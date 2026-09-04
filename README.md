@@ -64,6 +64,20 @@ python src/devbrain_mcp.py
 
 ---
 
+### Opción 3: Daemon de Aprendizaje en Segundo Plano (Opcional)
+
+Si deseas que el observador monitoree automáticamente tus repositorios Git locales y registre commits y decisiones en tu Vault de Obsidian:
+
+```powershell
+# Instalar como tarea programada en segundo plano (Windows)
+powershell -ExecutionPolicy Bypass -File src/scripts/install_daemon_service.ps1 -Action install
+
+# Para desinstalar cuando lo desees:
+powershell -ExecutionPolicy Bypass -File src/scripts/install_daemon_service.ps1 -Action uninstall
+```
+
+---
+
 ## 🔌 Configuración de Clientes MCP
 
 ### Google Antigravity / Gemini CLI (`mcp_config.json`)
