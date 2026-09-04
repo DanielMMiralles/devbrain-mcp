@@ -14,7 +14,7 @@ import math
 from collections import Counter
 from pathlib import Path
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(Path.home() / "ObsidianVault")))
 CONOCIMIENTO_DIR = VAULT_DIR / "03-CONOCIMIENTO"
 PROYECTOS_DIR = VAULT_DIR / "02-PROYECTOS"
 

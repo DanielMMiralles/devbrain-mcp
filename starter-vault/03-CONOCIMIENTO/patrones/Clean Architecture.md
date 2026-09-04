@@ -1,0 +1,1 @@
+# Clean Architecture\n\nPrincipio de inversion de dependencias donde las reglas de negocio de la entidad no dependen de frameworks externos ni de bases de datos.\n\nRelacionado con: [[Domain Driven Design]] y [[SOLID Principles]].\n

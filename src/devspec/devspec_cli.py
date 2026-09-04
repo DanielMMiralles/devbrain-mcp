@@ -11,7 +11,7 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(Path.home() / "ObsidianVault")))
 SPECS_DIR = VAULT_DIR / "02-PROYECTOS" / "specs"
 SKILLS_DIR = VAULT_DIR / "03-CONOCIMIENTO" / "skills-practicas"
 

@@ -1,27 +1,15 @@
-# DevBrain Monitored Projects Configuration
+# DevBrain Monitored Projects Configuration (Template)
 version: "1.0"
 projects:
-  - name: Narval-SGN
-    path: /projects/Narval-SGN/backend
-    stack: [Django, DRF, PostgreSQL, Docker, NLP/OCR]
+  - name: Backend-API
+    path: /projects/backend-api
+    stack: [FastAPI, PostgreSQL, Docker]
     status: activo
-  - name: AliaLog-API
-    path: /projects/alia-log-api/alia-log-api
-    stack: [NestJS, TypeScript, PostgreSQL]
+  - name: Frontend-Web
+    path: /projects/frontend-web
+    stack: [React, TypeScript, Tailwind CSS]
     status: activo
-  - name: Chambita-API
-    path: /projects/Chambita/chambita-api
-    stack: [NestJS, TypeScript, PostgreSQL]
-    status: activo
-  - name: Chambita-App
-    path: /projects/Chambita App/chambita-mobile-app
+  - name: Mobile-App
+    path: /projects/mobile-app
     stack: [React Native, Expo, TypeScript]
-    status: activo
-  - name: Alia-LangGraph
-    path: /projects/Alia_LangGraph
-    stack: [Python, LangGraph, LangChain]
-    status: activo
-  - name: Mayan-EDMS
-    path: /projects/mayan-edms
-    stack: [Django, Python, Docker]
     status: activo

@@ -7,11 +7,11 @@ import sys
 import os
 from pathlib import Path
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(Path.home() / "ObsidianVault")))
 OUTPUT_DIR = VAULT_DIR / "02-PROYECTOS" / "context-bundles"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-DESKTOP_DIR = Path(os.getenv("DESKTOP_DIR", r"C:\Users\damm1\OneDrive\Escritorio"))
+DESKTOP_DIR = Path(os.getenv("DESKTOP_DIR", str(Path.home() / "Projects")))
 MAYAN_DIR = Path(os.getenv("MAYAN_DIR", r"C:\Users\damm1\mayan-edms"))
 
 IGNORE_DIRS = {".git", "node_modules", "dist", "build", "venv", "__pycache__", ".pytest_cache", ".next", ".expo"}

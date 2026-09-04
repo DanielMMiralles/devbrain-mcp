@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(Path.home() / "ObsidianVault")))
 LEARNING_DIR = VAULT_DIR / "04-APRENDIZAJES" / "experimentos"
 CACHE_FILE = VAULT_DIR / "06-SISTEMA" / "daemon_git_cache.json"
 
@@ -26,7 +26,7 @@ DEFAULT_WATCHED_DIRS = [
     Path(r"C:\Users\damm1\OneDrive\Escritorio\Odysseus"),
     Path(r"C:\Users\damm1\OneDrive\Escritorio\alaorden_web"),
     Path(r"C:\Users\damm1\OneDrive\Escritorio\IMA_Landgraph"),
-    Path(r"C:\Users\damm1\mayan-edms")
+    Path(os.getenv("MAYAN_DIR", str(Path.home() / "Projects" / "mayan-edms")))
 ]
 
 def load_watched_dirs():

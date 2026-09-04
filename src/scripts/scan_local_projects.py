@@ -7,7 +7,7 @@ import os
 import json
 from pathlib import Path
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(Path.home() / "ObsidianVault")))
 PROYECTOS_DIR = VAULT_DIR / "02-PROYECTOS"
 
 # Directorios de desarrollo reales en la máquina
@@ -19,7 +19,7 @@ CANDIDATE_ROOTS = [
     Path(r"C:\Users\damm1\source"),
     Path(r"C:\Users\damm1\Proyecto1"),
     Path(r"C:\Users\damm1\Teamwork-bookstore"),
-    Path(r"C:\Users\damm1\mayan-edms"),
+    Path(os.getenv("MAYAN_DIR", str(Path.home() / "Projects" / "mayan-edms"))),
     Path(r"C:\Users\damm1\simpy"),
 ]
 

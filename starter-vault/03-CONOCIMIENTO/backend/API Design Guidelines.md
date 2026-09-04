@@ -1,0 +1,1 @@
+# API Design Guidelines\n\nEstandares de diseno para APIs RESTful modernas, versionado semantico y codigos de estado HTTP consistentes.\n

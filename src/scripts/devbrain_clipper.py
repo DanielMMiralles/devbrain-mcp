@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from html.parser import HTMLParser
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(Path.home() / "ObsidianVault")))
 INBOX_DIR = VAULT_DIR / "00-INBOX" / "clips"
 INBOX_DIR.mkdir(parents=True, exist_ok=True)
 

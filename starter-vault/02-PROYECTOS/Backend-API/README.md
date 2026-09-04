@@ -1,0 +1,1 @@
+# Backend API\n\nProyecto de ejemplo.\n\nestado: activo\nstack: [FastAPI, PostgreSQL, Docker]\n

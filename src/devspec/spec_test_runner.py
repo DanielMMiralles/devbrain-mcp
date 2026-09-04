@@ -3,7 +3,7 @@ import re
 import argparse
 from pathlib import Path
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(Path.home() / "ObsidianVault")))
 SPECS_DIR = VAULT_DIR / "02-PROYECTOS" / "specs"
 
 JEST_TEMPLATE = """import { Test, TestingModule } from '@nestjs/testing';

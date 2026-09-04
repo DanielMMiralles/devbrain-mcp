@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(Path.home() / "ObsidianVault")))
 DIARY_DIR = VAULT_DIR / "07-DIARIO"
 DIARY_DIR.mkdir(parents=True, exist_ok=True)
 

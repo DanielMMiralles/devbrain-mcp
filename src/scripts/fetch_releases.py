@@ -17,7 +17,7 @@ REPOS = [
     "docker/compose"
 ]
 
-VAULT = Path(r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault")
+VAULT = Path(str(Path.home() / "ObsidianVault"))
 OUT_DIR = VAULT / "00-INBOX" / "auto" / "releases"
 
 def run():

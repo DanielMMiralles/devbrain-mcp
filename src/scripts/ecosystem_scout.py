@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
-VAULT = Path(r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault")
+VAULT = Path(str(Path.home() / "ObsidianVault"))
 OUT_DIR = VAULT / "00-INBOX" / "auto" / "ecosystem-scout"
 
 KEYWORDS = [

@@ -6,7 +6,7 @@ para verificar que no existan credenciales, tokens de API o secretos expuestos.
 import re
 from pathlib import Path
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(Path.home() / "ObsidianVault")))
 OUTPUT_REPORT = VAULT_DIR / "06-SISTEMA" / "security_audit_report.md"
 
 PATTERNS = {

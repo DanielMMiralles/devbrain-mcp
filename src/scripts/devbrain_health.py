@@ -5,10 +5,10 @@ de tus proyectos insignia en el Escritorio y genera un informe en el Vault.
 import json
 from pathlib import Path
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(Path.home() / "ObsidianVault")))
 OUTPUT_REPORT = VAULT_DIR / "04-APRENDIZAJES" / "salud-proyectos.md"
 
-DESKTOP_DIR = Path(os.getenv("DESKTOP_DIR", r"C:\Users\damm1\OneDrive\Escritorio"))
+DESKTOP_DIR = Path(os.getenv("DESKTOP_DIR", str(Path.home() / "Projects")))
 MAYAN_DIR = Path(os.getenv("MAYAN_DIR", r"C:\Users\damm1\mayan-edms"))
 
 PROJECTS = [

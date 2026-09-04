@@ -19,13 +19,18 @@ from pathlib import Path
 from datetime import datetime
 
 BASE_DIR = Path(__file__).resolve().parent
-VAULT_DIR = Path(os.getenv("VAULT_DIR", r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault"))
+default_vault = BASE_DIR.parent / "starter-vault"
+if not default_vault.exists():
+    default_vault = Path.home() / "ObsidianVault"
+
+VAULT_DIR = Path(os.getenv("VAULT_DIR", str(default_vault)))
 PROYECTOS_DIR = VAULT_DIR / "02-PROYECTOS"
 CONOCIMIENTO_DIR = VAULT_DIR / "03-CONOCIMIENTO"
 APRENDIZAJES_DIR = VAULT_DIR / "04-APRENDIZAJES"
 SPECS_DIR = PROYECTOS_DIR / "specs"
 DECISIONS_DIR = VAULT_DIR / "04-APRENDIZAJES" / "decisiones"
-DECISIONS_DIR.mkdir(parents=True, exist_ok=True)
+if VAULT_DIR.exists():
+    DECISIONS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Importar modulos internos si existen
 # Soportar ejecucion modular (repo standalone) o dentro del vault
@@ -46,13 +51,13 @@ TOOLS_MANIFEST = [
     # --- GRUPO 1: DevBrain Core & Proyectos ---
     {
         "name": "get_project_context",
-        "description": "Recupera la documentacion tecnica, stack, dependencias y arquitectura de un proyecto insignia (AliaLog, Chambita, Narval-SGN, Mayan-EDMS, Alia-IMA-LangGraph, Odysseus, AlaOrden-Web).",
+        "description": "Recupera la documentacion tecnica, stack, dependencias y arquitectura de un proyecto insignia (tus proyectos locales registrados en 02-PROYECTOS).",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "project_name": {
                     "type": "string",
-                    "description": "Nombre o palabra clave del proyecto (ej: 'Chambita', 'AliaLog', 'Narval')"
+                    "description": "Nombre o palabra clave del proyecto (ej: 'Backend-API', 'Frontend-Web')"
                 }
             },
             "required": ["project_name"]
@@ -60,7 +65,7 @@ TOOLS_MANIFEST = [
     },
     {
         "name": "search_knowledge",
-        "description": "Busca conceptos tecnicos, patrones de arquitectura (GoF/Cloud), gotchas, DDD y buenas practicas entre las 1,675 notas del Vault.",
+        "description": "Busca conceptos tecnicos, patrones de arquitectura (GoF/Cloud), gotchas, DDD y buenas practicas en tu almacén de Obsidian.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -186,6 +191,8 @@ TOOLS_MANIFEST = [
 # ==========================================
 
 def handle_get_project_context(args):
+    if not PROYECTOS_DIR.exists():
+        return "El directorio de proyectos (02-PROYECTOS) no existe en el almacén actual."
     q = args.get("project_name", "").lower()
     matches = [p for p in PROYECTOS_DIR.iterdir() if p.is_dir() and q in p.name.lower() and p.name not in ["specs", "_templates", "context-bundles"]]
     if not matches:
@@ -199,6 +206,8 @@ def handle_get_project_context(args):
     return content
 
 def handle_search_knowledge(args):
+    if not CONOCIMIENTO_DIR.exists():
+        return "El directorio de conocimiento (03-CONOCIMIENTO) no existe en el almacén actual."
     q = args.get("query", "").lower()
     results = []
     for f in CONOCIMIENTO_DIR.rglob("*.md"):
@@ -211,6 +220,8 @@ def handle_search_knowledge(args):
     return "\n".join(results) if results else f"No se encontraron notas sobre '{q}'."
 
 def handle_list_projects(args):
+    if not PROYECTOS_DIR.exists():
+        return "No hay proyectos configurados aún en este almacén (crea una carpeta dentro de 02-PROYECTOS)."
     projs = []
     for p in PROYECTOS_DIR.iterdir():
         if p.is_dir() and p.name not in ["specs", "_templates", "context-bundles"]:
@@ -220,7 +231,7 @@ def handle_list_projects(args):
                 for line in readme.read_text(encoding="utf-8", errors="ignore").splitlines():
                     if "estado:" in line: status = line.split(":", 1)[1].strip().replace('"', ''); break
             projs.append(f"- **{p.name}** (Estado: {status})")
-    return "\n".join(projs)
+    return "\n".join(projs) if projs else "No hay proyectos registrados en 02-PROYECTOS."
 
 # Handlers OpenSpec
 def handle_propose_spec(args):
