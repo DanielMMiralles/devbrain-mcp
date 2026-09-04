@@ -2,6 +2,7 @@
 DevBrain Health Checker: Inspecciona las dependencias y estado de salud
 de tus proyectos insignia en el Escritorio y genera un informe en el Vault.
 """
+import os
 import json
 from pathlib import Path
 

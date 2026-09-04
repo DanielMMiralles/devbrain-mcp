@@ -18,18 +18,23 @@ IGNORE_DIRS = {".git", "node_modules", "dist", "build", "venv", "__pycache__", "
 ALLOWED_EXTS = {".ts", ".tsx", ".py", ".json", ".yml", ".yaml", ".sql", ".prisma", ".dart"}
 
 def package_project(project_name: str, max_files: int = 25):
-    # Buscar ruta local
+    # Buscar ruta local en DESKTOP_DIR o en el vault (02-PROYECTOS)
     target = None
-    for p in DESKTOP_DIR.iterdir():
-        if p.is_dir() and project_name.lower() in p.name.lower():
-            target = p
+    search_dirs = [DESKTOP_DIR, VAULT_DIR / "02-PROYECTOS"]
+    for base in search_dirs:
+        if base.exists():
+            for p in base.iterdir():
+                if p.is_dir() and project_name.lower() in p.name.lower() and p.name not in ["specs", "_templates", "context-bundles"]:
+                    target = p
+                    break
+        if target:
             break
-    if not target and "mayan" in project_name.lower():
+
+    if not target and "mayan" in project_name.lower() and MAYAN_DIR.exists():
         target = MAYAN_DIR
 
     if not target or not target.exists():
-        print(f"No se encontro ningun proyecto que coincida con '{project_name}'.")
-        return
+        return f"No se encontro ningun proyecto que coincida con '{project_name}'. Verifica que el directorio exista en PROJECTS_DIR o 02-PROYECTOS."
 
     print(f"Empaquetando contexto inteligente para: {target.name}...")
     bundle_name = f"context-{target.name.lower().replace(' ', '-')}.md"
