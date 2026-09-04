@@ -31,7 +31,7 @@
 
 1. Clona este repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/devbrain-mcp.git
+   git clone https://github.com/DanielMMiralles/devbrain-mcp.git
    cd devbrain-mcp
    ```
 
