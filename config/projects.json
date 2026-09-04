@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "description": "Ecosistema de proyectos monitoreados por DevBrain",
+  "projects": [
+    {
+      "name": "Narval-SGN",
+      "path": "/projects/Narval-SGN/backend",
+      "local_path": "C:/Users/damm1/OneDrive/Escritorio/Narval-SGN/backend",
+      "stack": [
+        "Django 6.0",
+        "DRF",
+        "PostgreSQL",
+        "Docker",
+        "NLP/OCR"
+      ],
+      "status": "activo",
+      "description": "Sistema empresarial de mision critica para gestion naviera y portuaria"
+    },
+    {
+      "name": "AliaLog-API",
+      "path": "/projects/alia-log-api/alia-log-api",
+      "local_path": "C:/Users/damm1/OneDrive/Escritorio/alia-log-api/alia-log-api",
+      "stack": [
+        "NestJS",
+        "TypeScript",
+        "PostgreSQL"
+      ],
+      "status": "activo",
+      "description": "API backend para plataforma logistica AliaLog"
+    },
+    {
+      "name": "AliaLog-Frontend",
+      "path": "/projects/alia-log-frontend",
+      "local_path": "C:/Users/damm1/OneDrive/Escritorio/alia-log-frontend",
+      "stack": [
+        "React",
+        "TypeScript",
+        "Tailwind CSS"
+      ],
+      "status": "activo",
+      "description": "Frontend web de AliaLog"
+    },
+    {
+      "name": "Chambita-API",
+      "path": "/projects/Chambita/chambita-api",
+      "local_path": "C:/Users/damm1/OneDrive/Escritorio/Chambita/chambita-api",
+      "stack": [
+        "NestJS",
+        "TypeScript",
+        "PostgreSQL"
+      ],
+      "status": "activo",
+      "description": "API backend del ecosistema Chambita"
+    },
+    {
+      "name": "Chambita-App",
+      "path": "/projects/Chambita App/chambita-mobile-app",
+      "local_path": "C:/Users/damm1/OneDrive/Escritorio/Chambita App/chambita-mobile-app",
+      "stack": [
+        "React Native",
+        "Expo",
+        "TypeScript"
+      ],
+      "status": "activo",
+      "description": "Aplicacion movil de Chambita"
+    },
+    {
+      "name": "Alia-LangGraph",
+      "path": "/projects/Alia_LangGraph",
+      "local_path": "C:/Users/damm1/OneDrive/Escritorio/Alia_LangGraph",
+      "stack": [
+        "Python",
+        "LangGraph",
+        "LangChain"
+      ],
+      "status": "activo",
+      "description": "Agentes cognitivos orquestados con LangGraph"
+    },
+    {
+      "name": "Mayan-EDMS",
+      "path": "/projects/mayan-edms",
+      "local_path": "C:/Users/damm1/mayan-edms",
+      "stack": [
+        "Django",
+        "Python",
+        "Docker"
+      ],
+      "status": "activo",
+      "description": "Sistema de gestion documental electronica de codigo abierto"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+services:
+  # DevBrain MCP Server (stdio mode for AI IDEs & CLI agents)
+  devbrain-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: devbrain/mcp-server:latest
+    container_name: devbrain-mcp
+    restart: unless-stopped
+    stdin_open: true    # CRITICAL: keeps stdin open for MCP JSON-RPC
+    tty: false          # CRITICAL: must NOT allocate TTY to avoid corrupting JSON-RPC lines
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONIOENCODING=utf-8
+      - PYTHONUTF8=1
+      - VAULT_DIR=/vault
+      - PROJECTS_DIR=/projects
+      - PROJECTS_CONFIG=/app/config/projects.json
+    volumes:
+      # Mount your local Obsidian Vault
+      - "${VAULT_PATH:-./starter-vault}:/vault"
+      # Mount your development projects (read-only for safety)
+      - "${PROJECTS_PATH:-./projects}:/projects:ro"
+
+  # Optional DevBrain Observer Daemon (background commit tracker)
+  devbrain-daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: devbrain/mcp-server:latest
+    container_name: devbrain-daemon
+    restart: unless-stopped
+    entrypoint: ["python", "-u", "/app/src/scripts/devbrain_daemon.py"]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - VAULT_DIR=/vault
+      - PROJECTS_DIR=/projects
+      - PROJECTS_CONFIG=/app/config/projects.json
+    volumes:
+      - "${VAULT_PATH:-./starter-vault}:/vault"
+      - "${PROJECTS_PATH:-./projects}:/projects:ro"
+    profiles:
+      - daemon

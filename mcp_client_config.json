@@ -1,0 +1,36 @@
+{
+  "_comment": "Ejemplos de configuracion para conectar clientes MCP a DevBrain (Docker o Local)",
+  "docker_mode": {
+    "mcpServers": {
+      "devbrain": {
+        "command": "docker",
+        "args": [
+          "run",
+          "-i",
+          "--rm",
+          "-v",
+          "C:\\\\Users\\\\tu_usuario\\\\Documents\\\\Obsidian Vault:/vault",
+          "-v",
+          "C:\\\\Users\\\\tu_usuario\\\\Desktop:/projects:ro",
+          "devbrain/mcp-server:latest"
+        ]
+      }
+    }
+  },
+  "local_python_mode": {
+    "mcpServers": {
+      "devbrain": {
+        "command": "python",
+        "args": [
+          "src/devbrain_mcp.py"
+        ],
+        "env": {
+          "PYTHONIOENCODING": "utf-8",
+          "PYTHONUTF8": "1",
+          "VAULT_DIR": "C:\\\\Users\\\\tu_usuario\\\\Documents\\\\Obsidian Vault",
+          "PROJECTS_DIR": "C:\\\\Users\\\\tu_usuario\\\\Desktop"
+        }
+      }
+    }
+  }
+}
