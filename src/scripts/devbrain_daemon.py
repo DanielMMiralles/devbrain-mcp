@@ -60,9 +60,11 @@ WATCHED_DIRS = load_watched_dirs()
 
 def get_git_head(repo_path: Path):
     try:
+        flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         res = subprocess.run(
             ["git", "-C", str(repo_path), "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=5
+            capture_output=True, text=True, timeout=5,
+            creationflags=flags
         )
         if res.returncode == 0:
             return res.stdout.strip()
@@ -72,9 +74,11 @@ def get_git_head(repo_path: Path):
 
 def get_last_commit_info(repo_path: Path):
     try:
+        flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         res = subprocess.run(
             ["git", "-C", str(repo_path), "log", "-1", "--pretty=format:%h|%an|%s|%cI"],
-            capture_output=True, text=True, timeout=5
+            capture_output=True, text=True, timeout=5,
+            creationflags=flags
         )
         if res.returncode == 0 and res.stdout:
             parts = res.stdout.strip().split("|")
@@ -158,8 +162,9 @@ def scan_all_repos():
                     info = get_last_commit_info(r)
                     if info:
                         process_new_commit(r.name, info)
-                cache[str(r)] = head
-                updated = True
+                if old_head != head:
+                    cache[str(r)] = head
+                    updated = True
 
     if updated:
         CACHE_FILE.write_text(json.dumps(cache, indent=2), encoding="utf-8")
@@ -169,13 +174,13 @@ def main():
         scan_all_repos()
         return
 
-    print("DevBrain Observer Daemon iniciado en segundo plano (Monitoreo cada 60s)...")
+    print("DevBrain Observer Daemon iniciado en segundo plano (Monitoreo cada 300s)...")
     while True:
         try:
             scan_all_repos()
         except Exception as e:
             pass
-        time.sleep(60)
+        time.sleep(300)
 
 if __name__ == "__main__":
     main()

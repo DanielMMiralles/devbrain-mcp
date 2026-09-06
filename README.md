@@ -11,14 +11,16 @@
 
 ## ✨ Características Principales
 
-- **12 Herramientas MCP Nativas**:
-  - `get_project_context`: Lee arquitectura y contexto de proyectos insignia.
-  - `list_projects`: Lista proyectos activos con sus stacks tecnológicos.
-  - `search_knowledge`: Búsqueda de patrones arquitectónicos y notas de ingeniería.
-  - `propose_spec`, `validate_spec`, `get_spec_questions`, `generate_scaffold`: Suite completa SDD/BDD.
-  - `remember_decision`, `recall_memory`, `log_learning`: Memoria persistente entre sesiones de IA.
-  - `package_project_context`: Empaquetador de código para reducir consumo de tokens en ~80%.
-  - `audit_project_health`: Auditoría de dependencias y Dockerfiles.
+- **16 Herramientas MCP Nativas (DevBrain v2)**:
+  - `get_project_context`, `list_projects`, `search_knowledge`: Navegación ontológica y contexto de proyectos.
+  - `propose_spec`, `validate_spec`, `get_spec_questions`, `generate_scaffold`: Suite completa SDD/BDD (OpenSpec).
+  - `remember_decision`, `recall_memory`: Memoria persistente y lecciones aprendidas (Gentle-AI / Engram).
+  - `package_project_context`, `audit_project_health`: Empaquetado ultracompacto y auditoría de salud.
+  - `debate_project_feasibility`: **(NUEVO)** Modo Debate Sin Filtros (Red Team) para estresar viabilidad y costos ocultos.
+  - `audit_ponytail_complexity`: **(NUEVO)** Auditoría de simplicidad y poda de sobre-ingeniería según la escalera YAGNI.
+  - `query_code_graph`, `sync_project_graph`: **(NUEVO)** Motor AST Graphify para extraer relaciones de símbolos y dependencias.
+  - `route_model_dispatch`: **(NUEVO)** Gateway inteligente multi-modelo (FAST vs FRONTIER vs CODER) con soporte OmniRoute.
+- **Resolución Resiliente de Vault**: Soporta indistintamente `VAULT_PATH` o `VAULT_DIR`, lectura automática de `.env` y fallback instantáneo a `./starter-vault` (100% plug-and-play).
 - **Cero Dependencias de Terceros**: Construido al 100% sobre la biblioteca estándar de Python 3.12.
 - **Contenerizado con Docker**: Despliegue con un solo comando o ejecución nativa con Python.
 - **Multiplataforma**: Compatible con Windows, macOS y Linux.

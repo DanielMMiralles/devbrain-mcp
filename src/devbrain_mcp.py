@@ -18,31 +18,68 @@ import re
 from pathlib import Path
 from datetime import datetime
 
-BASE_DIR = Path(__file__).resolve().parent
-default_vault = BASE_DIR.parent / "starter-vault"
-if not default_vault.exists():
-    default_vault = Path.home() / "ObsidianVault"
+def resolve_vault_dir() -> Path:
+    # 1. Leer variables de entorno (soportando ambas variantes: VAULT_DIR y VAULT_PATH)
+    env_vault = os.getenv("VAULT_DIR") or os.getenv("VAULT_PATH")
+    
+    # 2. Si no esta en el entorno, intentar leer un archivo .env local si existe
+    if not env_vault:
+        for candidate_env in [Path(".env"), Path(__file__).resolve().parent / ".env", Path(__file__).resolve().parent.parent / ".env"]:
+            if candidate_env.exists():
+                try:
+                    for line in candidate_env.read_text(encoding="utf-8", errors="ignore").splitlines():
+                        line = line.strip()
+                        if line.startswith("#") or "=" not in line: continue
+                        k, v = line.split("=", 1)
+                        k, v = k.strip(), v.strip().strip("'\"")
+                        if k in ["VAULT_DIR", "VAULT_PATH"] and v:
+                            env_vault = v
+                            break
+                except Exception:
+                    pass
+            if env_vault: break
 
-VAULT_DIR = Path(os.getenv("VAULT_DIR", str(default_vault)))
+    # 3. Validar ruta obtenida
+    if env_vault:
+        p = Path(env_vault).resolve()
+        if p.exists(): return p
+
+    # 4. Fallback al Vault de damm1 si existe en esta maquina
+    default_vault = Path(r"C:\Users\damm1\OneDrive\Documentos\Obsidian Vault")
+    if default_vault.exists():
+        return default_vault
+
+    # 5. Fallback a starter-vault local o del repositorio
+    for candidate_starter in [
+        Path("./starter-vault"),
+        Path(__file__).resolve().parent / "starter-vault",
+        Path(__file__).resolve().parent.parent / "starter-vault"
+    ]:
+        if candidate_starter.exists():
+            return candidate_starter.resolve()
+
+    # 6. Fallback final: carpeta segura en el directorio de trabajo
+    fallback_dir = Path("./.devbrain_vault").resolve()
+    fallback_dir.mkdir(parents=True, exist_ok=True)
+    return fallback_dir
+
+VAULT_DIR = resolve_vault_dir()
 PROYECTOS_DIR = VAULT_DIR / "02-PROYECTOS"
 CONOCIMIENTO_DIR = VAULT_DIR / "03-CONOCIMIENTO"
 APRENDIZAJES_DIR = VAULT_DIR / "04-APRENDIZAJES"
 SPECS_DIR = PROYECTOS_DIR / "specs"
 DECISIONS_DIR = VAULT_DIR / "04-APRENDIZAJES" / "decisiones"
-if VAULT_DIR.exists():
-    DECISIONS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Crear estructura minima garantizada para no fallar en ningun entorno
+for d in [PROYECTOS_DIR, CONOCIMIENTO_DIR, APRENDIZAJES_DIR, SPECS_DIR, DECISIONS_DIR]:
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
 
 # Importar modulos internos si existen
-# Soportar ejecucion modular (repo standalone) o dentro del vault
-if (BASE_DIR / "devspec").exists():
-    sys.path.append(str(BASE_DIR / "devspec"))
-else:
-    sys.path.append(str(VAULT_DIR / "06-SISTEMA" / "devspec"))
-
-if (BASE_DIR / "scripts").exists():
-    sys.path.append(str(BASE_DIR / "scripts"))
-else:
-    sys.path.append(str(VAULT_DIR / "06-SISTEMA" / "scripts"))
+sys.path.append(str(VAULT_DIR / "06-SISTEMA" / "devspec"))
+sys.path.append(str(VAULT_DIR / "06-SISTEMA" / "scripts"))
 
 # ==========================================
 # MANIFIESTO DE HERRAMIENTAS UNIFICADAS
@@ -51,13 +88,13 @@ TOOLS_MANIFEST = [
     # --- GRUPO 1: DevBrain Core & Proyectos ---
     {
         "name": "get_project_context",
-        "description": "Recupera la documentacion tecnica, stack, dependencias y arquitectura de un proyecto insignia (tus proyectos locales registrados en 02-PROYECTOS).",
+        "description": "Recupera la documentacion tecnica, stack, dependencias y arquitectura de un proyecto insignia (AliaLog, Chambita, Narval-SGN, Mayan-EDMS, Alia-IMA-LangGraph, Odysseus, AlaOrden-Web).",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "project_name": {
                     "type": "string",
-                    "description": "Nombre o palabra clave del proyecto (ej: 'Backend-API', 'Frontend-Web')"
+                    "description": "Nombre o palabra clave del proyecto (ej: 'Chambita', 'AliaLog', 'Narval')"
                 }
             },
             "required": ["project_name"]
@@ -65,7 +102,7 @@ TOOLS_MANIFEST = [
     },
     {
         "name": "search_knowledge",
-        "description": "Busca conceptos tecnicos, patrones de arquitectura (GoF/Cloud), gotchas, DDD y buenas practicas en tu almacén de Obsidian.",
+        "description": "Busca conceptos tecnicos, patrones de arquitectura (GoF/Cloud), gotchas, DDD y buenas practicas entre las 1,675 notas del Vault.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -183,6 +220,90 @@ TOOLS_MANIFEST = [
             "type": "object",
             "properties": {}
         }
+    },
+
+    # --- GRUPO 4: Modo Debate Sin Filtros & Filtro Ponytail ---
+    {
+        "name": "debate_project_feasibility",
+        "description": "Evalua una propuesta, stack o arquitectura aplicando el protocolo Red Team sin filtros de cortesia y la escalera de poda Ponytail.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "proposal_text": {
+                    "type": "string",
+                    "description": "Texto detallado de la propuesta, arquitectura, dependencias o idea a debatir"
+                },
+                "project_name": {
+                    "type": "string",
+                    "description": "Nombre del proyecto o iniciativa (opcional, default: 'General')"
+                }
+            },
+            "required": ["proposal_text"]
+        }
+    },
+    {
+        "name": "audit_ponytail_complexity",
+        "description": "Audita una solucion o codigo buscando violaciones a YAGNI, dependencias innecesarias o sobre-abstraccion segun las reglas Ponytail.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target_description": {
+                    "type": "string",
+                    "description": "Descripcion de lo que se desea implementar o codigo a auditar"
+                }
+            },
+            "required": ["target_description"]
+        }
+    },
+
+    # --- GRUPO 5: Graphify AST Engine ---
+    {
+        "name": "query_code_graph",
+        "description": "Consulta el grafo sintactico (AST) de un proyecto para ver que clases, funciones o modulos dependen o importan un simbolo especifico.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_name": {
+                    "type": "string",
+                    "description": "Nombre del proyecto (ej: '06-SISTEMA', 'Chambita', 'AliaLog')"
+                },
+                "symbol_name": {
+                    "type": "string",
+                    "description": "Nombre de la clase, funcion, o modulo a rastrear"
+                }
+            },
+            "required": ["project_name", "symbol_name"]
+        }
+    },
+    {
+        "name": "sync_project_graph",
+        "description": "Genera o actualiza el grafo de relaciones sintacticas (AST) de un proyecto a partir de su ruta en disco.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_path": {
+                    "type": "string",
+                    "description": "Ruta absoluta o relativa del proyecto a indexar"
+                }
+            },
+            "required": ["project_path"]
+        }
+    },
+
+    # --- GRUPO 6: Omni Router Gateway ---
+    {
+        "name": "route_model_dispatch",
+        "description": "Consulta el despacho optimo de modelo (FAST vs FRONTIER vs CODER) y endpoint OmniRoute para una tarea especifica.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "task_type": {
+                    "type": "string",
+                    "description": "Tipo de tarea (ej: 'debate', 'architecture', 'daemon', 'scaffold', 'summary')"
+                }
+            },
+            "required": ["task_type"]
+        }
     }
 ]
 
@@ -191,8 +312,6 @@ TOOLS_MANIFEST = [
 # ==========================================
 
 def handle_get_project_context(args):
-    if not PROYECTOS_DIR.exists():
-        return "El directorio de proyectos (02-PROYECTOS) no existe en el almacén actual."
     q = args.get("project_name", "").lower()
     matches = [p for p in PROYECTOS_DIR.iterdir() if p.is_dir() and q in p.name.lower() and p.name not in ["specs", "_templates", "context-bundles"]]
     if not matches:
@@ -206,8 +325,6 @@ def handle_get_project_context(args):
     return content
 
 def handle_search_knowledge(args):
-    if not CONOCIMIENTO_DIR.exists():
-        return "El directorio de conocimiento (03-CONOCIMIENTO) no existe en el almacén actual."
     q = args.get("query", "").lower()
     results = []
     for f in CONOCIMIENTO_DIR.rglob("*.md"):
@@ -220,8 +337,6 @@ def handle_search_knowledge(args):
     return "\n".join(results) if results else f"No se encontraron notas sobre '{q}'."
 
 def handle_list_projects(args):
-    if not PROYECTOS_DIR.exists():
-        return "No hay proyectos configurados aún en este almacén (crea una carpeta dentro de 02-PROYECTOS)."
     projs = []
     for p in PROYECTOS_DIR.iterdir():
         if p.is_dir() and p.name not in ["specs", "_templates", "context-bundles"]:
@@ -231,7 +346,7 @@ def handle_list_projects(args):
                 for line in readme.read_text(encoding="utf-8", errors="ignore").splitlines():
                     if "estado:" in line: status = line.split(":", 1)[1].strip().replace('"', ''); break
             projs.append(f"- **{p.name}** (Estado: {status})")
-    return "\n".join(projs) if projs else "No hay proyectos registrados en 02-PROYECTOS."
+    return "\n".join(projs)
 
 # Handlers OpenSpec
 def handle_propose_spec(args):
@@ -402,6 +517,36 @@ def handle_audit_project_health(args):
     check_all_projects()
     return f"Auditoria completada. Reporte actualizado en: 04-APRENDIZAJES/salud-proyectos.md"
 
+# --- Nuevos Handlers v2 ---
+
+def handle_debate_project_feasibility(args):
+    from devbrain_debate import analyze_feasibility
+    proposal = args.get("proposal_text", "")
+    project = args.get("project_name", "General")
+    return analyze_feasibility(proposal, project)
+
+def handle_audit_ponytail_complexity(args):
+    from devbrain_debate import audit_complexity
+    target = args.get("target_description", "")
+    return audit_complexity(target)
+
+def handle_query_code_graph(args):
+    from devbrain_graphify import query_symbol
+    project = args.get("project_name", "")
+    symbol = args.get("symbol_name", "")
+    return query_symbol(project, symbol)
+
+def handle_sync_project_graph(args):
+    from devbrain_graphify import sync_project_graph
+    path_str = args.get("project_path", "")
+    return sync_project_graph(path_str)
+
+def handle_route_model_dispatch(args):
+    from model_hub import route_model
+    task_type = args.get("task_type", "general")
+    res = route_model(task_type)
+    return json.dumps(res, indent=2, ensure_ascii=False)
+
 
 def process_request(request):
     req_id = request.get("id")
@@ -444,6 +589,12 @@ def process_request(request):
             elif name == "recall_memory": text = handle_recall_memory(args)
             elif name == "package_project_context": text = handle_package_project_context(args)
             elif name == "audit_project_health": text = handle_audit_project_health(args)
+            # DevBrain v2 (Debate, Ponytail, Graphify, OmniRouter)
+            elif name == "debate_project_feasibility": text = handle_debate_project_feasibility(args)
+            elif name == "audit_ponytail_complexity": text = handle_audit_ponytail_complexity(args)
+            elif name == "query_code_graph": text = handle_query_code_graph(args)
+            elif name == "sync_project_graph": text = handle_sync_project_graph(args)
+            elif name == "route_model_dispatch": text = handle_route_model_dispatch(args)
             else:
                 return {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": f"Herramienta no encontrada: {name}"}}
 

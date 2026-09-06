@@ -1,41 +1,101 @@
 """
-DevBrain Elite Model Hub:
-Configuración optimizada hacia la máxima capacidad cognitiva y de razonamiento profundo.
-Prioriza exactitud arquitectónica, cero alucinaciones y estricto cumplimiento de BDD/DDD
-sobre el costo de tokens.
+DevBrain Elite Model Hub & Omni Router Gateway:
+Configuracion optimizada con despacho inteligente multi-modelo.
+Soporta enrutamiento via OmniRoute (http://localhost:8000/v1) con conmutacion automatica
+y fallback directo segun criticidad de la tarea.
 """
 import sys
+import io
+import os
 import json
 from pathlib import Path
 
-ELITE_MODELS = {
-    "AGY_PRIMARY": {
-        "tier": "Arquitecto Senior & Razonamiento Complejo (Top Tier)",
-        "model_id": "claude-3-7-sonnet-thought / gemini-2.0-pro-exp",
-        "description": "Modelo de referencia para redacción de specs, DDD táctico, diseño distribuido y refactorizaciones críticas con cadena de pensamiento extendida (Extended Thinking).",
-        "surface": "Antigravity IDE & Chat Canvas"
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+OMNI_ROUTE_URL = os.getenv("OMNI_ROUTE_URL", "http://localhost:8000/v1")
+
+ROUTING_PROFILES = {
+    "FAST": {
+        "tier": "Mecanico & Alta Frecuencia (Costo Minimo)",
+        "models": ["gemini-2.5-flash", "claude-3-5-haiku", "deepseek-chat"],
+        "recommended": "gemini-2.5-flash",
+        "description": "Ideal para daemons en background, extraccion de tags, clasificacion de inbox y tareas de monitoreo.",
+        "cost_tier": "$"
     },
-    "OPENCODE_TERMINAL": {
-        "tier": "Agente Autónomo de Ejecución en Terminal",
-        "model_id": "anthropic/claude-3-7-sonnet / opencode/deepseek-v4-flash-free",
-        "description": "Orquestador de terminal para ejecución autónoma de tasks.md, tests BDD y compilación.",
-        "surface": "OpenCode CLI"
+    "FRONTIER": {
+        "tier": "Razonamiento Profundo & Auditoria Implacable",
+        "models": ["claude-3-7-sonnet", "gemini-2.5-pro", "gpt-4o"],
+        "recommended": "claude-3-7-sonnet",
+        "description": "Utilizado para Modo Debate Sin Filtros, diseno de arquitectura distribuida, OpenSpec y refactorizaciones de alto riesgo.",
+        "cost_tier": "$$$"
     },
-    "SPECIALIZED_CODER": {
-        "tier": "Generación Determinista de Código & Scaffolding",
-        "model_id": "claude-3-5-sonnet-latest / gpt-4o",
-        "description": "Generación exacta de DTOs, NestJS controllers, FastAPI routers y esquemas de base de datos sin atajos sintácticos.",
-        "surface": "Spec-to-Scaffold Engine"
+    "CODER": {
+        "tier": "Scaffolding & Cumplimiento BDD Estricto",
+        "models": ["claude-3-5-sonnet", "gpt-4o", "qwen-2.5-coder-32b"],
+        "recommended": "claude-3-5-sonnet",
+        "description": "Generacion determinista de DTOs, controllers, servicios y migraciones de bases de datos.",
+        "cost_tier": "$$"
     }
 }
 
+TASK_MAPPING = {
+    "debate": "FRONTIER",
+    "architecture": "FRONTIER",
+    "red_team": "FRONTIER",
+    "spec": "FRONTIER",
+    "code": "CODER",
+    "scaffold": "CODER",
+    "refactor": "CODER",
+    "daemon": "FAST",
+    "summary": "FAST",
+    "inbox": "FAST",
+    "rag": "FAST",
+    "graphify": "FAST"
+}
+
+import urllib.request
+
+def check_endpoint_health(url: str, timeout_sec: float = 0.2) -> bool:
+    """Verifica si el gateway local OmniRoute esta activo sin bloquear."""
+    try:
+        # Peticion rapida al endpoint
+        req = urllib.request.Request(f"{url}/models", method="GET")
+        with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+            return resp.status in [200, 401, 403]
+    except Exception:
+        return False
+
+def route_model(task_type: str = "general") -> dict:
+    profile_key = TASK_MAPPING.get(task_type.lower(), "FRONTIER")
+    profile = ROUTING_PROFILES[profile_key]
+    is_online = check_endpoint_health(OMNI_ROUTE_URL)
+    status = "ONLINE (Gateway Activo)" if is_online else "STANDBY (Despacho directo por API / Provider Fallback)"
+    return {
+        "task_type": task_type,
+        "profile": profile_key,
+        "recommended_model": profile["recommended"],
+        "fallback_models": profile["models"],
+        "endpoint": OMNI_ROUTE_URL,
+        "endpoint_status": status,
+        "cost_tier": profile["cost_tier"],
+        "description": profile["description"]
+    }
+
 def print_matrix():
-    print("=== CONFIGURACIÓN DE MODELOS DE ÉLITE (MÁXIMA CAPACIDAD) ===")
-    for key, info in ELITE_MODELS.items():
-        print(f"\n* [{key}] -> {info['tier']}")
-        print(f"  Modelo: {info['model_id']}")
-        print(f"  Entorno: {info['surface']}")
-        print(f"  Capacidad: {info['description']}")
+    print("=== DEV-BRAIN OMNI ROUTER & MODEL HUB ===")
+    print(f"Gateway Endpoint: {OMNI_ROUTE_URL}")
+    for key, info in ROUTING_PROFILES.items():
+        print(f"\n* [{key}] -> {info['tier']} ({info['cost_tier']})")
+        print(f"  Recomendado: {info['recommended']}")
+        print(f"  Pool de Fallback: {', '.join(info['models'])}")
+        print(f"  Uso: {info['description']}")
 
 if __name__ == "__main__":
     print_matrix()
+    test_route = route_model("debate")
+    print(f"\nEjemplo de despacho para 'debate':\n{json.dumps(test_route, indent=2, ensure_ascii=False)}")
