@@ -132,6 +132,20 @@ python tests/test_mcp_stdio.py
 
 ---
 
+## 📜 Protocolos Operativos del Agente (`docs/protocols/`)
+
+DevBrain no solo provee herramientas pasivas, sino protocolos de conducta e ingeniería para agentes de IA:
+
+1. **[Protocolo de Debate Sin Filtros](docs/protocols/protocolo_debate_redteam.md)**:
+   - Activa el rol de *Principal Systems Architect / Red Team Auditor*.
+   - Suspende el sesgo de complacencia (*sycophancy*) y somete cualquier propuesta al test de las 5 preguntas de fuego (SPOF, costos ocultos, mantenimiento a las 3 AM).
+2. **[Reglas Ponytail (Lazy Senior Dev)](docs/protocols/ponytail_rules.md)**:
+   - Escalera de 6 peldaños YAGNI para forzar la simplificación radical: ¿Tiene que existir? -> ¿Existe ya? -> ¿Standard Lib? -> ¿Nativo? -> ¿Una sola línea?
+3. **[Protocolo de Ingesta Tecnológica (DIP)](docs/protocols/protocolo_ingesta_tecnologica.md)**:
+   - Pipeline de 4 fases para evaluar repos de GitHub, librerías o paradigmas modernos, destilarlos en fichas atómicas para el Vault y activarlos en proyectos reales sin acumular deuda técnica.
+
+---
+
 ## 📂 Estructura del Repositorio
 
 ```
@@ -139,13 +153,17 @@ devbrain-mcp/
 ├── Dockerfile                  # Construccion minimalista Python 3.12 (<60MB)
 ├── docker-compose.yml          # Orquestacion con volumenes montados
 ├── mcp_client_config.json      # Plantillas de configuracion para IDEs
+├── docs/
+│   └── protocols/              # Protocolos operativos (Debate, Ponytail, Ingesta)
+├── skills/                     # Catalogo de Agent Skills (Core, Debate, Ponytail)
 ├── config/
 │   ├── projects.json           # Definicion de proyectos monitoreados
 │   └── projects.yaml           # Formato YAML alternativo
 ├── src/
-│   ├── devbrain_mcp.py         # Entrypoint del servidor MCP
+│   ├── devbrain_mcp.py         # Entrypoint del servidor MCP (16 herramientas)
 │   ├── devspec/                # Suite OpenSpec (BDD, scaffold, preguntas)
-│   └── scripts/                # Empaquetador, auditor, daemon, RAG
+│   └── scripts/                # Motores de debate, graphify, model hub, packager, daemon
+├── starter-vault/              # Plantilla inicial de Obsidian Vault lista para usar
 └── tests/
     └── test_mcp_stdio.py       # Suite de pruebas automatizadas JSON-RPC
 ```
