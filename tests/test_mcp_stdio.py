@@ -53,7 +53,7 @@ def run_test():
     print(f"  [OK] tools/list returned {len(tools)} tools:")
     for t in tools:
         print(f"       - {t['name']}: {t['description'][:60]}...")
-    assert len(tools) == 11, f"Expected 11 tools, got {len(tools)}"
+    assert len(tools) == 16, f"Expected 16 tools, got {len(tools)}"
 
     # 3. Test tools/call (list_projects)
     call_request = {

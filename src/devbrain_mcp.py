@@ -193,11 +193,12 @@ TOOLS_MANIFEST = [
     },
     {
         "name": "recall_memory",
-        "description": "Recupera decisiones arquitectonicas, reglas de diseno o lecciones pasadas buscando en la memoria persistente del agente.",
+        "description": "Recupera decisiones arquitectonicas, reglas de diseno o lecciones pasadas buscando en la memoria persistente del agente (compatible con Engram v1.20 BM25 & project override).",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Palabra clave o tema a consultar en memoria"}
+                "query": {"type": "string", "description": "Palabra clave o tema a consultar en memoria"},
+                "project": {"type": "string", "description": "Filtro opcional de proyecto para project override (ej: 'Chambita', 'AliaLog')"}
             },
             "required": ["query"]
         }
@@ -493,17 +494,42 @@ fecha: {today}
 
 def handle_recall_memory(args):
     q = args.get("query", "").lower()
-    matches = []
-    # Buscar en decisiones y aprendizajes
+    proj_filter = args.get("project", "").lower().strip()
+    query_tokens = [t for t in re.split(r"\W+", q) if len(t) > 2]
+    
+    scored_matches = []
+    # Buscar en decisiones, aprendizajes y conocimientos clave
     for d in [DECISIONS_DIR, APRENDIZAJES_DIR / "errores"]:
         if d.exists():
             for f in d.rglob("*.md"):
                 txt = f.read_text(encoding="utf-8", errors="ignore")
-                if q in f.stem.lower() or q in txt.lower():
-                    snippet = txt[:350].replace("\n", " ")
-                    matches.append(f"- **[[{f.stem}]]**: {snippet}...")
-                if len(matches) >= 5: break
-    return "\n".join(matches) if matches else f"No se encontraron memorias previas relacionadas con '{q}'."
+                txt_lower = txt.lower()
+                stem_lower = f.stem.lower()
+                
+                # Filtro de proyecto si se especifica (estilo Engram v1.20 project override)
+                if proj_filter and proj_filter not in txt_lower and proj_filter not in stem_lower:
+                    continue
+                
+                # Scoring ponderado estilo BM25: match en título x10, match de frase x5, tokens individuales x2
+                score = 0
+                if q in stem_lower: score += 10
+                if q in txt_lower: score += 5
+                for token in query_tokens:
+                    if token in stem_lower: score += 4
+                    score += min(txt_lower.count(token) * 2, 8)
+                
+                if score > 0:
+                    snippet = txt[:350].replace("\n", " ").strip()
+                    scored_matches.append((score, f"- **[[{f.stem}]]** (Score: {score}): {snippet}..."))
+                    
+    scored_matches.sort(key=lambda x: x[0], reverse=True)
+    top_matches = [m[1] for m in scored_matches[:6]]
+    
+    if top_matches:
+        header = f"Resultados de memoria persistente para '{q}'"
+        if proj_filter: header += f" [Filtro Proyecto: {proj_filter}]"
+        return f"### 🧠 {header}:\n" + "\n".join(top_matches)
+    return f"No se encontraron memorias previas relacionadas con '{q}'."
 
 def handle_package_project_context(args):
     from devbrain_packager import package_project, OUTPUT_DIR

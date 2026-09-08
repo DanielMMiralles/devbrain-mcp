@@ -14,10 +14,21 @@ REPOS = [
     "n8n-io/n8n",
     "tailwindlabs/tailwindcss",
     "shadcn-ui/ui",
-    "docker/compose"
+    "docker/compose",
+    "Gentleman-Programming/gentle-ai",
+    "Gentleman-Programming/gentle-pi",
+    "Gentleman-Programming/engram"
 ]
 
-VAULT = Path(str(Path.home() / "ObsidianVault"))
+import os
+env_vault = os.getenv("VAULT_DIR") or os.getenv("VAULT_PATH")
+if env_vault and Path(env_vault).exists():
+    VAULT = Path(env_vault)
+elif (Path(__file__).resolve().parent.parent.parent / "starter-vault").exists():
+    VAULT = Path(__file__).resolve().parent.parent.parent / "starter-vault"
+else:
+    VAULT = Path(str(Path.home() / "ObsidianVault"))
+
 OUT_DIR = VAULT / "00-INBOX" / "auto" / "releases"
 
 def run():
