@@ -36,7 +36,7 @@ def package_project(project_name: str, max_files: int = 25):
     if not target or not target.exists():
         return f"No se encontro ningun proyecto que coincida con '{project_name}'. Verifica que el directorio exista en PROJECTS_DIR o 02-PROYECTOS."
 
-    print(f"Empaquetando contexto inteligente para: {target.name}...")
+    sys.stderr.write(f"Empaquetando contexto inteligente para: {target.name}...\n")
     bundle_name = f"context-{target.name.lower().replace(' ', '-')}.md"
     bundle_path = OUTPUT_DIR / bundle_name
 
@@ -88,8 +88,8 @@ archivos_incluidos: {collected_count}
 {"".join(file_contents)}
 """
     bundle_path.write_text(md_output.strip() + "\n", encoding="utf-8")
-    print(f"[OK] Bundle generado exitosamente en: {bundle_path.relative_to(VAULT_DIR)}")
-    print(f"Total de modulos empaquetados: {collected_count}")
+    sys.stderr.write(f"[OK] Bundle generado exitosamente en: {bundle_path.relative_to(VAULT_DIR)}\n")
+    sys.stderr.write(f"Total de modulos empaquetados: {collected_count}\n")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

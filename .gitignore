@@ -4,3 +4,6 @@ __pycache__/
 .venv/
 venv/
 *.log
+*.db
+.devbrain_cache/
+.devbrain_vault/
