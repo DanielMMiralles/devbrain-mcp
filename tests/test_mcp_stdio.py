@@ -12,7 +12,7 @@ SERVER_SCRIPT = Path(__file__).resolve().parent.parent / "src" / "devbrain_mcp.p
 def run_test():
     print(f"[TEST] Launching DevBrain MCP Server: {SERVER_SCRIPT}")
     proc = subprocess.Popen(
-        [sys.executable, str(SERVER_SCRIPT)],
+        [sys.executable, "-u", str(SERVER_SCRIPT)],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -53,12 +53,34 @@ def run_test():
     print(f"  [OK] tools/list returned {len(tools)} tools:")
     for t in tools:
         print(f"       - {t['name']}: {t['description'][:60]}...")
-    assert len(tools) == 17, f"Expected 17 tools, got {len(tools)}"
+    assert len(tools) == 21, f"Expected 21 tools, got {len(tools)}"
 
-    # 3. Test tools/call (list_projects)
-    call_request = {
+    # 3. Test tools/call (classify_odd_task)
+    odd_request = {
         "jsonrpc": "2.0",
         "id": 3,
+        "method": "tools/call",
+        "params": {
+            "name": "classify_odd_task",
+            "arguments": {
+                "request_description": "Migrar módulo de usuarios a NestJS con OAuth2",
+                "files_touched_estimate": 4
+            }
+        }
+    }
+    proc.stdin.write(json.dumps(odd_request) + "\n")
+    proc.stdin.flush()
+    odd_response = json.loads(proc.stdout.readline())
+    assert "result" in odd_response, "tools/call classify_odd_task failed"
+    odd_content = odd_response["result"].get("content", [])
+    assert len(odd_content) > 0, "tools/call classify_odd_task returned empty content"
+    assert "[SUBSTANTIAL_ODD]" in odd_content[0]["text"], "Classification mismatch"
+    print("  [OK] tools/call (classify_odd_task) returned [SUBSTANTIAL_ODD] successfully")
+
+    # 4. Test tools/call (list_projects)
+    call_request = {
+        "jsonrpc": "2.0",
+        "id": 4,
         "method": "tools/call",
         "params": {
             "name": "list_projects",
@@ -75,8 +97,8 @@ def run_test():
     for line in content_list[0]["text"].splitlines()[:4]:
         print(f"       {line}")
 
-    # 4. Test ping
-    ping_request = {"jsonrpc": "2.0", "id": 4, "method": "ping"}
+    # 5. Test ping
+    ping_request = {"jsonrpc": "2.0", "id": 5, "method": "ping"}
     proc.stdin.write(json.dumps(ping_request) + "\n")
     proc.stdin.flush()
     ping_response = json.loads(proc.stdout.readline())

@@ -21,8 +21,14 @@ Compatible al 100% con la especificación MCP oficial (2024-11-05).
 import json
 import os
 import re
+import unicodedata
 from pathlib import Path
 from datetime import datetime
+
+def slugify(text: str) -> str:
+    """Normaliza tildes y caracteres especiales a un slug ASCII limpio."""
+    text = unicodedata.normalize('NFKD', str(text)).encode('ascii', 'ignore').decode('utf-8')
+    return re.sub(r"[^a-zA-Z0-9_\-]+", "-", text.lower()).strip("-")
 
 # ==========================================
 # 1. RESOLUCIÓN RESILIENTE DE ENTORNO
@@ -156,6 +162,26 @@ BUILTIN_KNOWLEDGE = {
         "title": "Distributed Rate Limiting (Token Bucket vs Leaky Bucket)",
         "summary": "Estrategias algorítmicas para proteger APIs contra sobrecarga y abusos. Token Bucket permite ráfagas acumuladas; Leaky Bucket procesa a flujo constante; Sliding Window Counter ofrece máxima precisión en ventanas temporales distribuidas respaldadas comúnmente por scripts Lua atómicos en Redis.",
         "gotcha": "Almacenar contadores de rate limit en memoria de proceso local no funciona cuando la aplicación escala horizontalmente en múltiples pods de Kubernetes."
+    },
+    "odd": {
+        "title": "Organic Driven Development (ODD - Gentle-AI v3.0)",
+        "summary": "Metodología de desarrollo adaptativa que escala proporcionalmente a la necesidad: sin artefactos para tareas triviales/consultas, y con un documento único de feature (odd/tasks/<feature>.md) espejado en Engram (odd/<feature>/tasks) para tareas sustanciales (≥2 pasos). Enfatiza TDD observado (RED->GREEN->REFACTOR) y elimina la burocracia rígida de admisión de SDD.",
+        "gotcha": "Tratar la heurística orientativa de ~400 líneas por tarea como un límite estricto o forzar splits artificiales que dañen la cohesión del código."
+    },
+    "gentle-shell": {
+        "title": "Gentle-Shell (Ecosistema Workspace & Agente Pi)",
+        "summary": "Entorno integral de desarrollo sobre Pi (evolución de Gentle-Pi). Incorpora perfiles de modelos en sidebar anclables por repo, vista de cambios acotada a la sesión activa (eliminando escaneos masivos) y protocolo de mensajería nativa inter-orquestador (orchestrator_list, orchestrator_send_message) reemplazando intercom.",
+        "gotcha": "Asumir que un ACK de mensajería inter-sesión implica finalización de tarea por parte del par; solo certifica entrega en la cola de transporte."
+    },
+    "engram-v2": {
+        "title": "Engram v2.0 (Persistent Memory & Session Lifecycle)",
+        "summary": "Capa de memoria persistente para agentes con soporte git tracking (.engram/), consola TUI, detección y normalización de proyectos y gestión robusta de procesos en Windows. Almacena decisiones, directrices y espejos ODD que sobreviven a compactaciones de contexto e interrupciones.",
+        "gotcha": "Sobrescribir ciegamente memorias divergentes en reanudación sin reconciliar antes las evidencias observadas en el código real."
+    },
+    "rdd": {
+        "title": "Receipt-Driven Development (RDD Guardrail)",
+        "summary": "Capa opcional e independiente de revisión con árbitros independientes para candidatos de entrega congelados. Se activa bajo demanda o ante umbrales de riesgo medio/alto con consentimiento previo, sin bloquear tareas rutinarias.",
+        "gotcha": "Creer que ODD impone RDD automáticamente; RDD es un switch independiente controlado por el usuario."
     }
 }
 
@@ -249,7 +275,7 @@ TOOLS_MANIFEST = [
     },
     {
         "name": "prepare_sdd_preflight",
-        "description": "Genera el bloque de autoridad y contexto estandarizado '## SDD Session Preflight' (Gentle-AI v2.9.1) para despachar subagentes con limites estrictos y directrices Engram.",
+        "description": "Genera el bloque de autoridad y contexto '## SDD Session Preflight' (Gentle-AI v3.0 Lightened SDD Contract) para despachar subagentes cuando se elige explícitamente el flujo SDD.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -360,6 +386,72 @@ TOOLS_MANIFEST = [
             },
             "required": ["task_type"]
         }
+    },
+    {
+        "name": "prepare_odd_task",
+        "description": "Genera el documento de feature ODD 'odd/tasks/<feature>.md' y el payload espejado en Engram 'odd/<feature>/tasks' (Gentle-AI v3.0).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "feature_name": {"type": "string", "description": "Nombre o slug de la funcionalidad/tarea"},
+                "project_name": {"type": "string", "description": "Proyecto asociado (o 'General')"},
+                "objective": {"type": "string", "description": "Objetivo, problema a resolver y justificación del valor"},
+                "scope": {"type": "string", "description": "Límites y restricciones técnicas"},
+                "tasks": {"type": "array", "items": {"type": "string"}, "description": "Lista de tareas accionables con criterio ~400 líneas"},
+                "acceptance_criteria": {"type": "array", "items": {"type": "string"}, "description": "Criterios de aceptación verificables"},
+                "tdd_mode": {"type": "boolean", "description": "True para activar exigencia de TDD observado (RED -> GREEN -> REFACTOR)"},
+                "test_runner": {"type": "string", "description": "Comando runner de pruebas (ej: 'pytest', 'pnpm test')"},
+                "write_to_disk": {"type": "boolean", "description": "True para guardar directamente en odd/tasks/<feature>.md"}
+            },
+            "required": ["feature_name", "objective"]
+        }
+    },
+    {
+        "name": "classify_odd_task",
+        "description": "Evalua deterministamente una petición según las reglas de ODD (READ_ONLY, SMALL_DIRECT, SUBSTANTIAL_ODD, EXPLICIT_SDD).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "request_description": {"type": "string", "description": "Descripción de la solicitud o prompt del usuario"},
+                "files_touched_estimate": {"type": "integer", "description": "Estimación de archivos a modificar (default: 1)"},
+                "is_read_only": {"type": "boolean", "description": "True si el pedido es solo lectura o explicación"},
+                "explicit_sdd_requested": {"type": "boolean", "description": "True si el usuario pidió explícitamente SDD"}
+            },
+            "required": ["request_description"]
+        }
+    },
+    {
+        "name": "reconcile_odd_resume",
+        "description": "Reconcilia el estado de tareas locales y la memoria de Engram al reanudar una sesión ODD interrumpida.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "feature_name": {"type": "string", "description": "Nombre de la feature a reanudar"},
+                "project_name": {"type": "string", "description": "Proyecto asociado"},
+                "file_content": {"type": "string", "description": "Contenido actual del archivo odd/tasks/<feature>.md si existe"},
+                "engram_mirror_content": {"type": "string", "description": "Contenido recuperado de Engram odd/<feature>/tasks"}
+            },
+            "required": ["feature_name"]
+        }
+    },
+    {
+        "name": "orchestrator_session_bridge",
+        "description": "Valida y formatea notificaciones del protocolo inter-orquestador de Gentle-Shell (main) con semántica ACK.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["explain", "format_notification", "verify_ack"],
+                    "description": "Acción a realizar dentro del protocolo inter-sesión"
+                },
+                "session_id": {"type": "string", "description": "ID de la sesión emisora"},
+                "target_session_id": {"type": "string", "description": "ID de la sesión par destinataria"},
+                "message_payload": {"type": "string", "description": "Mensaje o payload a transmitir"},
+                "ack_received": {"type": "boolean", "description": "Resultado de la recepción de ACK de transporte"}
+            },
+            "required": ["action"]
+        }
     }
 ]
 
@@ -409,8 +501,24 @@ def handle_get_project_context(args):
 
 def handle_search_knowledge(args):
     q = args.get("query", "").strip()
+    q_lower = q.lower()
     
-    # 1. Búsqueda instantánea con FTS5 si está disponible
+    # 1. Coincidencia directa en el catálogo canónico embebido (ej: odd, gentle-shell, engram-v2, cqrs)
+    if q_lower in BUILTIN_KNOWLEDGE:
+        item = BUILTIN_KNOWLEDGE[q_lower]
+        builtin_text = f"### 💡 {item['title']} (Conocimiento Canónico)\n\n" \
+                       f"{item['summary']}\n\n" \
+                       f"**⚠️ Gotcha de Producción**: {item['gotcha']}\n"
+        if INDEXER:
+            try:
+                vault_notes = INDEXER.search_knowledge(q, limit=3, max_chars=1800)
+                if "No se encontraron" not in vault_notes:
+                    builtin_text += f"\n---\n### 📚 Notas Relacionadas en Vault:\n{vault_notes}"
+            except Exception:
+                pass
+        return builtin_text
+
+    # 2. Búsqueda instantánea con FTS5 si está disponible
     if INDEXER:
         try:
             res = INDEXER.search_knowledge(q, limit=5, max_chars=3500)
@@ -419,8 +527,7 @@ def handle_search_knowledge(args):
         except Exception:
             pass
 
-    # 2. Fallback Autónomo / Built-in Knowledge (Prescindible de Vault)
-    q_lower = q.lower()
+    # 3. Fallback Autónomo / Built-in Knowledge por palabras clave
     keywords = [w for w in q_lower.split() if len(w) > 2]
     for key, item in BUILTIN_KNOWLEDGE.items():
         if key in q_lower or any(kw in key for kw in keywords):
@@ -700,6 +807,250 @@ def handle_recall_memory(args):
         return f"### 🧠 {header}:\n" + "\n".join(top_matches)
     return f"No se encontraron memorias previas relacionadas con '{q}'."
 
+def handle_classify_odd_task(args):
+    desc = args.get("request_description", "").strip()
+    files_estimate = int(args.get("files_touched_estimate", 1))
+    is_read_only = bool(args.get("is_read_only", False))
+    explicit_sdd = bool(args.get("explicit_sdd_requested", False))
+    
+    desc_lower = desc.lower()
+    if not explicit_sdd and any(term in desc_lower for term in ["use sdd", "usar sdd", "flujo sdd", "openspec sdd"]):
+        explicit_sdd = True
+
+    if explicit_sdd:
+        return (
+            "### 🏷️ Clasificación ODD: [EXPLICIT_SDD]\n"
+            "- **Razón**: Solicitud explícita de Spec-Driven Development (SDD).\n"
+            "- **Acción Recomendada**: Generar propuesta OpenSpec canónica (`propose_spec`) y preflight de sesión (`prepare_sdd_preflight`).\n"
+            "- **Artefactos Requeridos**: `openspec/specs/<feature>/` (proposal.md, spec.md, design.md, tasks.md).\n"
+            "- **Nota Gentle-AI v3.0**: SDD es una rama opcional y liviana dentro del ecosistema ODD; se retiraron 108 rutas burocráticas heredadas."
+        )
+    
+    read_only_triggers = ["explica", "explicar", "investiga", "investigar", "describe", "describir", "busca", "buscar", "analiza", "analizar", "documenta", "documentar", "consulta", "consultar"]
+    if is_read_only or (any(desc_lower.startswith(w) or f" {w} " in f" {desc_lower} " for w in read_only_triggers) and not any(w in desc_lower for w in ["crea", "crear", "modifica", "modificar", "agrega", "agregar", "corrige", "corregir", "refactoriza", "refactorizar", "implementa", "implementar"])):
+        return (
+            "### 🏷️ Clasificación ODD: [READ_ONLY]\n"
+            "- **Razón**: La petición es exclusivamente de consulta, análisis o explicación técnica.\n"
+            "- **Acción Recomendada**: Responder e investigar directamente sin ceremonia ni generación de tareas.\n"
+            "- **Artefactos Requeridos**: NINGUNO (Zero ceremony). ODD se corre del medio para no estorbar."
+        )
+
+    if files_estimate <= 1 and not any(k in desc_lower for k in ["arquitectura", "refactor masivo", "feature completa", "migracion", "sistema"]):
+        return (
+            "### 🏷️ Clasificación ODD: [SMALL_DIRECT]\n"
+            "- **Razón**: Tarea pequeña, localizada y bien comprendida (<2 pasos significativos).\n"
+            "- **Acción Recomendada**: Implementar de inmediato aplicando verificaciones proporcionales y comprobaciones funcionales.\n"
+            "- **Artefactos Requeridos**: NINGUNO duradero. No crear `odd/tasks/` para cambios triviales."
+        )
+
+    return (
+        "### 🏷️ Clasificación ODD: [SUBSTANTIAL_ODD]\n"
+        "- **Razón**: Trabajo sustancial detectado (≥ 2 pasos significativos o progreso que amerita persistencia).\n"
+        "- **Acción Recomendada**: Antes de la primera modificación de código fuente, generar el documento de feature mediante `prepare_odd_task` y sincronizar con Engram.\n"
+        "- **Artefactos Requeridos**: `odd/tasks/<feature-name>.md` espejado en Engram bajo `odd/<feature-name>/tasks`.\n"
+        "- **TDD**: Si TDD está activo, observar estrictamente RED -> GREEN -> REFACTOR."
+    )
+
+
+def handle_prepare_odd_task(args):
+    feature = args.get("feature_name", "").strip()
+    if not feature:
+        return "Error: Se requiere 'feature_name' para preparar el documento ODD."
+    
+    project = args.get("project_name", "General").strip()
+    objective = args.get("objective", "").strip()
+    scope = args.get("scope", "").strip()
+    tasks = args.get("tasks", [])
+    acceptance_criteria = args.get("acceptance_criteria", [])
+    tdd_mode = bool(args.get("tdd_mode", False))
+    test_runner = args.get("test_runner", "").strip()
+    write_to_disk = bool(args.get("write_to_disk", False))
+    target_dir = args.get("target_dir", "").strip()
+
+    slug = slugify(feature)
+    today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    memories_summary = ""
+    if INDEXER:
+        try:
+            mem_res = INDEXER.search_memories(f"{project} {feature}", project_filter=project, limit=3, max_chars=1000)
+            if "No se encontraron" not in mem_res:
+                memories_summary = mem_res
+        except Exception:
+            pass
+
+    tdd_status = "ENABLED (Observed RED -> GREEN -> REFACTOR required)" if tdd_mode else "DISABLED (Ordinary functional checks apply)"
+    
+    doc = f"""# Feature: {feature}
+- **Project**: [[{project}]]
+- **Created**: {today}
+- **Status**: in-progress
+- **Workflow**: Organic Driven Development (ODD - Gentle-AI v3.0)
+- **TDD Mode**: {tdd_status}
+- **Test Runner**: {test_runner or "Auto-detect"}
+- **Engram Mirror Locator**: `odd/{slug}/tasks`
+
+## 🎯 Objective & Problem
+{objective or "- Implementación orientada por valor según requerimientos acordados."}
+
+## 🛡️ Scope & Constraints
+{scope or "- Acotado exclusivamente al comportamiento solicitado sin sobreingeniería."}
+
+## 📋 Actionable Tasks
+<!-- Heurística ODD: ~400 líneas modificadas por tarea es guía orientativa, nunca un hard-cap o split forzado -->
+"""
+    if tasks:
+        for idx, t in enumerate(tasks, 1):
+            task_id = f"TASK-{idx:02d}"
+            doc += f"- [ ] [{task_id}] {t}\n"
+    else:
+        doc += f"- [ ] [TASK-01] Exploración e implementación nuclear de {feature}\n"
+        doc += f"- [ ] [TASK-02] Verificación funcional y pruebas proporcionales observadas\n"
+
+    doc += "\n## ✅ Acceptance Criteria & Invariants\n"
+    if acceptance_criteria:
+        for ac in acceptance_criteria:
+            doc += f"- [ ] {ac}\n"
+    else:
+        doc += "- [ ] Cumple con la intención original sin regresiones en tests existentes.\n- [ ] Verificaciones observadas en ejecución (no narradas).\n"
+
+    if memories_summary:
+        doc += f"\n## 🧠 Active Engram Directives & Memory\n{memories_summary}\n"
+
+    doc += """
+## 🔬 Verification Evidence
+<!-- Registrar comandos ejecutados, salidas reales y resultados observados -->
+- Status: pending implementation
+
+## ⏭️ Progress & Next Step
+- Current: Initialized
+- Next: Iniciar TASK-01 bajo el protocolo ODD.
+"""
+
+    task_count = len(tasks) if tasks else 2
+    notification_line = f"[ODD] Creado odd/tasks/{slug}.md con {task_count} tareas espejado en Engram."
+
+    written_msg = ""
+    if write_to_disk:
+        base_path = Path(target_dir).resolve() if target_dir else Path.cwd()
+        odd_tasks_dir = base_path / "odd" / "tasks"
+        try:
+            odd_tasks_dir.mkdir(parents=True, exist_ok=True)
+            target_file = odd_tasks_dir / f"{slug}.md"
+            target_file.write_text(doc, encoding="utf-8")
+            written_msg = f"\n💾 Archivo guardado en disco: `{target_file}`"
+        except Exception as e:
+            written_msg = f"\n⚠️ Error al escribir en disco: {e}"
+
+    return f"{notification_line}{written_msg}\n\n```markdown\n{doc}\n```"
+
+
+def handle_reconcile_odd_resume(args):
+    feature = args.get("feature_name", "").strip()
+    project = args.get("project_name", "General").strip()
+    file_content = args.get("file_content", "").strip()
+    engram_mirror = args.get("engram_mirror_content", "").strip()
+
+    slug = slugify(feature)
+    
+    if not file_content:
+        candidate_file = Path.cwd() / "odd" / "tasks" / f"{slug}.md"
+        if candidate_file.exists():
+            try:
+                file_content = candidate_file.read_text(encoding="utf-8")
+            except Exception:
+                pass
+
+    if not file_content and not engram_mirror:
+        return f"No se encontró documento local ni copia en Engram para la feature '{feature}' (odd/tasks/{slug}.md)."
+
+    def parse_tasks(text):
+        completed = []
+        pending = []
+        for line in text.splitlines():
+            line_str = line.strip()
+            if line_str.startswith("- [x]") or line_str.startswith("- [X]"):
+                completed.append(line_str)
+            elif line_str.startswith("- [ ]"):
+                pending.append(line_str)
+        return completed, pending
+
+    file_done, file_pend = parse_tasks(file_content) if file_content else ([], [])
+    engram_done, engram_pend = parse_tasks(engram_mirror) if engram_mirror else ([], [])
+
+    all_done = list(dict.fromkeys(file_done + engram_done))
+    
+    report = f"### 🔄 Reconciliación de Sesión ODD: [[{project}]] - {feature}\n"
+    report += f"- **Local (`odd/tasks/{slug}.md`)**: {len(file_done)} completadas, {len(file_pend)} pendientes.\n"
+    report += f"- **Engram (`odd/{slug}/tasks`)**: {len(engram_done)} completadas, {len(engram_pend)} pendientes.\n\n"
+
+    if file_content and not engram_mirror:
+        report += "ℹ️ **Estado**: La copia local está presente pero falta sincronizar el espejo en Engram.\n"
+    elif engram_mirror and not file_content:
+        report += "ℹ️ **Estado**: Recuperado desde Engram; se recomienda restaurar el archivo local antes de editar.\n"
+    elif file_done != engram_done:
+        report += "⚠️ **Divergencia Detectada**: Se unificaron las tareas verificadas observadas sin sobrescribir destructivamente.\n"
+    else:
+        report += "✅ **Consistencia**: Ambas copias están alineadas.\n"
+
+    report += f"\n**Tareas Verificadas Totales ({len(all_done)})**:\n"
+    for t in all_done:
+        report += f"  {t}\n"
+
+    next_task = file_pend[0] if file_pend else (engram_pend[0] if engram_pend else "Ninguna (Feature lista para cierre)")
+    report += f"\n👉 **Próximo Paso Recomendado**: {next_task}\n"
+    report += "> Subagente: Lee siempre el documento de tareas antes de escribir código y verifica con evidencia real."
+    return report
+
+
+def handle_orchestrator_session_bridge(args):
+    action = args.get("action", "explain").lower()
+    session_id = args.get("session_id", "").strip()
+    target_id = args.get("target_session_id", "").strip()
+    message = args.get("message_payload", "")
+    ack_received = args.get("ack_received", None)
+
+    if action == "explain" or not action:
+        return (
+            "### 📡 Protocolo de Mensajería Inter-Orquestador (Gentle-Shell v3.0 / main)\n"
+            "Gentle-Shell introduce comunicación nativa entre orquestadores y sesiones activas en Pi, reemplazando a `intercom`:\n\n"
+            "1. **Identidad**: `orchestrator_session_id` expone el identificador local único de la sesión.\n"
+            "2. **Descubrimiento**: `orchestrator_list` anuncia los IDs de sesiones pares locales (el alcance de conectividad permanece desconocido hasta intentar el envío).\n"
+            "3. **Envío de Notificación**: `orchestrator_send_message` transmite un mensaje al par objetivo.\n"
+            "4. **Semántica ACK**: Un acuse de recibo ACK confirma ÚNICAMENTE que el par aceptó la notificación en su cola de entrega, NO que haya leído el mensaje ni que el trabajo esté completado.\n"
+            "5. **Límites de Diseño**: Sin colas offline, sin reintentos automáticos, sin broadcast, sin consultas cross-session sincrónicas."
+        )
+
+    if action == "format_notification":
+        if not target_id:
+            return "Error: 'target_session_id' es requerido para formatear la notificación."
+        payload_str = json.dumps(message, ensure_ascii=False) if isinstance(message, (dict, list)) else str(message)
+        return (
+            f"### 📤 Notificación Formateada para Gentle-Shell\n"
+            f"- **From**: `{session_id or 'current-session'}`\n"
+            f"- **To**: `{target_id}`\n"
+            f"- **Protocol**: `orchestrator_send_message`\n"
+            f"- **Payload**:\n```\n{payload_str}\n```\n"
+            f"- **Regla de Entrega**: Esperar ACK de transporte antes de proseguir la orquestación."
+        )
+
+    if action == "verify_ack":
+        if ack_received is True:
+            return (
+                "### ✅ Transporte ACK Confirmado\n"
+                f"- Mensaje entregado con éxito a la sesión `{target_id or 'peer'}`.\n"
+                "- **Aviso**: El ACK certifica entrega en cola, no finalización de tarea. Continúa tu flujo de acuerdo a las evidencias observadas."
+            )
+        else:
+            return (
+                "### ❌ Fallo en Entrega o ACK Pendiente\n"
+                f"- No se recibió acuse de recibo de `{target_id or 'peer'}`.\n"
+                "- **Acción**: Comprueba que la sesión par esté activa en el workspace de Gentle-Shell o consulta al usuario."
+            )
+
+    return f"Acción '{action}' no reconocida. Acciones válidas: 'explain', 'format_notification', 'verify_ack'."
+
+
 def handle_prepare_sdd_preflight(args):
     feature = args.get("feature_name", "").strip()
     project = args.get("project_name", "General").strip()
@@ -718,10 +1069,11 @@ def handle_prepare_sdd_preflight(args):
 
     today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    preflight = f"""## SDD Session Preflight (Gentle-AI v2.9.1 Contract)
+    preflight = f"""## SDD Session Preflight (Gentle-AI v3.0 Lightened SDD Contract)
 - **Timestamp**: {today}
 - **Project**: [[{project}]]
 - **Feature/Task**: {feature}
+- **Workflow Branch**: Explicit SDD Opt-In (ODD Ecosystem)
 - **Scope Authority**: Parent-Confirmed Preflight
 
 ### 🎯 Task Boundaries & Constraints:
@@ -745,7 +1097,7 @@ def handle_prepare_sdd_preflight(args):
     if memories_summary:
         preflight += f"\n### 🧠 Active Engram Directives:\n{memories_summary}\n"
 
-    preflight += "\n> [!IMPORTANT]\n> Subagente: Opera exclusivamente dentro de los límites y criterios anteriores. No ejecutes subprocesos de consola no autorizados."
+    preflight += "\n> [!IMPORTANT]\n> Subagente: Opera exclusivamente dentro de los límites y criterios anteriores. Flujo SDD simplificado (108 rutas burocráticas retiradas)."
     return preflight
 
 
@@ -842,7 +1194,7 @@ def process_request(request):
                 "capabilities": {"tools": {}},
                 "serverInfo": {
                     "name": "devbrain-mcp",
-                    "version": "2.1.0",
+                    "version": "2.2.0",
                     "mode": "vault-connected" if HAS_VAULT else "autonomous-standalone"
                 }
             }
@@ -864,6 +1216,10 @@ def process_request(request):
             elif name == "get_spec_questions": text = handle_get_spec_questions(args)
             elif name == "generate_scaffold": text = handle_generate_scaffold(args)
             elif name == "prepare_sdd_preflight": text = handle_prepare_sdd_preflight(args)
+            elif name == "prepare_odd_task": text = handle_prepare_odd_task(args)
+            elif name == "classify_odd_task": text = handle_classify_odd_task(args)
+            elif name == "reconcile_odd_resume": text = handle_reconcile_odd_resume(args)
+            elif name == "orchestrator_session_bridge": text = handle_orchestrator_session_bridge(args)
             elif name == "remember_decision": text = handle_remember_decision(args)
             elif name == "recall_memory": text = handle_recall_memory(args)
             elif name == "package_project_context": text = handle_package_project_context(args)

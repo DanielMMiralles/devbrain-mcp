@@ -11,15 +11,20 @@
 
 ## ✨ Características Principales
 
-- **16 Herramientas MCP Nativas (DevBrain v2)**:
-  - `get_project_context`, `list_projects`, `search_knowledge`: Navegación ontológica y contexto de proyectos.
+- **21 Herramientas MCP Nativas (DevBrain v2.2 - ODD & Gentle-Shell)**:
+  - `classify_odd_task`: **(NUEVO)** Clasificación determinista según protocolo ODD (READ_ONLY, SMALL_DIRECT, SUBSTANTIAL_ODD, EXPLICIT_SDD).
+  - `prepare_odd_task`: **(NUEVO)** Generación canónica del documento de feature `odd/tasks/<feature>.md` y su espejo Engram `odd/<feature>/tasks`.
+  - `reconcile_odd_resume`: **(NUEVO)** Reconciliación de estado local vs memoria Engram al reanudar sesiones interrumpidas.
+  - `orchestrator_session_bridge`: **(NUEVO)** Soporte para el protocolo de mensajería inter-sesión de Gentle-Shell (main) con semántica ACK.
+  - `prepare_sdd_preflight`: Contrato SDD liviano (Gentle-AI v3.0, 108 rutas burocráticas retiradas).
+  - `get_project_context`, `list_projects`, `search_knowledge`: Navegación ontológica y catálogo de conocimiento con indexador FTS5.
   - `propose_spec`, `validate_spec`, `get_spec_questions`, `generate_scaffold`: Suite completa SDD/BDD (OpenSpec).
-  - `remember_decision`, `recall_memory`: Memoria persistente y lecciones aprendidas (Gentle-AI / Engram).
+  - `remember_decision`, `recall_memory`: Memoria persistente y lecciones aprendidas (Gentle-AI / Engram v2).
   - `package_project_context`, `audit_project_health`: Empaquetado ultracompacto y auditoría de salud.
-  - `debate_project_feasibility`: **(NUEVO)** Modo Debate Sin Filtros (Red Team) para estresar viabilidad y costos ocultos.
-  - `audit_ponytail_complexity`: **(NUEVO)** Auditoría de simplicidad y poda de sobre-ingeniería según la escalera YAGNI.
-  - `query_code_graph`, `sync_project_graph`: **(NUEVO)** Motor AST Graphify para extraer relaciones de símbolos y dependencias.
-  - `route_model_dispatch`: **(NUEVO)** Gateway inteligente multi-modelo (FAST vs FRONTIER vs CODER) con soporte OmniRoute.
+  - `debate_project_feasibility`: Modo Debate Sin Filtros (Red Team) para estresar viabilidad y costos ocultos.
+  - `audit_ponytail_complexity`: Auditoría de simplicidad y poda de sobre-ingeniería según la escalera YAGNI.
+  - `query_code_graph`, `sync_project_graph`: Motor AST Graphify para extraer relaciones de símbolos y dependencias.
+  - `route_model_dispatch`: Gateway inteligente multi-modelo (FAST vs FRONTIER vs CODER) con soporte OmniRoute.
 - **Resolución Resiliente de Vault**: Soporta indistintamente `VAULT_PATH` o `VAULT_DIR`, lectura automática de `.env` y fallback instantáneo a `./starter-vault` (100% plug-and-play).
 - **Cero Dependencias de Terceros**: Construido al 100% sobre la biblioteca estándar de Python 3.12.
 - **Contenerizado con Docker**: Despliegue con un solo comando o ejecución nativa con Python.
