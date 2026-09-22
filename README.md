@@ -11,9 +11,9 @@
 
 ## ✨ Características Principales
 
-- **21 Herramientas MCP Nativas (DevBrain v2.2 - ODD & Gentle-Shell)**:
-  - `classify_odd_task`: **(NUEVO)** Clasificación determinista según protocolo ODD (READ_ONLY, SMALL_DIRECT, SUBSTANTIAL_ODD, EXPLICIT_SDD).
-  - `prepare_odd_task`: **(NUEVO)** Generación canónica del documento de feature `odd/tasks/<feature>.md` y su espejo Engram `odd/<feature>/tasks`.
+- **21 Herramientas MCP Nativas (DevBrain v2.3 - Gentle-AI v3.5.0 & Gentle-Shell v3.4.0)**:
+  - `classify_odd_task`: Clasificación determinista según protocolo ODD (READ_ONLY, SMALL_DIRECT, SUBSTANTIAL_ODD, EXPLICIT_SDD) con **Review ON de fábrica** e invariante **fail-safe** en análisis de riesgo.
+  - `prepare_odd_task`: Generación canónica del documento de feature `odd/tasks/<feature>.md` y su espejo Engram `odd/<feature>/tasks`, preparado para el dock de preguntas nativo de Gentle Shell v3.4.0.
   - `reconcile_odd_resume`: **(NUEVO)** Reconciliación de estado local vs memoria Engram al reanudar sesiones interrumpidas.
   - `orchestrator_session_bridge`: **(NUEVO)** Soporte para el protocolo de mensajería inter-sesión de Gentle-Shell (main) con semántica ACK.
   - `prepare_sdd_preflight`: Contrato SDD liviano (Gentle-AI v3.0, 108 rutas burocráticas retiradas).
