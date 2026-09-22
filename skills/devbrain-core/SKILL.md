@@ -25,7 +25,9 @@ Esta habilidad conecta a los agentes con el segundo cerebro de desarrollo (DevBr
    - Si es consulta o documentación: responder directamente sin crear artefactos de tareas (cero ceremonia).
    - Si es cambio pequeño (<2 pasos): implementar directamente con checks funcionales.
    - Si es trabajo sustancial (≥2 pasos): generar `prepare_odd_task(feature_name, objective, tasks)` antes de la primera edición de código.
+   - En resolución de incertidumbre (Paso 3 ODD): utilizar el sistema interactivo de preguntas en el dock de Gentle Shell (hasta 4 preguntas navegables por teclado).
 4. **Modo TDD Observado**: Si TDD está activo, exigir el ciclo estricto RED → GREEN → REFACTOR en ejecución real (no narrado).
 5. **Reanudación / Recuperación**: Ante interrupciones o reinicios de contexto, invocar `reconcile_odd_resume(feature_name)` para sincronizar `odd/tasks/<feature>.md` con Engram.
 6. **Flujo SDD Opcional**: Usar `propose_spec` / `prepare_sdd_preflight` solo si el usuario pide explícitamente "use SDD".
 7. **Empaquetar Contexto**: Al depurar código complejo, usar `package_project_context(project_name)` para obtener una vista condensada sin sobrecargar tokens.
+8. **Capa de Revisión (Gentle-AI v3.5.0)**: Review (RDD) viene PRENDIDO de fábrica por defecto con análisis de riesgo fail-safe (los fallos de evaluación se consideran de alto riesgo). Solo el usuario puede desactivarlo (`gentle-ai review mode disable`).

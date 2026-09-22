@@ -44,6 +44,8 @@ class TestDevBrainODD(unittest.TestCase):
         self.assertIn("[SUBSTANTIAL_ODD]", res)
         self.assertIn("odd/tasks/", res)
         self.assertIn("odd/<feature-name>/tasks", res)
+        self.assertIn("Review Mode (Gentle-AI v3.5.0)", res)
+        self.assertIn("fail-safe", res)
 
     def test_classify_explicit_sdd(self):
         res = handle_classify_odd_task({
@@ -134,12 +136,18 @@ class TestDevBrainODD(unittest.TestCase):
     def test_builtin_knowledge_odd_and_gentle_shell(self):
         odd_know = handle_search_knowledge({"query": "odd"})
         self.assertIn("Organic Driven Development", odd_know)
+        self.assertIn("preguntas interactivas", odd_know)
 
         shell_know = handle_search_knowledge({"query": "gentle-shell"})
         self.assertIn("Gentle-Shell", shell_know)
+        self.assertIn("gentle-shell", shell_know)
 
         engram_know = handle_search_knowledge({"query": "engram-v2"})
         self.assertIn("Engram v2.0", engram_know)
+
+        rdd_know = handle_search_knowledge({"query": "rdd"})
+        self.assertIn("PRENDIDA de fábrica", rdd_know)
+        self.assertIn("fail-safe", rdd_know)
 
 if __name__ == "__main__":
     unittest.main()

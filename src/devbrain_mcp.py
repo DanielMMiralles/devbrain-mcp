@@ -164,14 +164,14 @@ BUILTIN_KNOWLEDGE = {
         "gotcha": "Almacenar contadores de rate limit en memoria de proceso local no funciona cuando la aplicación escala horizontalmente en múltiples pods de Kubernetes."
     },
     "odd": {
-        "title": "Organic Driven Development (ODD - Gentle-AI v3.0)",
-        "summary": "Metodología de desarrollo adaptativa que escala proporcionalmente a la necesidad: sin artefactos para tareas triviales/consultas, y con un documento único de feature (odd/tasks/<feature>.md) espejado en Engram (odd/<feature>/tasks) para tareas sustanciales (≥2 pasos). Enfatiza TDD observado (RED->GREEN->REFACTOR) y elimina la burocracia rígida de admisión de SDD.",
+        "title": "Organic Driven Development (ODD - Gentle-AI v3.5.0)",
+        "summary": "Metodología de desarrollo adaptativa que escala proporcionalmente a la necesidad: sin artefactos para tareas triviales/consultas, y con un documento único de feature (odd/tasks/<feature>.md) espejado en Engram (odd/<feature>/tasks) para tareas sustanciales (≥2 pasos). En v3.5.0 se integra con el sistema nativo de preguntas interactivas en el dock de Gentle Shell para resolver incertidumbre (Paso 3) sin tapar la conversación.",
         "gotcha": "Tratar la heurística orientativa de ~400 líneas por tarea como un límite estricto o forzar splits artificiales que dañen la cohesión del código."
     },
     "gentle-shell": {
-        "title": "Gentle-Shell (Ecosistema Workspace & Agente Pi)",
-        "summary": "Entorno integral de desarrollo sobre Pi (evolución de Gentle-Pi). Incorpora perfiles de modelos en sidebar anclables por repo, vista de cambios acotada a la sesión activa (eliminando escaneos masivos) y protocolo de mensajería nativa inter-orquestador (orchestrator_list, orchestrator_send_message) reemplazando intercom.",
-        "gotcha": "Asumir que un ACK de mensajería inter-sesión implica finalización de tarea por parte del par; solo certifica entrega en la cola de transporte."
+        "title": "Gentle-Shell (Workspace Pi v3.4.0 & CLI Propio)",
+        "summary": "Workspace integral de desarrollo sobre Pi con comando propio ('gentle-shell') y modo de configuración aislado. Incluye sistema nativo de preguntas interactivas en el dock (hasta 4 preguntas, selección simple/múltiple y texto libre), perfiles de modelos en sidebar anclables por repo, vista de cambios acotada a la sesión, menús de subagentes en background y modos de rendimiento gráfico (modo papa).",
+        "gotcha": "Tener instalado el paquete de terceros 'rpiv-ask-user-question' genera colisión de nombres de herramienta en Pi; debe desinstalarse."
     },
     "engram-v2": {
         "title": "Engram v2.0 (Persistent Memory & Session Lifecycle)",
@@ -179,9 +179,9 @@ BUILTIN_KNOWLEDGE = {
         "gotcha": "Sobrescribir ciegamente memorias divergentes en reanudación sin reconciliar antes las evidencias observadas en el código real."
     },
     "rdd": {
-        "title": "Receipt-Driven Development (RDD Guardrail)",
-        "summary": "Capa opcional e independiente de revisión con árbitros independientes para candidatos de entrega congelados. Se activa bajo demanda o ante umbrales de riesgo medio/alto con consentimiento previo, sin bloquear tareas rutinarias.",
-        "gotcha": "Creer que ODD impone RDD automáticamente; RDD es un switch independiente controlado por el usuario."
+        "title": "Receipt-Driven Development / Review Guardrail (Gentle-AI v3.5.0)",
+        "summary": "Capa de revisión independiente para candidatos de entrega. En Gentle-AI v3.5.0 viene PRENDIDA de fábrica por defecto (desactivable con 'gentle-ai review mode disable'). Incorpora análisis de riesgo fail-safe: si la evaluación de riesgo falla o produce error, se clasifica obligatoriamente como cambio riesgoso/medio-alto, nunca como bajo riesgo.",
+        "gotcha": "Asumir que un fallo en el analizador de riesgo permite omitir la revisión; en v3.5.0 los fallos son fail-closed."
     }
 }
 
@@ -848,7 +848,9 @@ def handle_classify_odd_task(args):
         "- **Razón**: Trabajo sustancial detectado (≥ 2 pasos significativos o progreso que amerita persistencia).\n"
         "- **Acción Recomendada**: Antes de la primera modificación de código fuente, generar el documento de feature mediante `prepare_odd_task` y sincronizar con Engram.\n"
         "- **Artefactos Requeridos**: `odd/tasks/<feature-name>.md` espejado en Engram bajo `odd/<feature-name>/tasks`.\n"
-        "- **TDD**: Si TDD está activo, observar estrictamente RED -> GREEN -> REFACTOR."
+        "- **TDD**: Si TDD está activo, observar estrictamente RED -> GREEN -> REFACTOR.\n"
+        "- **Review Mode (Gentle-AI v3.5.0)**: ON de fábrica con análisis de riesgo fail-safe (falla del lado seguro). Desactivable con `gentle-ai review mode disable`.\n"
+        "- **Resolución de Incertidumbre**: Utilizar el sistema nativo de preguntas en dock de Gentle Shell (hasta 4 preguntas con opciones/texto libre)."
     )
 
 
@@ -1194,7 +1196,7 @@ def process_request(request):
                 "capabilities": {"tools": {}},
                 "serverInfo": {
                     "name": "devbrain-mcp",
-                    "version": "2.2.0",
+                    "version": "2.3.0",
                     "mode": "vault-connected" if HAS_VAULT else "autonomous-standalone"
                 }
             }

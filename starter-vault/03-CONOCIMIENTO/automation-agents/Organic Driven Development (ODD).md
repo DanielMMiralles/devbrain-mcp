@@ -1,4 +1,4 @@
-﻿---
+---
 title: Organic Driven Development (ODD)
 category: automation-agents
 tags: [ai, agents, odd, gentle-ai, engram, workflows, software-engineering, tdd]
@@ -117,14 +117,27 @@ Al reanudar una sesión (`reconcile_odd_resume`), el orquestador:
 - Reanuda en la primera tarea pendiente verificable.
 
 ---
+## 5. Composabilidad de Capas: ODD + SDD + RDD (Gentle-AI v3.5.0)
 
-## 5. Composabilidad de Capas: ODD + SDD + RDD
-
-| Capa | Estado por Defecto | Activación | Propósito |
+| Capa | Estado por Defecto | Control de Usuario | Propósito |
 | :--- | :--- | :--- | :--- |
 | **ODD** | **Activo (Por defecto)** | Automático en todas las peticiones | Flujo adaptativo continuo con cero fricción. |
-| **SDD** | Opcional | "use SDD" o propuesta formal | Especificación multipartes (spec, design, tasks). |
-| **Review / RDD** | Opcional | `gentle-ai review mode enable` | Árbitros independientes y evaluación formal de riesgos. |
+| **Review / RDD** | **Activo de Fábrica (v3.5.0)** | `gentle-ai review mode disable` | Árbitros independientes y evaluación formal de riesgos. |
+| **SDD** | Opcional / Liviano | "use SDD" o propuesta formal | Especificación multipartes (spec, design, tasks). |
+
+### Invariante Crítica: Análisis de Riesgo Fail-Safe (Falla del Lado Seguro)
+A partir de Gentle-AI v3.5.0:
+- Si el analizador de riesgo de un candidato de entrega falla, se interrumpe o produce un error, **falla cerrado (*fail-closed*)**.
+- Se asume obligatoriamente como un **cambio de riesgo medio o alto** y se exige el consentimiento o plan de revisión correspondiente.
+- **Invariante**: Un error en la evaluación de riesgo **nunca** puede interpretarse como "cambio de bajo riesgo" ni eludir los guardarraíles de entrega.
+
+### Resolución Interactiva de Incertidumbre con Gentle Shell (Paso 3)
+Durante la fase de resolución de dudas técnicas o de producto (Paso 3):
+- El agente dispone del **sistema nativo de preguntas en el dock** de Gentle Shell:
+  - Hasta **4 preguntas simultáneas**.
+  - Opciones navegables con el teclado (flechas/Enter), selección simple o múltiple con descripciones y previsualizaciones.
+  - Opción permanente de **escritura libre** si ninguna alternativa satisface la necesidad.
+  - Ubicación en el **dock inferior**, manteniendo visible toda la conversación y el transcript sin sobreponer modales invasivos.
 
 ---
 

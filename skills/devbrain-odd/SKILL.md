@@ -1,4 +1,4 @@
-﻿---
+---
 name: devbrain-odd
 description: >-
   Protocolo canónico de Organic Driven Development (ODD) para agentes de software:
@@ -22,6 +22,10 @@ Esta habilidad dota al agente del criterio arquitectónico y la disciplina de in
 4. **Doble Persistencia Desacoplada**:
    - Local: `odd/tasks/<feature>.md`
    - Memoria Engram: `odd/<feature>/tasks`
+5. **Resolución Interactiva de Incertidumbre**:
+   - En el Paso 3 (Resolver Incertidumbre), emplear el sistema nativo de preguntas en el dock de Gentle Shell (hasta 4 preguntas con opciones, selección simple/múltiple y texto libre, navegables por teclado).
+6. **Capa de Revisión Fail-Safe (Gentle-AI v3.5.0)**:
+   - Review viene PRENDIDO de fábrica por defecto. El análisis de riesgo es fail-closed: cualquier fallo se evalúa automáticamente como riesgoso/medio-alto. Se apaga solo por comando explícito del usuario (`gentle-ai review mode disable`).
 
 ## Herramientas ODD en DevBrain MCP
 - `classify_odd_task`: Evalúa deterministamente la naturaleza del pedido.
