@@ -801,7 +801,14 @@ fecha: {today}
         except Exception:
             pass
     loc_str = str(fpath.relative_to(VAULT_DIR)) if HAS_VAULT else str(fpath)
-    return f"Directriz guardada en la memoria persistente del agente en: {loc_str}"
+    res_msg = f"Directriz guardada en la memoria persistente del agente en: {loc_str}"
+    if GENTLE_PI_BRIDGE:
+        try:
+            if GENTLE_PI_BRIDGE.engram_save(title, details, project=proj):
+                res_msg += "\n(Sincronizado automáticamente con Engram)"
+        except Exception:
+            pass
+    return res_msg
 
 def handle_recall_memory(args):
     q = args.get("query", "").strip()
@@ -820,6 +827,13 @@ def handle_recall_memory(args):
         try:
             res = INDEXER.search_memories(q, project_filter=proj_filter, limit=6, max_chars=3500, session_nodes=session_nodes)
             if "No se encontraron" not in res:
+                if GENTLE_PI_BRIDGE:
+                    try:
+                        engram_matches = GENTLE_PI_BRIDGE.engram_search(q, project=proj_filter, limit=3)
+                        if engram_matches:
+                            res += "\n\n### ⚡ Memorias en Engram (Gentle-AI):\n" + "\n".join(f"- {m}" for m in engram_matches[:3])
+                    except Exception:
+                        pass
                 return res
         except Exception:
             pass
@@ -914,13 +928,25 @@ def handle_classify_odd_task(args):
             "- **Artefactos Requeridos**: NINGUNO duradero. No crear `odd/tasks/` para cambios triviales."
         )
 
+    review_live = ""
+    if GENTLE_PI_BRIDGE:
+        try:
+            st = GENTLE_PI_BRIDGE.gentle_ai_review_status()
+            if st:
+                rev_status = st.get("status", "clean")
+                auth = "Certificada" if st.get("authoritative") else "Pendiente"
+                review_live = f"\n- **Estado Live de Review (Gentle-AI CLI)**: `{rev_status}` (Autoridad: {auth})."
+        except Exception:
+            pass
+
     return (
         "### 🏷️ Clasificación ODD: [SUBSTANTIAL_ODD]\n"
         "- **Razón**: Trabajo sustancial detectado (≥ 2 pasos significativos o progreso que amerita persistencia).\n"
         "- **Acción Recomendada**: Antes de la primera modificación de código fuente, generar el documento de feature mediante `prepare_odd_task` y sincronizar con Engram.\n"
         "- **Artefactos Requeridos**: `odd/tasks/<feature-name>.md` espejado en Engram bajo `odd/<feature-name>/tasks`.\n"
         "- **TDD**: Si TDD está activo, observar estrictamente RED -> GREEN -> REFACTOR.\n"
-        "- **Review Mode (Gentle-AI v3.5.0)**: ON de fábrica con análisis de riesgo fail-safe (falla del lado seguro). Desactivable con `gentle-ai review mode disable`.\n"
+        "- **Review Mode (Gentle-AI v3.5.0)**: ON de fábrica con análisis de riesgo fail-safe (falla del lado seguro). Desactivable con `gentle-ai review mode disable`."
+        f"{review_live}\n"
         "- **Resolución de Incertidumbre**: Utilizar el sistema nativo de preguntas en dock de Gentle Shell (hasta 4 preguntas con opciones/texto libre)."
     )
 
@@ -1003,6 +1029,20 @@ def handle_prepare_odd_task(args):
     task_count = len(tasks) if tasks else 2
     notification_line = f"[ODD] Creado odd/tasks/{slug}.md con {task_count} tareas espejado en Engram."
 
+    engram_status = ""
+    if GENTLE_PI_BRIDGE:
+        try:
+            ok = GENTLE_PI_BRIDGE.engram_save(
+                f"Feature: {feature}",
+                doc[:500],
+                project=project,
+                topic=f"odd/{slug}/tasks"
+            )
+            if ok:
+                engram_status = f"\n⚡ Espejado automáticamente en Engram (`odd/{slug}/tasks`)"
+        except Exception:
+            pass
+
     written_msg = ""
     if write_to_disk:
         base_path = Path(target_dir).resolve() if target_dir else Path.cwd()
@@ -1015,7 +1055,7 @@ def handle_prepare_odd_task(args):
         except Exception as e:
             written_msg = f"\n⚠️ Error al escribir en disco: {e}"
 
-    return f"{notification_line}{written_msg}\n\n```markdown\n{doc}\n```"
+    return f"{notification_line}{engram_status}{written_msg}\n\n```markdown\n{doc}\n```"
 
 
 def handle_reconcile_odd_resume(args):
@@ -1184,12 +1224,23 @@ def handle_package_project_context(args):
         return f"Bundle de contexto generado en modo compacto para {args.get('project_name')}."
 
 def handle_audit_project_health(args):
+    report = "Auditoria de salud ejecutada en modo local: dependencias verificadas."
     try:
         from devbrain_health import check_all_projects
         check_all_projects()
-        return "Auditoria completada. Reporte actualizado en salud-proyectos.md"
+        report = "Auditoria completada. Reporte actualizado en salud-proyectos.md"
     except Exception:
-        return "Auditoria de salud ejecutada en modo local: dependencias verificadas."
+        pass
+
+    if GENTLE_PI_BRIDGE:
+        try:
+            doc = GENTLE_PI_BRIDGE.gentle_ai_doctor()
+            if doc:
+                report += f"\n\n## 🩺 Diagnóstico del Ecosistema Gentle-AI (Live):\n```text\n{doc[:800]}\n```"
+        except Exception:
+            pass
+
+    return report
 
 def handle_debate_project_feasibility(args):
     proposal = args.get("proposal_text", "")

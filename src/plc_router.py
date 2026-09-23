@@ -12,6 +12,8 @@ from __future__ import annotations
 import os
 import json
 import time
+import shutil
+import subprocess
 from datetime import datetime, timezone
 
 # Routing decisions (module-level for import convenience)
@@ -243,3 +245,102 @@ class GentlePIBridge:
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         return json.dumps(message)
+
+    def is_engram_available(self) -> bool:
+        """Comprueba si el binario de engram está disponible en PATH."""
+        return shutil.which("engram") is not None
+
+    def is_gentle_ai_available(self) -> bool:
+        """Comprueba si el binario de gentle-ai está disponible en PATH."""
+        return shutil.which("gentle-ai") is not None
+
+    def engram_save(self, title: str, content: str, project: str = "", topic: str = "") -> bool:
+        """Guarda automáticamente una memoria u observación en Engram de forma segura."""
+        if not self.is_engram_available():
+            return False
+        cmd = ["engram", "save", title, content]
+        if project:
+            cmd.extend(["--project", project])
+        if topic:
+            cmd.extend(["--topic", topic])
+        try:
+            res = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=3.0,
+                encoding="utf-8",
+                errors="replace"
+            )
+            return res.returncode == 0
+        except Exception:
+            return False
+
+    def engram_search(self, query: str, project: str = "", limit: int = 4) -> list[str]:
+        """Busca memorias en Engram y devuelve una lista de snippets limpios."""
+        if not self.is_engram_available() or not query.strip():
+            return []
+        cmd = ["engram", "search", query, "--limit", str(limit)]
+        if project:
+            cmd.extend(["--project", project])
+        try:
+            res = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=2.5,
+                encoding="utf-8",
+                errors="replace"
+            )
+            if res.returncode != 0:
+                return []
+            lines = []
+            for line in res.stdout.splitlines():
+                clean = line.strip()
+                if not clean or clean.startswith("Update available") or clean.startswith("To update:") or clean.startswith("or: http") or clean.startswith("Found "):
+                    continue
+                lines.append(clean)
+            return lines
+        except Exception:
+            return []
+
+    def gentle_ai_review_status(self, cwd: str = None) -> dict | None:
+        """Obtiene el estado de revisión formal y bloqueos activos de Gentle-AI en tiempo real."""
+        if not self.is_gentle_ai_available():
+            return None
+        cmd = ["gentle-ai", "review", "status"]
+        if cwd:
+            cmd.extend(["--cwd", cwd])
+        try:
+            res = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=2.5,
+                encoding="utf-8",
+                errors="replace"
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                return json.loads(res.stdout)
+        except Exception:
+            pass
+        return None
+
+    def gentle_ai_doctor(self) -> str | None:
+        """Ejecuta los diagnósticos de salud del ecosistema Gentle-AI."""
+        if not self.is_gentle_ai_available():
+            return None
+        try:
+            res = subprocess.run(
+                ["gentle-ai", "doctor"],
+                capture_output=True,
+                text=True,
+                timeout=5.0,
+                encoding="utf-8",
+                errors="replace"
+            )
+            if res.stdout.strip():
+                return res.stdout.strip()
+        except Exception:
+            pass
+        return None
