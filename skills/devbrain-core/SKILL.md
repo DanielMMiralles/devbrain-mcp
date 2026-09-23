@@ -34,3 +34,6 @@ Esta habilidad conecta a los agentes con el segundo cerebro de desarrollo (DevBr
 9. **DevBrain como PLC & Neuroplasticidad Dinámica (v3.0)**:
    - DevBrain actúa como un **PLC ultrarrápido** (<5ms) que clasifica peticiones en LOCAL_FAST (búsqueda de conocimiento, memoria) y delega tareas pesadas o de orquestación a Gentle-PI/Shell.
    - Las consultas de conocimiento se potencian mediante **neuroplasticidad dinámica**: las co-activaciones fortalecen sinapsis entre conceptos (regla de Hebb) y aceleran la recuperación de notas relacionadas mediante un Synaptic Bonus determinista.
+10. **CLI Nativo y Telemetría Cognitiva en Vivo (`devbrain`)**:
+   - Interfaz de terminal desacoplada (`devbrain live`, `devbrain shell`, `devbrain stats`, `devbrain doctor`).
+   - Monitorea métricas en tiempo real (tokens in/out, costos en USD, latencia p50/p95, traza cognitiva del PLC y mapa de sinapsis activas) compatible con Antigravity, Cursor y Claude Code.

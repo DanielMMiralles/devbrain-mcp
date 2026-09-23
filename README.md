@@ -154,26 +154,80 @@ DevBrain no solo provee herramientas pasivas, sino protocolos de conducta e inge
 
 ---
 
+## 🖥️ DevBrain Native CLI & Cognitive HUD (Estilo Gentle-Shell)
+
+DevBrain incluye ahora un **CLI nativo interactivo** y un **HUD de Telemetría Cognitiva en Tiempo Real** para inspeccionar exactamente cómo piensa el agente, cómo orquesta las tareas y qué recursos consume:
+
+```bash
+# Iniciar el HUD de telemetría cognitiva en vivo (60fps)
+devbrain live
+
+# Iniciar la terminal interactiva con autocompletado y dock questions
+devbrain shell
+
+# Ver resumen de métricas acumuladas (tokens, costos USD, p50/p95, herramientas)
+devbrain stats
+
+# Diagnóstico de salud del ecosistema (Python, FTS5, Engram, Gentle-PI, Vault)
+devbrain doctor
+
+# Consultas directas al cerebro con reranking sináptico
+devbrain search "organic driven development"
+
+# Cambiar paleta visual o alternar Modo Papa (ahorro de batería / minimalista)
+devbrain theme cyberpunk
+devbrain papa
+```
+
+### 📊 Indicadores en Vivo ("¿Cómo Piensa?")
+- **Consumo de Tokens & Costos**: Desglose `Tokens In` / `Out` / `Total`, Throughput (`tok/s`), Costo acumulado en USD por modelo (Gemini 3.8 Flash, Claude 3.5/Sonnet, GPT-5, etc.).
+- **Latencias de Respuesta**: Medición en tiempo real de latencia mediana ($p50$) y de cola ($p95$).
+- **Corteza Sináptica Hebbiana**: Visualización de sinapsis activas disparadas por co-activación contextual en la sesión.
+- **Rastro de Razonamiento del PLC**: Exposición de la traza de pensamiento y decisión del PLC Router (`LOCAL_FAST`, `DELEGATE`, `ORCHESTRATE`).
+- **Carril de Orquestación Ecosistémico**: Integración visual de pipeline con **Gentle-PI** y **Engram v2.0**.
+- **Personalización Visual**: Temas `Gentleman-Dark`, `Cyberpunk`, `Obsidian-Dark`, `Monokai` y `Modo Papa` austero.
+
+### 🔌 Conexión con Hosts e IDEs (Antigravity, Cursor, Claude Code)
+El CLI de DevBrain opera de forma **completamente desacoplada** a través de un bus de eventos atómico (`~/.devbrain/live_events.jsonl` y `session_stats.json`):
+- **Antigravity (AGY)**: Detecta automáticamente el entorno AGY vía handshake de inicialización MCP o variables de entorno. Puedes tener tu agente trabajando en AGY mientras mantienes una terminal abierta al lado con `devbrain live` viendo cada tool call en tiempo real.
+- **Cursor IDE**: Detecta sesiones de Cursor mediante variables de traza y el cliente MCP de Cursor. El HUD refleja inmediatamente las consultas que Cursor delega a DevBrain.
+- **Claude Code**: Conexión nativa vía configuración en `claude_desktop_config.json` o subproceso stdio.
+
+---
+
 ## 📂 Estructura del Repositorio
 
 ```
 devbrain-mcp/
+├── devbrain.cmd                # Launcher Windows CMD para terminal global
+├── devbrain.ps1                # Launcher Windows PowerShell
 ├── Dockerfile                  # Construccion minimalista Python 3.12 (<60MB)
 ├── docker-compose.yml          # Orquestacion con volumenes montados
 ├── mcp_client_config.json      # Plantillas de configuracion para IDEs
 ├── docs/
 │   └── protocols/              # Protocolos operativos (Debate, Ponytail, Ingesta)
-├── skills/                     # Catalogo de Agent Skills (Core, Debate, Ponytail)
+├── skills/                     # Catalogo de Agent Skills (Core, ODD, Debate, Ponytail)
 ├── config/
 │   ├── projects.json           # Definicion de proyectos monitoreados
 │   └── projects.yaml           # Formato YAML alternativo
 ├── src/
-│   ├── devbrain_mcp.py         # Entrypoint del servidor MCP (16 herramientas)
+│   ├── devbrain_cli.py         # Entrypoint del CLI unificado ('devbrain')
+│   ├── cli_hud.py              # Dashboard TUI en vivo con Rich (Cognitive HUD)
+│   ├── cli_shell.py            # Terminal interactiva REPL con prompt-toolkit
+│   ├── cli_theme.py            # Motor de temas visuales y Modo Papa
+│   ├── telemetry.py            # Event Bus, cálculo de tokens/costos y métricas p50/p95
+│   ├── devbrain_mcp.py         # Servidor MCP stdio (21 herramientas integradas)
+│   ├── plc_router.py           # PLC Router (fast-path local vs Gentle-PI)
+│   ├── neuroplasticity.py      # Motor de plasticidad sináptica (LTP/LTD Hebb)
+│   ├── devbrain_index.py       # Motor de búsqueda FTS5 y reranking híbrido
 │   ├── devspec/                # Suite OpenSpec (BDD, scaffold, preguntas)
 │   └── scripts/                # Motores de debate, graphify, model hub, packager, daemon
 ├── starter-vault/              # Plantilla inicial de Obsidian Vault lista para usar
 └── tests/
-    └── test_mcp_stdio.py       # Suite de pruebas automatizadas JSON-RPC
+    ├── test_cli_telemetry.py   # Tests de telemetría, temas y renderizado HUD
+    ├── test_neuroplasticity.py # Tests de plasticidad sináptica y PLC Router
+    ├── test_odd_mcp.py         # Tests de herramientas ODD y contratos de sesión
+    └── test_mcp_stdio.py       # Suite de pruebas automatizadas JSON-RPC stdio
 ```
 
 ---
@@ -181,3 +235,4 @@ devbrain-mcp/
 ## 📄 Licencia
 
 MIT License — Totalmente de código abierto para compartir y colaborar con la comunidad.
+

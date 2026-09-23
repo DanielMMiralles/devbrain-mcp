@@ -22,6 +22,7 @@ Compatible al 100% con la especificación MCP oficial (2024-11-05).
 import json
 import os
 import re
+import time
 import unicodedata
 from pathlib import Path
 from datetime import datetime
@@ -134,6 +135,15 @@ try:
     sys.stderr.write(f"[DevBrain] PLC Router activo (Gentle-PI: {_gp_version or 'no detectado'})\n")
 except Exception as e:
     sys.stderr.write(f"[DevBrain] Info: PLC Router en modo fallback: {e}\n")
+
+# Inicializar motor de telemetría y bus de eventos cognitivos (DevBrain v3.0)
+TELEMETRY_ENGINE = None
+try:
+    from telemetry import TelemetryEngine
+    TELEMETRY_ENGINE = TelemetryEngine.get_instance()
+    sys.stderr.write("[DevBrain] Telemetría y Live Event Bus activos\n")
+except Exception as e:
+    sys.stderr.write(f"[DevBrain] Info: Telemetría en modo fallback: {e}\n")
 
 # ==========================================
 # 2. BASE DE CONOCIMIENTO EMBEBIDA (OFFLINE FALLBACK)
@@ -1310,6 +1320,12 @@ def process_request(request):
         return None
 
     if method == "initialize":
+        if TELEMETRY_ENGINE:
+            try:
+                c_name = TELEMETRY_ENGINE.detect_client(params.get("clientInfo"))
+                sys.stderr.write(f"[DevBrain] Cliente conectado: {c_name}\n")
+            except Exception:
+                pass
         return {
             "jsonrpc": "2.0",
             "id": req_id,
@@ -1330,6 +1346,7 @@ def process_request(request):
     elif method == "tools/call":
         name = params.get("name")
         args = params.get("arguments", {})
+        call_start = time.time()
         
         try:
             if name == "get_project_context": text = handle_get_project_context(args)
@@ -1355,6 +1372,30 @@ def process_request(request):
             elif name == "route_model_dispatch": text = handle_route_model_dispatch(args)
             else:
                 return {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": f"Herramienta no encontrada: {name}"}}
+
+            latency_ms = (time.time() - call_start) * 1000.0
+
+            # Registrar telemetría en vivo
+            if TELEMETRY_ENGINE:
+                try:
+                    plc_route = PLC_ROUTER.classify(name) if PLC_ROUTER else "local"
+                    active_syn = SYNAPSE_ENGINE.get_session_nodes(CURRENT_SESSION_ID) if SYNAPSE_ENGINE else []
+                    thought_trace = f"Ruta PLC: {plc_route}."
+                    if name == "classify_odd_task":
+                        thought_trace += " Clasificación determinista ODD evaluada."
+                    elif name == "search_knowledge":
+                        thought_trace += f" Búsqueda FTS5 con {len(active_syn)} sinapsis activas."
+                    TELEMETRY_ENGINE.record_event(
+                        tool_name=name,
+                        input_data=args,
+                        output_data=text,
+                        latency_ms=latency_ms,
+                        plc_route=plc_route,
+                        synapses_fired=active_syn,
+                        thought_trace=thought_trace
+                    )
+                except Exception:
+                    pass
 
             return {"jsonrpc": "2.0", "id": req_id, "result": {"content": [{"type": "text", "text": text}]}}
         except Exception as e:
