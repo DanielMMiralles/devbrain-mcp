@@ -74,6 +74,17 @@ def main():
     # devbrain papa
     subparsers.add_parser("papa", help="Alterna el Modo Papa de bajo consumo")
 
+    # devbrain help
+    help_parser = subparsers.add_parser("help", help="Muestra la guía completa de comandos, tópicos y arquitectura")
+    help_parser.add_argument("topic", nargs="?", default=None, help="Tópico específico (live, odd, mcp, hosts, neuro, shell)")
+
+    def custom_print_help():
+        from cli_help import render_help_overview
+        theme = config_mgr.get_theme()
+        render_help_overview(console, theme)
+
+    parser.print_help = custom_print_help
+
     args = parser.parse_args()
 
     # Si se invoca sin argumentos, abrir shell por defecto
@@ -152,6 +163,14 @@ def main():
         is_papa = config_mgr.toggle_papa_mode()
         state = "ENCENDIDO (ahorro de batería / sin animaciones)" if is_papa else "APAGADO (animaciones completas)"
         console.print(f"[yellow]Modo Papa: {state}[/yellow]")
+
+    elif args.command == "help":
+        from cli_help import render_help_overview, render_topic_help
+        theme = config_mgr.get_theme()
+        if getattr(args, "topic", None):
+            render_topic_help(console, theme, args.topic)
+        else:
+            render_help_overview(console, theme)
 
 if __name__ == "__main__":
     main()

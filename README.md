@@ -177,6 +177,14 @@ devbrain search "organic driven development"
 # Cambiar paleta visual o alternar Modo Papa (ahorro de batería / minimalista)
 devbrain theme cyberpunk
 devbrain papa
+
+# Manual completo interactivo y guías especializadas por tópico
+devbrain help
+devbrain help live      # Ayuda profunda sobre el HUD y paneles
+devbrain help odd       # Guía de clasificación ODD y fail-safe
+devbrain help mcp       # Catálogo de las 21 herramientas y rutas PLC
+devbrain help hosts     # Guía de conexión para Antigravity, Cursor y Claude
+devbrain help neuro     # Fórmulas de Hebb, LTP/LTD y bonus sináptico
 ```
 
 ### 📊 Indicadores en Vivo ("¿Cómo Piensa?")
@@ -212,6 +220,7 @@ devbrain-mcp/
 │   └── projects.yaml           # Formato YAML alternativo
 ├── src/
 │   ├── devbrain_cli.py         # Entrypoint del CLI unificado ('devbrain')
+│   ├── cli_help.py             # Sistema de ayuda y manual interactivo con temas
 │   ├── cli_hud.py              # Dashboard TUI en vivo con Rich (Cognitive HUD)
 │   ├── cli_shell.py            # Terminal interactiva REPL con prompt-toolkit
 │   ├── cli_theme.py            # Motor de temas visuales y Modo Papa

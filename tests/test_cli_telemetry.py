@@ -199,5 +199,46 @@ class TestDevBrainHUD(unittest.TestCase):
         self.assertIsNotNone(header)
 
 
+class TestCliHelp(unittest.TestCase):
+    """Pruebas unitarias para el sistema de ayuda y manual interactivo de DevBrain CLI."""
+
+    def setUp(self):
+        from rich.console import Console
+        from cli_theme import ConfigManager
+        self.devnull = open(os.devnull, "w", encoding="utf-8")
+        self.console = Console(file=self.devnull)
+        self.config_mgr = ConfigManager()
+        self.theme = self.config_mgr.get_theme()
+
+    def tearDown(self):
+        self.devnull.close()
+
+    def test_render_help_overview_no_exceptions(self):
+        """render_help_overview debe renderizar el manual general sin errores."""
+        from cli_help import render_help_overview
+        try:
+            render_help_overview(self.console, self.theme)
+        except Exception as e:
+            self.fail(f"render_help_overview lanzó excepción: {e}")
+
+    def test_render_topic_help_all_topics(self):
+        """render_topic_help debe renderizar cada tópico documentado sin errores."""
+        from cli_help import render_topic_help, AVAILABLE_TOPICS
+        for topic in AVAILABLE_TOPICS.keys():
+            try:
+                render_topic_help(self.console, self.theme, topic)
+            except Exception as e:
+                self.fail(f"render_topic_help falló para tópico '{topic}': {e}")
+
+    def test_render_topic_help_unknown_topic(self):
+        """render_topic_help debe manejar tópicos desconocidos amigablemente."""
+        from cli_help import render_topic_help
+        try:
+            render_topic_help(self.console, self.theme, "topico_inventado_xyz")
+        except Exception as e:
+            self.fail(f"render_topic_help falló ante tópico desconocido: {e}")
+
+
 if __name__ == "__main__":
     unittest.main()
+

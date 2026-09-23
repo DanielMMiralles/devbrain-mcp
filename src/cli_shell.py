@@ -77,9 +77,11 @@ class DevBrainShell:
         table.add_row("/doctor", "Ejecuta chequeos de salud de DevBrain, Gentle-AI y Engram.")
         table.add_row("/theme <gentleman|cyberpunk|obsidian|monokai|papa>", "Cambia la paleta de colores de la interfaz.")
         table.add_row("/papa", "Activa/Desactiva el Modo Papa (ahorro de batería y rendimiento).")
+        table.add_row("/help [tema]", "Muestra este resumen o ayuda profunda (/help live, odd, mcp, hosts, neuro).")
         table.add_row("/exit, /quit", "Cierra el shell interactivo.")
 
         self.console.print(table)
+        self.console.print(f"[{self.theme.dim}]Tip: Escribe [bold {self.theme.accent}]/help <live|odd|mcp|hosts|neuro>[/bold {self.theme.accent}] para manuales especializados.[/{self.theme.dim}]\n")
 
     def ask_dock_question(self, question: str, options: list[str]) -> str:
         """Emula el sistema interactivo de preguntas en el dock de Gentle Shell."""
@@ -110,7 +112,11 @@ class DevBrainShell:
             return
 
         elif cmd == "/help":
-            self.print_help()
+            if args:
+                from cli_help import render_topic_help
+                render_topic_help(self.console, self.theme, args)
+            else:
+                self.print_help()
 
         elif cmd == "/stats":
             summary = self.telemetry.get_summary()
