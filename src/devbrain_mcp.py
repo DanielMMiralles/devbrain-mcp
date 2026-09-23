@@ -11,11 +11,12 @@ if sys.platform == "win32":
         pass
 
 """
-DevBrain Unified MCP Server (v2.1.0 - Decoupled & Resilient Architecture):
-Integra la base de conocimiento de DevBrain, el ciclo completo de OpenSpec (SDD)
-y las herramientas de Gentle-AI / Engram para memoria persistente.
-100% prescindible de un Obsidian Vault: opera en modo conectado si existe un Vault,
-o en modo Standalone autónomo con conocimiento y almacenamiento local si no existe.
+DevBrain Unified MCP Server (v3.0.0 - PLC Neuroplástico):
+Controlador Lógico Programable (PLC) con neuroplasticidad dinámica.
+Clasifica y enruta peticiones MCP al procesador más eficiente (local o Gentle-PI).
+Integra un grafo sináptico adaptativo inspirado en LTP/LTD y la regla de Hebb
+para reconectar dinámicamente nodos de conocimiento según patrones de uso.
+100% prescindible de un Obsidian Vault: opera en modo conectado o Standalone autónomo.
 Compatible al 100% con la especificación MCP oficial (2024-11-05).
 """
 import json
@@ -109,6 +110,31 @@ try:
 except Exception as e:
     sys.stderr.write(f"[DevBrain] Info: Indexador FTS5 en modo fallback: {e}\n")
 
+# Inicializar motor de neuroplasticidad sináptica (DevBrain v3.0)
+SYNAPSE_ENGINE = None
+CURRENT_SESSION_ID = ""
+try:
+    from neuroplasticity import SynapticEngine, generate_session_id
+    _synapse_db = INDEXER.db_path if INDEXER else Path("./.devbrain_cache/devbrain_fts.db").resolve()
+    _synapse_db.parent.mkdir(parents=True, exist_ok=True)
+    SYNAPSE_ENGINE = SynapticEngine(_synapse_db)
+    CURRENT_SESSION_ID = generate_session_id()
+    sys.stderr.write(f"[DevBrain] Neuroplasticidad activa (session: {CURRENT_SESSION_ID})\n")
+except Exception as e:
+    sys.stderr.write(f"[DevBrain] Info: Motor sináptico en modo fallback: {e}\n")
+
+# Inicializar PLC Router (DevBrain v3.0)
+PLC_ROUTER = None
+GENTLE_PI_BRIDGE = None
+try:
+    from plc_router import PLCRouter, GentlePIBridge
+    PLC_ROUTER = PLCRouter()
+    GENTLE_PI_BRIDGE = GentlePIBridge()
+    _gp_version = GENTLE_PI_BRIDGE.get_version()
+    sys.stderr.write(f"[DevBrain] PLC Router activo (Gentle-PI: {_gp_version or 'no detectado'})\n")
+except Exception as e:
+    sys.stderr.write(f"[DevBrain] Info: PLC Router en modo fallback: {e}\n")
+
 # ==========================================
 # 2. BASE DE CONOCIMIENTO EMBEBIDA (OFFLINE FALLBACK)
 # ==========================================
@@ -182,6 +208,16 @@ BUILTIN_KNOWLEDGE = {
         "title": "Receipt-Driven Development / Review Guardrail (Gentle-AI v3.5.0)",
         "summary": "Capa de revisión independiente para candidatos de entrega. En Gentle-AI v3.5.0 viene PRENDIDA de fábrica por defecto (desactivable con 'gentle-ai review mode disable'). Incorpora análisis de riesgo fail-safe: si la evaluación de riesgo falla o produce error, se clasifica obligatoriamente como cambio riesgoso/medio-alto, nunca como bajo riesgo.",
         "gotcha": "Asumir que un fallo en el analizador de riesgo permite omitir la revisión; en v3.5.0 los fallos son fail-closed."
+    },
+    "neuroplasticity": {
+        "title": "Neuroplasticidad Dinámica & Sinapsis Hebbianas (DevBrain v3.0)",
+        "summary": "Motor de conexiones neuronales adaptativas inspirado en la regla de Hebb ('neurons that fire together wire together'), Potenciación a Largo Plazo (LTP), Depresión a Largo Plazo (LTD) y poda sináptica. Conecta dinámicamente nodos de conocimiento según co-activación en sesiones reales, acelerando la recuperación contextual y el ranking en tiempo real.",
+        "gotcha": "Sin decaimiento sináptico (LTD), las conexiones antiguas saturarían el grafo creando rutas irrelevantes perpetuas."
+    },
+    "plc-router": {
+        "title": "DevBrain PLC Router (Controlador Lógico Programable)",
+        "summary": "Capa de enrutamiento ultraligera (<5ms) que clasifica herramientas MCP en tres vías: LOCAL_FAST (ejecución in-process inmediata para lecturas y memoria), DELEGATABLE (delegación a Gentle-PI/Shell cuando está activo para ejecución pesada), y REQUIRES_ORCHESTRATOR (puente inter-sesión con semántica ACK).",
+        "gotcha": "Delegar operaciones ultrarrápidas de lectura a un orquestador externo agrega latencia de transporte innecesaria; las lecturas siempre van por el fast path local."
     }
 }
 
@@ -503,6 +539,14 @@ def handle_search_knowledge(args):
     q = args.get("query", "").strip()
     q_lower = q.lower()
     
+    session_nodes = []
+    if SYNAPSE_ENGINE and CURRENT_SESSION_ID:
+        try:
+            session_nodes = SYNAPSE_ENGINE.get_session_nodes(CURRENT_SESSION_ID)
+            SYNAPSE_ENGINE.record_activation(q_lower, context_type="knowledge", session_id=CURRENT_SESSION_ID)
+        except Exception:
+            pass
+
     # 1. Coincidencia directa en el catálogo canónico embebido (ej: odd, gentle-shell, engram-v2, cqrs)
     if q_lower in BUILTIN_KNOWLEDGE:
         item = BUILTIN_KNOWLEDGE[q_lower]
@@ -511,9 +555,17 @@ def handle_search_knowledge(args):
                        f"**⚠️ Gotcha de Producción**: {item['gotcha']}\n"
         if INDEXER:
             try:
-                vault_notes = INDEXER.search_knowledge(q, limit=3, max_chars=1800)
+                vault_notes = INDEXER.search_knowledge(q, limit=3, max_chars=1800, session_nodes=session_nodes)
                 if "No se encontraron" not in vault_notes:
                     builtin_text += f"\n---\n### 📚 Notas Relacionadas en Vault:\n{vault_notes}"
+            except Exception:
+                pass
+        if SYNAPSE_ENGINE:
+            try:
+                assoc = SYNAPSE_ENGINE.get_associated_nodes(q_lower, limit=3)
+                if assoc:
+                    syn_list = ", ".join(f"[[{a['key']}]] ({a['weight']:.1f})" for a in assoc)
+                    builtin_text += f"\n\n🔗 **Sinapsis Activas (Neuroplasticidad):** {syn_list}"
             except Exception:
                 pass
         return builtin_text
@@ -521,7 +573,7 @@ def handle_search_knowledge(args):
     # 2. Búsqueda instantánea con FTS5 si está disponible
     if INDEXER:
         try:
-            res = INDEXER.search_knowledge(q, limit=5, max_chars=3500)
+            res = INDEXER.search_knowledge(q, limit=5, max_chars=3500, session_nodes=session_nodes)
             if "No se encontraron" not in res:
                 return res
         except Exception:
@@ -755,10 +807,18 @@ def handle_recall_memory(args):
     q = args.get("query", "").strip()
     proj_filter = args.get("project", "").strip()
     
-    # 1. Reranking compuesto determinista con FTS5 (BM25 + Pinned + Recency estilo Engram v2)
+    session_nodes = []
+    if SYNAPSE_ENGINE and CURRENT_SESSION_ID:
+        try:
+            session_nodes = SYNAPSE_ENGINE.get_session_nodes(CURRENT_SESSION_ID)
+            SYNAPSE_ENGINE.record_activation(q.lower(), context_type="memory", session_id=CURRENT_SESSION_ID)
+        except Exception:
+            pass
+
+    # 1. Reranking compuesto determinista con FTS5 (BM25 + Pinned + Recency estilo Engram v2 + Sinapsis)
     if INDEXER:
         try:
-            res = INDEXER.search_memories(q, project_filter=proj_filter, limit=6, max_chars=3500)
+            res = INDEXER.search_memories(q, project_filter=proj_filter, limit=6, max_chars=3500, session_nodes=session_nodes)
             if "No se encontraron" not in res:
                 return res
         except Exception:
@@ -816,6 +876,17 @@ def handle_classify_odd_task(args):
     desc_lower = desc.lower()
     if not explicit_sdd and any(term in desc_lower for term in ["use sdd", "usar sdd", "flujo sdd", "openspec sdd"]):
         explicit_sdd = True
+
+    if SYNAPSE_ENGINE and CURRENT_SESSION_ID:
+        try:
+            ctx = "coding"
+            if explicit_sdd:
+                ctx = "architecture"
+            elif is_read_only or any(desc_lower.startswith(w) for w in ["explica", "investiga", "describe", "busca", "analiza", "documenta", "consulta"]):
+                ctx = "investigation"
+            SYNAPSE_ENGINE.record_activation("odd", context_type=ctx, session_id=CURRENT_SESSION_ID)
+        except Exception:
+            pass
 
     if explicit_sdd:
         return (
@@ -1196,7 +1267,7 @@ def process_request(request):
                 "capabilities": {"tools": {}},
                 "serverInfo": {
                     "name": "devbrain-mcp",
-                    "version": "2.3.0",
+                    "version": "3.0.0",
                     "mode": "vault-connected" if HAS_VAULT else "autonomous-standalone"
                 }
             }

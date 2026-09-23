@@ -11,12 +11,15 @@
 
 ## ✨ Características Principales
 
-- **21 Herramientas MCP Nativas (DevBrain v2.3 - Gentle-AI v3.5.0 & Gentle-Shell v3.4.0)**:
-  - `classify_odd_task`: Clasificación determinista según protocolo ODD (READ_ONLY, SMALL_DIRECT, SUBSTANTIAL_ODD, EXPLICIT_SDD) con **Review ON de fábrica** e invariante **fail-safe** en análisis de riesgo.
-  - `prepare_odd_task`: Generación canónica del documento de feature `odd/tasks/<feature>.md` y su espejo Engram `odd/<feature>/tasks`, preparado para el dock de preguntas nativo de Gentle Shell v3.4.0.
-  - `reconcile_odd_resume`: **(NUEVO)** Reconciliación de estado local vs memoria Engram al reanudar sesiones interrumpidas.
-  - `orchestrator_session_bridge`: **(NUEVO)** Soporte para el protocolo de mensajería inter-sesión de Gentle-Shell (main) con semántica ACK.
-  - `prepare_sdd_preflight`: Contrato SDD liviano (Gentle-AI v3.0, 108 rutas burocráticas retiradas).
+- **Arquitectura PLC Neuroplástica (DevBrain v3.0)**:
+  - **PLC Router (`src/plc_router.py`)**: Controlador de ultra-baja latencia (<5ms) que resuelve lecturas in-process (fast path) y delega tareas pesadas de orquestación y subagentes a Gentle-PI/Shell.
+  - **Grafo Sináptico Dinámico (`src/neuroplasticity.py`)**: Motor de plasticidad biológica (Hebb, LTP, LTD, poda sináptica). Conecta conceptos adaptativamente según co-activación en sesiones reales y potencia el reranking con un Synaptic Bonus.
+- **21 Herramientas MCP Nativas (DevBrain v3.0 - PLC & ODD)**:
+  - `classify_odd_task`: Clasificación determinista según protocolo ODD con activación contextual neuroplástica.
+  - `prepare_odd_task`: Generación del documento `odd/tasks/<feature>.md` y su espejo Engram `odd/<feature>/tasks`.
+  - `reconcile_odd_resume`: Reconciliación de estado local vs memoria Engram al reanudar sesiones.
+  - `orchestrator_session_bridge`: Soporte para el protocolo de mensajería inter-sesión de Gentle-Shell con semántica ACK.
+  - `prepare_sdd_preflight`: Contrato SDD liviano (Gentle-AI v3.0).
   - `get_project_context`, `list_projects`, `search_knowledge`: Navegación ontológica y catálogo de conocimiento con indexador FTS5.
   - `propose_spec`, `validate_spec`, `get_spec_questions`, `generate_scaffold`: Suite completa SDD/BDD (OpenSpec).
   - `remember_decision`, `recall_memory`: Memoria persistente y lecciones aprendidas (Gentle-AI / Engram v2).

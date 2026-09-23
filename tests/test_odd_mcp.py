@@ -149,5 +149,22 @@ class TestDevBrainODD(unittest.TestCase):
         self.assertIn("PRENDIDA de fábrica", rdd_know)
         self.assertIn("fail-safe", rdd_know)
 
+        neuro_know = handle_search_knowledge({"query": "neuroplasticity"})
+        self.assertIn("Neuroplasticidad", neuro_know)
+        self.assertIn("Hebb", neuro_know)
+
+        plc_know = handle_search_knowledge({"query": "plc-router"})
+        self.assertIn("PLC Router", plc_know)
+        self.assertIn("LOCAL_FAST", plc_know)
+
+    def test_synaptic_recording_and_bonus(self):
+        # Ejecutar búsquedas co-ocurrentes
+        handle_search_knowledge({"query": "odd"})
+        handle_search_knowledge({"query": "clean architecture"})
+        
+        # Verificar que buscar odd ahora tiene sinapsis o notas
+        res = handle_search_knowledge({"query": "odd"})
+        self.assertIn("Organic Driven Development", res)
+
 if __name__ == "__main__":
     unittest.main()

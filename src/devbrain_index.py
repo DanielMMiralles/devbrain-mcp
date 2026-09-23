@@ -27,6 +27,13 @@ class DevBrainIndex:
             self.db_path = Path(db_path).resolve()
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
+        self.synapse_engine = None
+        try:
+            from neuroplasticity import SynapticEngine
+            self.synapse_engine = SynapticEngine(self.db_path)
+        except Exception:
+            pass
+
         self._init_db()
         self.sync_index(force=True)
 
@@ -226,8 +233,16 @@ class DevBrainIndex:
 
             conn.commit()
 
-    def search_memories(self, query: str, project_filter: str = "", limit: int = 6, max_chars: int = 3500):
-        """Búsqueda con reranking compuesto determinista estilo Engram v2."""
+        # Mantenimiento neuroplástico en resincronización forzada
+        if self.synapse_engine and force:
+            try:
+                self.synapse_engine.decay_synapses(half_life_days=30.0)
+                self.synapse_engine.prune_synapses(min_weight=0.05)
+            except Exception:
+                pass
+
+    def search_memories(self, query: str, project_filter: str = "", limit: int = 6, max_chars: int = 3500, session_nodes: list = None):
+        """Búsqueda con reranking compuesto determinista estilo Engram v2 enriquecido con bonus sináptico."""
         self.sync_index()
         fts_query = self._sanitize_fts_query(query)
         if not fts_query:
@@ -277,7 +292,13 @@ class DevBrainIndex:
                 # 3. Exact Title Bonus (+10.0)
                 exact_title = 10.0 if query.lower() in r["title"].lower() else 0.0
 
-                composite_score = base_score + pinned_bonus + recency_bonus + exact_title
+                # 4. Synaptic Bonus (Neuroplasticidad)
+                synaptic_bonus = 0.0
+                if self.synapse_engine and session_nodes:
+                    node_key = r["title"].lower().replace(" ", "-")
+                    synaptic_bonus = self.synapse_engine.compute_synaptic_bonus(node_key, session_nodes, scale=0.5)
+
+                composite_score = base_score + pinned_bonus + recency_bonus + exact_title + synaptic_bonus
                 results.append((composite_score, r))
 
         results.sort(key=lambda x: x[0], reverse=True)
@@ -301,8 +322,8 @@ class DevBrainIndex:
             header += f" [Filtro: {project_filter}]"
         return f"### {header}:\n" + "\n\n".join(output_lines)
 
-    def search_knowledge(self, query: str, limit: int = 5, max_chars: int = 3500):
-        """Búsqueda instantánea FTS5 sobre notas técnicas y patrones arquitectónicos."""
+    def search_knowledge(self, query: str, limit: int = 5, max_chars: int = 3500, session_nodes: list = None):
+        """Búsqueda instantánea FTS5 sobre notas técnicas enriquecida con conexiones sinápticas."""
         self.sync_index()
         fts_query = self._sanitize_fts_query(query)
         if not fts_query:
@@ -330,6 +351,11 @@ class DevBrainIndex:
                 score = -r["bm25_rank"] if r["bm25_rank"] is not None else 1.0
                 if query.lower() in r["title"].lower():
                     score += 10.0
+                # Synaptic Bonus (Neuroplasticidad)
+                if self.synapse_engine and session_nodes:
+                    node_key = r["title"].lower().replace(" ", "-")
+                    synaptic_bonus = self.synapse_engine.compute_synaptic_bonus(node_key, session_nodes, scale=0.5)
+                    score += synaptic_bonus
                 results.append((score, r))
 
         results.sort(key=lambda x: x[0], reverse=True)
@@ -343,6 +369,12 @@ class DevBrainIndex:
         for score, r in results[:limit]:
             snippet = r["content"][:350].strip()
             block = f"### [[{r['title']}]] ({r['category']})\n{snippet}..."
+            if self.synapse_engine:
+                node_key = r["title"].lower().replace(" ", "-")
+                associated = self.synapse_engine.get_associated_nodes(node_key, limit=3)
+                if associated:
+                    conn_str = ", ".join(f"[[{a['key']}]]" for a in associated)
+                    block += f"\n  🔗 *Sinapsis activas:* {conn_str}"
             if total_len + len(block) > max_chars:
                 break
             output_blocks.append(block)

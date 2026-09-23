@@ -31,3 +31,6 @@ Esta habilidad conecta a los agentes con el segundo cerebro de desarrollo (DevBr
 6. **Flujo SDD Opcional**: Usar `propose_spec` / `prepare_sdd_preflight` solo si el usuario pide explícitamente "use SDD".
 7. **Empaquetar Contexto**: Al depurar código complejo, usar `package_project_context(project_name)` para obtener una vista condensada sin sobrecargar tokens.
 8. **Capa de Revisión (Gentle-AI v3.5.0)**: Review (RDD) viene PRENDIDO de fábrica por defecto con análisis de riesgo fail-safe (los fallos de evaluación se consideran de alto riesgo). Solo el usuario puede desactivarlo (`gentle-ai review mode disable`).
+9. **DevBrain como PLC & Neuroplasticidad Dinámica (v3.0)**:
+   - DevBrain actúa como un **PLC ultrarrápido** (<5ms) que clasifica peticiones en LOCAL_FAST (búsqueda de conocimiento, memoria) y delega tareas pesadas o de orquestación a Gentle-PI/Shell.
+   - Las consultas de conocimiento se potencian mediante **neuroplasticidad dinámica**: las co-activaciones fortalecen sinapsis entre conceptos (regla de Hebb) y aceleran la recuperación de notas relacionadas mediante un Synaptic Bonus determinista.

@@ -37,7 +37,7 @@ def run_test():
     assert init_response.get("id") == 1, "Initialize response ID mismatch"
     assert "result" in init_response, "Initialize response missing result"
     server_info = init_response["result"].get("serverInfo", {})
-    assert server_info.get("version") == "2.3.0", f"Expected version 2.3.0, got {server_info.get('version')}"
+    assert server_info.get("version") == "3.0.0", f"Expected version 3.0.0, got {server_info.get('version')}"
     print(f"  [OK] Initialized: {server_info.get('name')} v{server_info.get('version')}")
 
     # 2. Test tools/list
