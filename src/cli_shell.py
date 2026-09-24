@@ -65,21 +65,38 @@ class DevBrainShell:
             self.hud.theme = self.theme
             self.console.print(self.hud.render_layout())
 
+        width = self.console.size.width if self.console.size.width > 0 else 80
         dock_grid = Table.grid(expand=True)
         dock_grid.add_column(justify="left", ratio=1)
-        dock_text = Text.assemble(
-            (" 💬 WORKSPACE DOCK ", f"bold {self.theme.primary}"),
-            ("│ ", f"dim {self.theme.dim}"),
-            ("Pregunta en lenguaje natural o escribe: ", f"dim {self.theme.dim}"),
-            ("¿Cómo funciona...? / Crea tarea...", f"bold {self.theme.accent}"),
-            (" • ", f"dim {self.theme.dim}"),
-            ("/help", f"bold {self.theme.secondary}"),
-            (" • ", f"dim {self.theme.dim}"),
-            ("/theme", f"bold {self.theme.accent}"),
-            (" │ ", f"dim {self.theme.dim}"),
-            ("[Enter vacío = refrescar HUD]", f"italic dim {self.theme.dim}")
-        )
-        dock_grid.add_row(dock_text)
+
+        if width < 95:
+            dock_line1 = Text.assemble(
+                (" 💬 WORKSPACE DOCK ", f"bold {self.theme.primary}"),
+                ("│ ", f"dim {self.theme.dim}"),
+                ("Pregunta libre en lenguaje natural o escribe ", f"dim {self.theme.dim}"),
+                ("/help", f"bold {self.theme.secondary}")
+            )
+            dock_line2 = Text.assemble(
+                ("  Tips: ", f"dim {self.theme.dim}"),
+                ("¿Cómo funciona...? • Crea tarea... • /odd • /theme • [Enter = HUD]", f"italic dim {self.theme.accent}")
+            )
+            dock_grid.add_row(dock_line1)
+            dock_grid.add_row(dock_line2)
+        else:
+            dock_text = Text.assemble(
+                (" 💬 WORKSPACE DOCK ", f"bold {self.theme.primary}"),
+                ("│ ", f"dim {self.theme.dim}"),
+                ("Pregunta libre o comando: ", f"dim {self.theme.dim}"),
+                ("¿Cómo funciona...? • Crea tarea...", f"bold {self.theme.accent}"),
+                (" • ", f"dim {self.theme.dim}"),
+                ("/help", f"bold {self.theme.secondary}"),
+                (" • ", f"dim {self.theme.dim}"),
+                ("/theme", f"bold {self.theme.accent}"),
+                (" │ ", f"dim {self.theme.dim}"),
+                ("[Enter = HUD]", f"italic dim {self.theme.dim}")
+            )
+            dock_grid.add_row(dock_text)
+
         self.console.print(Panel(dock_grid, box=box.ROUNDED, border_style=f"dim {self.theme.dim}"))
 
     def print_banner(self) -> None:
@@ -255,12 +272,24 @@ class DevBrainShell:
             intent_badge = f"[dim {self.theme.dim}][{response.intent}][/dim {self.theme.dim}]"
             title = f"🤖 [bold]DevBrain Agent[/bold] {route_badge} {intent_badge}"
 
-            footer_text = (
-                f"⚡ [bold]{response.latency_ms:.0f} ms[/bold] │ "
-                f"Tokens In/Out: [bold]{response.tokens_in}[/bold] / [bold]{response.tokens_out}[/bold] │ "
-                f"Sinapsis: [bold]{len(response.synapses_fired)} activas[/bold] │ "
-                f"Proveedor: [italic]{response.provider_used}[/italic]"
-            )
+            width = self.console.size.width if self.console.size.width > 0 else 80
+            if width < 95:
+                prov_short = "LLM" if "LLM" in response.provider_used else "DevBrain Offline"
+                footer_text = (
+                    f"⚡ {response.latency_ms:.0f}ms │ "
+                    f"In/Out: {response.tokens_in}/{response.tokens_out} │ "
+                    f"Sinapsis: {len(response.synapses_fired)} │ "
+                    f"{prov_short}"
+                )
+                card_padding = (0, 1)
+            else:
+                footer_text = (
+                    f"⚡ [bold]{response.latency_ms:.0f} ms[/bold] │ "
+                    f"Tokens In/Out: [bold]{response.tokens_in}[/bold] / [bold]{response.tokens_out}[/bold] │ "
+                    f"Sinapsis: [bold]{len(response.synapses_fired)} activas[/bold] │ "
+                    f"Proveedor: [italic]{response.provider_used}[/italic]"
+                )
+                card_padding = (1, 2)
 
             self.console.print(Panel(
                 Markdown(response.content),
@@ -268,7 +297,7 @@ class DevBrainShell:
                 subtitle=footer_text,
                 box=box.ROUNDED,
                 border_style=self.theme.secondary,
-                padding=(1, 2)
+                padding=card_padding
             ))
 
     def run(self) -> None:

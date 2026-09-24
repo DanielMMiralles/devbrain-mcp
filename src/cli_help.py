@@ -4,6 +4,15 @@ Sistema de ayuda visual interactivo y categorizado para DevBrain CLI, HUD, herra
 """
 from __future__ import annotations
 import sys
+import os
+
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdin, "reconfigure"): sys.stdin.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stdout, "reconfigure"): sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"): sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 from rich import box
 from rich.console import Console, Group
 from rich.panel import Panel
@@ -39,6 +48,9 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
     console.print(Panel(grid, box=box.ROUNDED, border_style=theme.primary))
 
     # 2. Tabla de Comandos Principales
+    width = console.size.width if console.size.width > 0 else 80
+    is_narrow = width < 95
+
     table = Table(
         title="⚡ Comandos del CLI ('devbrain <comando>')",
         box=None,
@@ -46,83 +58,100 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
         header_style=f"bold {theme.secondary}",
         padding=(0, 1)
     )
-    table.add_column("Comando", style=f"bold {theme.accent}", ratio=2)
-    table.add_column("Sintaxis & Argumentos", style=f"{theme.primary}", ratio=3)
-    table.add_column("Descripción & Propósito", style=f"{theme.text}", ratio=5)
-    table.add_column("Área", justify="center", style=f"dim {theme.dim}", ratio=2)
 
-    # Agente & Lenguaje Natural (OpenCode Style)
-    table.add_row(
-        "ask, \"prompt\"",
-        "devbrain ask \"<pregunta>\" / devbrain \"<pregunta>\"",
-        "Interfaz agéntica en lenguaje natural (estilo OpenCode). Clasifica intención, activa sinapsis y responde con conocimiento y directrices.",
-        "🤖 Agente"
-    )
-    # Monitoreo & HUD
-    table.add_row(
-        "live, hud",
-        "devbrain live [--rate S] [--papa] [--once]",
-        "Inicia el Cognitive HUD en vivo a 60fps. Monitorea tokens, costos USD, latencias p50/p95, traza de pensamiento y carril de orquestación.",
-        "🖥️ HUD"
-    )
-    table.add_row(
-        "stats",
-        "devbrain stats",
-        "Muestra el resumen consolidado de la sesión: llamadas MCP, tokens in/out, throughput y costos acumulados.",
-        "📊 Métricas"
-    )
-    # Terminal & Diagnóstico
-    table.add_row(
-        "shell",
-        "devbrain shell",
-        "Abre la terminal interactiva estilo Gentle-Shell con autocompletado inteligente y dock questions ODD.",
-        "💬 Shell"
-    )
-    table.add_row(
-        "doctor",
-        "devbrain doctor",
-        "Ejecuta diagnóstico de salud unificado: DevBrain, FTS5, Engram v2.0 y Gentle-AI v3.1+.",
-        "🩺 Salud"
-    )
-    # Conocimiento & Memoria
-    table.add_row(
-        "search",
-        "devbrain search \"<query>\"",
-        "Busca en +1,675 notas técnicas del Vault de Obsidian con FTS5 y aceleración por sinapsis dinámicas.",
-        "💡 Cerebro"
-    )
-    table.add_row(
-        "memory",
-        "devbrain memory \"<query>\"",
-        "Recupera decisiones arquitectónicas, lecciones aprendidas y directrices de Obsidian y Engram.",
-        "🧠 Memoria"
-    )
-    # ODD
-    table.add_row(
-        "odd",
-        "devbrain odd \"<tarea>\"",
-        "Evalúa deterministamente una tarea bajo el protocolo ODD (READ_ONLY, SMALL_DIRECT o SUBSTANTIAL_ODD).",
-        "🏷️ ODD"
-    )
-    # Configuración & Temas
-    table.add_row(
-        "theme",
-        "devbrain theme [gentleman|cyberpunk|obsidian|monokai|papa]",
-        "Consulta o cambia la paleta de colores del CLI y el HUD con persistencia en ~/.devbrain/config.json.",
-        "🎨 Visual"
-    )
-    table.add_row(
-        "papa",
-        "devbrain papa",
-        "Alterna el 'Modo Papa' minimalista monocromático para ultra-bajo consumo de recursos y batería.",
-        "⚡ Batería"
-    )
-    table.add_row(
-        "help",
-        "devbrain help [tema]",
-        "Muestra esta guía general o la documentación profunda de un tópico específico.",
-        "📖 Ayuda"
-    )
+    if is_narrow:
+        table.add_column("Comando", style=f"bold {theme.accent}", ratio=3)
+        table.add_column("Descripción & Sintaxis", style=f"{theme.text}", ratio=7)
+
+        table.add_row("ask, \"prompt\"", "devbrain ask \"<pregunta>\" • Interfaz agéntica en lenguaje natural (OpenCode style).")
+        table.add_row("live, hud", "devbrain live [--papa] • Inicia el Cognitive HUD en vivo a 60fps.")
+        table.add_row("stats", "devbrain stats • Consumo de tokens, latencias p50/p95 y costo USD.")
+        table.add_row("shell", "devbrain shell • Workspace dock interactivo estilo Gentle-Shell.")
+        table.add_row("doctor", "devbrain doctor • Chequeo de salud: DevBrain + Gentle-AI + Engram.")
+        table.add_row("search", "devbrain search \"<q>\" • Búsqueda FTS5 con reranking sináptico.")
+        table.add_row("memory", "devbrain memory \"<q>\" • Decisiones persistentes en Vault y Engram.")
+        table.add_row("odd", "devbrain odd \"<tarea>\" • Clasificación determinista ODD.")
+        table.add_row("theme", "devbrain theme [nombre] • Paletas (gentleman, cyberpunk, obsidian, papa).")
+        table.add_row("papa", "devbrain papa • Alterna Modo Papa de bajo consumo.")
+        table.add_row("help", "devbrain help [tema] • Manuales especializados (/help agent, odd, live, etc).")
+    else:
+        table.add_column("Comando", style=f"bold {theme.accent}", ratio=2)
+        table.add_column("Sintaxis & Argumentos", style=f"{theme.primary}", ratio=3)
+        table.add_column("Descripción & Propósito", style=f"{theme.text}", ratio=5)
+        table.add_column("Área", justify="center", style=f"dim {theme.dim}", ratio=2)
+
+        # Agente & Lenguaje Natural (OpenCode Style)
+        table.add_row(
+            "ask, \"prompt\"",
+            "devbrain ask \"<pregunta>\" / devbrain \"<pregunta>\"",
+            "Interfaz agéntica en lenguaje natural (estilo OpenCode). Clasifica intención, activa sinapsis y responde con conocimiento y directrices.",
+            "🤖 Agente"
+        )
+        # Monitoreo & HUD
+        table.add_row(
+            "live, hud",
+            "devbrain live [--rate S] [--papa] [--once]",
+            "Inicia el Cognitive HUD en vivo a 60fps. Monitorea tokens, costos USD, latencias p50/p95, traza de pensamiento y carril de orquestación.",
+            "🖥️ HUD"
+        )
+        table.add_row(
+            "stats",
+            "devbrain stats",
+            "Muestra el resumen consolidado de la sesión: llamadas MCP, tokens in/out, throughput y costos acumulados.",
+            "📊 Métricas"
+        )
+        # Terminal & Diagnóstico
+        table.add_row(
+            "shell",
+            "devbrain shell",
+            "Abre la terminal interactiva estilo Gentle-Shell con autocompletado inteligente y dock questions ODD.",
+            "💬 Shell"
+        )
+        table.add_row(
+            "doctor",
+            "devbrain doctor",
+            "Ejecuta diagnóstico de salud unificado: DevBrain, FTS5, Engram v2.0 y Gentle-AI v3.1+.",
+            "🩺 Salud"
+        )
+        # Conocimiento & Memoria
+        table.add_row(
+            "search",
+            "devbrain search \"<query>\"",
+            "Busca en +1,675 notas técnicas del Vault de Obsidian con FTS5 y aceleración por sinapsis dinámicas.",
+            "💡 Cerebro"
+        )
+        table.add_row(
+            "memory",
+            "devbrain memory \"<query>\"",
+            "Recupera decisiones arquitectónicas, lecciones aprendidas y directrices de Obsidian y Engram.",
+            "🧠 Memoria"
+        )
+        # ODD
+        table.add_row(
+            "odd",
+            "devbrain odd \"<tarea>\"",
+            "Evalúa deterministamente una tarea bajo el protocolo ODD (READ_ONLY, SMALL_DIRECT o SUBSTANTIAL_ODD).",
+            "🏷️ ODD"
+        )
+        # Configuración & Temas
+        table.add_row(
+            "theme",
+            "devbrain theme [gentleman|cyberpunk|obsidian|monokai|papa]",
+            "Consulta o cambia la paleta de colores del CLI y el HUD con persistencia en ~/.devbrain/config.json.",
+            "🎨 Visual"
+        )
+        table.add_row(
+            "papa",
+            "devbrain papa",
+            "Alterna el 'Modo Papa' minimalista monocromático para ultra-bajo consumo de recursos y batería.",
+            "⚡ Batería"
+        )
+        table.add_row(
+            "help",
+            "devbrain help [tema]",
+            "Muestra esta guía general o la documentación profunda de un tópico específico.",
+            "📖 Ayuda"
+        )
 
     console.print(Panel(table, box=box.ROUNDED, border_style=theme.secondary))
 
