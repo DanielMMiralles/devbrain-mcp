@@ -1,6 +1,9 @@
 """
-DevBrain Interactive Terminal Shell (v1.0)
-Terminal interactiva estilo Gentle-Shell con prompt visual, autocompletado y comandos rápidos.
+DevBrain Interactive Terminal Shell (v2.0)
+Workspace interactivo estilo Gentle-Shell con prompt visual, autocompletado y HUD integrado:
+- Visualización estática de alta fidelidad del Cognitive HUD.
+- Dock interactivo para ejecutar comandos sin salir de la vista de métricas.
+- Soporte para dock questions interactivas, autocompletado y cambio de temas en caliente.
 """
 from __future__ import annotations
 import sys
@@ -15,6 +18,7 @@ if sys.platform == "win32":
         pass
 
 from pathlib import Path
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -29,42 +33,62 @@ try:
 except ImportError:
     HAS_PROMPT_TOOLKIT = False
 
-from cli_theme import ConfigManager
+from cli_theme import ConfigManager, ThemeColors
 from telemetry import TelemetryEngine
 
 COMMANDS = [
     "/search", "/memory", "/remember", "/odd", "/feature",
-    "/stats", "/doctor", "/theme", "/papa", "/help", "/exit", "/quit"
+    "/stats", "/doctor", "/theme", "/papa", "/help", "/live", "/refresh", "/exit", "/quit"
 ]
 
 class DevBrainShell:
     """Shell interactivo para DevBrain."""
 
-    def __init__(self, console: Console | None = None):
+    def __init__(self, console: Console | None = None, config_mgr: ConfigManager | None = None, hud = None):
         self.console = console or Console(legacy_windows=False)
-        self.config_mgr = ConfigManager()
+        self.config_mgr = config_mgr or ConfigManager()
         self.theme = self.config_mgr.get_theme()
         self.telemetry = TelemetryEngine.get_instance()
+        if hud is None:
+            from cli_hud import DevBrainHUD
+            self.hud = DevBrainHUD(self.console, self.config_mgr)
+        else:
+            self.hud = hud
         self.running = True
 
-    def print_banner(self) -> None:
-        grid = Table.grid(expand=True)
-        grid.add_column(justify="center", ratio=1)
-        
-        banner_text = Text.assemble(
-            ("🧠 DEVBRAIN SHELL v3.0 ", f"bold {self.theme.primary}"),
-            ("— Arquitectura PLC & Neuroplasticidad\n", f"dim {self.theme.dim}"),
-            ("Inspirado en Gentle-Shell & Gentle-AI. Escribe ", f"{self.theme.text}"),
+    def render_workspace(self) -> None:
+        """Renderiza el HUD completo estático y el dock interactivo sin parpadeo."""
+        self.console.clear()
+        if self.hud:
+            self.hud.theme = self.theme
+            self.console.print(self.hud.render_layout())
+
+        dock_grid = Table.grid(expand=True)
+        dock_grid.add_column(justify="left", ratio=1)
+        dock_text = Text.assemble(
+            (" 💬 WORKSPACE DOCK ", f"bold {self.theme.primary}"),
+            ("│ ", f"dim {self.theme.dim}"),
+            ("Comandos: ", f"dim {self.theme.dim}"),
+            ("/search <query>", f"bold {self.theme.accent}"),
+            (" • ", f"dim {self.theme.dim}"),
+            ("/odd <tarea>", f"bold {self.theme.accent}"),
+            (" • ", f"dim {self.theme.dim}"),
+            ("/memory <query>", f"bold {self.theme.accent}"),
+            (" • ", f"dim {self.theme.dim}"),
+            ("/theme <nombre>", f"bold {self.theme.accent}"),
+            (" • ", f"dim {self.theme.dim}"),
             ("/help", f"bold {self.theme.accent}"),
-            (" para ver los comandos disponibles o ", f"{self.theme.text}"),
-            ("/exit", f"bold {self.theme.danger}"),
-            (" para salir.", f"{self.theme.text}")
+            (" │ ", f"dim {self.theme.dim}"),
+            ("[Enter vacío = refrescar HUD]", f"italic dim {self.theme.dim}")
         )
-        grid.add_row(banner_text)
-        self.console.print(Panel(grid, border_style=self.theme.primary))
+        dock_grid.add_row(dock_text)
+        self.console.print(Panel(dock_grid, box=box.ROUNDED, border_style=f"dim {self.theme.dim}"))
+
+    def print_banner(self) -> None:
+        self.render_workspace()
 
     def print_help(self) -> None:
-        table = Table(title="📖 Comandos Disponibles en DevBrain Shell", box=None, header_style=f"bold {self.theme.secondary}")
+        table = Table(title="📖 Comandos Disponibles en DevBrain Shell", box=box.ROUNDED, header_style=f"bold {self.theme.secondary}")
         table.add_column("Comando", style=f"bold {self.theme.accent}", ratio=2)
         table.add_column("Descripción", style=f"{self.theme.text}", ratio=4)
 
@@ -77,6 +101,7 @@ class DevBrainShell:
         table.add_row("/doctor", "Ejecuta chequeos de salud de DevBrain, Gentle-AI y Engram.")
         table.add_row("/theme <gentleman|cyberpunk|obsidian|monokai|papa>", "Cambia la paleta de colores de la interfaz.")
         table.add_row("/papa", "Activa/Desactiva el Modo Papa (ahorro de batería y rendimiento).")
+        table.add_row("/live, /refresh", "Limpia y redibuja el HUD con las métricas actualizadas.")
         table.add_row("/help [tema]", "Muestra este resumen o ayuda profunda (/help live, odd, mcp, hosts, neuro).")
         table.add_row("/exit, /quit", "Cierra el shell interactivo.")
 
@@ -100,6 +125,7 @@ class DevBrainShell:
     def handle_command(self, raw_input: str) -> None:
         cmd_str = raw_input.strip()
         if not cmd_str:
+            self.render_workspace()
             return
 
         parts = cmd_str.split(" ", 1)
@@ -108,8 +134,11 @@ class DevBrainShell:
 
         if cmd in ["/exit", "/quit", "exit", "quit"]:
             self.running = False
-            self.console.print(f"[{self.theme.dim}]Cerrando DevBrain Shell. ¡Hasta la próxima![/{self.theme.dim}]")
+            self.console.print(f"[{self.theme.dim}]Cerrando DevBrain Workspace. ¡Hasta la próxima![/{self.theme.dim}]")
             return
+
+        elif cmd in ["/live", "/hud", "/refresh"]:
+            self.render_workspace()
 
         elif cmd == "/help":
             if args:
@@ -128,6 +157,7 @@ class DevBrainShell:
                 f"• Throughput: [bold]{summary['throughput_tps']} tok/s[/bold]\n"
                 f"• Cliente activo: [bold]{summary['active_client']}[/bold]",
                 title="[bold]⚡ Métricas de Rendimiento[/bold]",
+                box=box.ROUNDED,
                 border_style=self.theme.secondary
             ))
 
@@ -135,7 +165,8 @@ class DevBrainShell:
             if args:
                 if self.config_mgr.set_theme(args):
                     self.theme = self.config_mgr.get_theme()
-                    self.console.print(f"[{self.theme.success}]Tema cambiado con éxito a '{self.theme.name}'.[/{self.theme.success}]")
+                    self.console.print(f"[{self.theme.success}]✓ Tema cambiado con éxito a '{self.theme.name}'.[/{self.theme.success}]")
+                    self.render_workspace()
                 else:
                     self.console.print(f"[{self.theme.danger}]Tema desconocido. Disponibles: gentleman, cyberpunk, obsidian, monokai, papa[/{self.theme.danger}]")
             else:
@@ -146,13 +177,14 @@ class DevBrainShell:
             self.theme = self.config_mgr.get_theme()
             state_str = "ENCENDIDO (Modo bajo consumo / sin animaciones)" if is_papa else "APAGADO (Animaciones completas)"
             self.console.print(f"[{self.theme.warning}]Modo Papa: {state_str}[/{self.theme.warning}]")
+            self.render_workspace()
 
         elif cmd == "/doctor":
             self.console.print(f"[{self.theme.secondary}]Ejecutando diagnóstico del ecosistema...[/{self.theme.secondary}]")
             try:
                 from devbrain_mcp import handle_audit_project_health
                 report = handle_audit_project_health({})
-                self.console.print(Panel(report, title="[bold]🩺 Reporte de Salud del Ecosistema[/bold]", border_style=self.theme.primary))
+                self.console.print(Panel(report, title="[bold]🩺 Reporte de Salud del Ecosistema[/bold]", box=box.ROUNDED, border_style=self.theme.primary))
             except Exception as e:
                 self.console.print(f"[{self.theme.danger}]Error ejecutando doctor: {e}[/{self.theme.danger}]")
 
@@ -163,7 +195,7 @@ class DevBrainShell:
             try:
                 from devbrain_mcp import handle_search_knowledge
                 res = handle_search_knowledge({"query": args})
-                self.console.print(Panel(Markdown(res), title=f"[bold]💡 Búsqueda: '{args}'[/bold]", border_style=self.theme.primary))
+                self.console.print(Panel(Markdown(res), title=f"[bold]💡 Búsqueda: '{args}'[/bold]", box=box.ROUNDED, border_style=self.theme.primary))
             except Exception as e:
                 self.console.print(f"[{self.theme.danger}]Error en búsqueda: {e}[/{self.theme.danger}]")
 
@@ -174,7 +206,7 @@ class DevBrainShell:
             try:
                 from devbrain_mcp import handle_recall_memory
                 res = handle_recall_memory({"query": args})
-                self.console.print(Panel(Markdown(res), title=f"[bold]🧠 Memoria: '{args}'[/bold]", border_style=self.theme.secondary))
+                self.console.print(Panel(Markdown(res), title=f"[bold]🧠 Memoria: '{args}'[/bold]", box=box.ROUNDED, border_style=self.theme.secondary))
             except Exception as e:
                 self.console.print(f"[{self.theme.danger}]Error en memoria: {e}[/{self.theme.danger}]")
 
@@ -185,7 +217,7 @@ class DevBrainShell:
             try:
                 from devbrain_mcp import handle_classify_odd_task
                 res = handle_classify_odd_task({"request_description": args})
-                self.console.print(Panel(Markdown(res), title="[bold]🏷️ Clasificación ODD[/bold]", border_style=self.theme.accent))
+                self.console.print(Panel(Markdown(res), title="[bold]🏷️ Clasificación ODD[/bold]", box=box.ROUNDED, border_style=self.theme.accent))
             except Exception as e:
                 self.console.print(f"[{self.theme.danger}]Error al clasificar ODD: {e}[/{self.theme.danger}]")
 
@@ -212,7 +244,7 @@ class DevBrainShell:
             try:
                 from devbrain_mcp import handle_prepare_odd_task
                 res = handle_prepare_odd_task({"feature_name": feature_name, "objective": obj, "write_to_disk": True})
-                self.console.print(Panel(Markdown(res), title=f"[bold]📋 Feature ODD: {feature_name}[/bold]", border_style=self.theme.accent))
+                self.console.print(Panel(Markdown(res), title=f"[bold]📋 Feature ODD: {feature_name}[/bold]", box=box.ROUNDED, border_style=self.theme.accent))
             except Exception as e:
                 self.console.print(f"[{self.theme.danger}]Error preparando feature: {e}[/{self.theme.danger}]")
 
@@ -220,8 +252,7 @@ class DevBrainShell:
             self.console.print(f"[{self.theme.dim}]Comando no reconocido: '{cmd}'. Escribe /help para ver las opciones disponibles.[/{self.theme.dim}]")
 
     def run(self) -> None:
-        self.console.clear()
-        self.print_banner()
+        self.render_workspace()
 
         if HAS_PROMPT_TOOLKIT:
             completer = WordCompleter(COMMANDS, ignore_case=True)

@@ -22,6 +22,7 @@ current_dir = Path(__file__).resolve().parent
 if str(current_dir) not in sys.path:
     sys.path.insert(0, str(current_dir))
 
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -41,10 +42,11 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Comando a ejecutar")
 
     # devbrain live / hud
-    live_parser = subparsers.add_parser("live", aliases=["hud"], help="Inicia el HUD de telemetría y observación en tiempo real a 60fps")
-    live_parser.add_argument("--rate", type=float, default=0.5, help="Frecuencia de refresco en segundos (default: 0.5s)")
+    live_parser = subparsers.add_parser("live", aliases=["hud"], help="Inicia el Cognitive HUD en vivo (Workspace interactivo o --watch)")
+    live_parser.add_argument("--rate", type=float, default=1.0, help="Frecuencia de sondeo en segundos (default: 1.0s)")
     live_parser.add_argument("--papa", action="store_true", help="Forzar Modo Papa (ahorro de batería / sin animaciones)")
     live_parser.add_argument("--once", action="store_true", help="Renderizar una sola captura del HUD y salir")
+    live_parser.add_argument("--watch", "-w", action="store_true", help="Modo observador pasivo continuo sin prompt interactivo")
 
     # devbrain shell
     subparsers.add_parser("shell", help="Inicia la terminal interactiva de DevBrain con prompt visual")
@@ -101,15 +103,17 @@ def main():
         hud = DevBrainHUD(console, config_mgr)
         if getattr(args, "once", False):
             console.print(hud.render_layout())
+        elif getattr(args, "watch", False):
+            hud.run_watch(refresh_rate=args.rate)
         else:
-            hud.run_live(refresh_rate=args.rate)
+            hud.run_interactive()
 
     elif args.command == "stats":
         telemetry = TelemetryEngine.get_instance()
         summary = telemetry.get_summary()
         theme = config_mgr.get_theme()
         
-        table = Table(title="⚡ Resumen de Métricas de DevBrain", box=None, header_style=f"bold {theme.secondary}")
+        table = Table(title="⚡ Resumen de Métricas de DevBrain", box=box.ROUNDED, header_style=f"bold {theme.secondary}")
         table.add_column("Métrica", style=f"bold {theme.accent}")
         table.add_column("Valor", style=f"{theme.text}")
 
@@ -124,29 +128,29 @@ def main():
         table.add_row("Latencia p50 (Media)", f"{summary['p50_latency_ms']} ms")
         table.add_row("Latencia p95 (Cola)", f"{summary['p95_latency_ms']} ms")
 
-        console.print(Panel(table, border_style=theme.primary))
+        console.print(Panel(table, box=box.ROUNDED, border_style=theme.primary))
 
     elif args.command == "doctor":
         theme = config_mgr.get_theme()
         console.print(f"[{theme.secondary}]Ejecutando diagnóstico del ecosistema DevBrain + Gentle-AI...[/{theme.secondary}]")
         from devbrain_mcp import handle_audit_project_health
         report = handle_audit_project_health({})
-        console.print(Panel(report, title="[bold]🩺 Diagnóstico Oficial del Ecosistema[/bold]", border_style=theme.primary))
+        console.print(Panel(report, title="[bold]🩺 Diagnóstico Oficial del Ecosistema[/bold]", box=box.ROUNDED, border_style=theme.primary))
 
     elif args.command == "search":
         from devbrain_mcp import handle_search_knowledge
         res = handle_search_knowledge({"query": args.query})
-        console.print(Panel(Markdown(res), title=f"💡 Búsqueda: '{args.query}'", border_style="cyan"))
+        console.print(Panel(Markdown(res), title=f"💡 Búsqueda: '{args.query}'", box=box.ROUNDED, border_style="cyan"))
 
     elif args.command == "memory":
         from devbrain_mcp import handle_recall_memory
         res = handle_recall_memory({"query": args.query})
-        console.print(Panel(Markdown(res), title=f"🧠 Memoria: '{args.query}'", border_style="magenta"))
+        console.print(Panel(Markdown(res), title=f"🧠 Memoria: '{args.query}'", box=box.ROUNDED, border_style="magenta"))
 
     elif args.command == "odd":
         from devbrain_mcp import handle_classify_odd_task
         res = handle_classify_odd_task({"request_description": args.description})
-        console.print(Panel(Markdown(res), title="🏷️ Clasificación ODD", border_style="yellow"))
+        console.print(Panel(Markdown(res), title="🏷️ Clasificación ODD", box=box.ROUNDED, border_style="yellow"))
 
     elif args.command == "theme":
         if args.name:

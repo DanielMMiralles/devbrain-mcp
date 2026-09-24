@@ -4,6 +4,7 @@ Sistema de ayuda visual interactivo y categorizado para DevBrain CLI, HUD, herra
 """
 from __future__ import annotations
 import sys
+from rich import box
 from rich.console import Console, Group
 from rich.panel import Panel
 from rich.table import Table
@@ -34,7 +35,7 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
         ("Controlador PLC Neuroplástico • Telemetría Cognitiva • Suite Gentle-AI & ODD", f"dim {theme.dim}")
     )
     grid.add_row(banner)
-    console.print(Panel(grid, border_style=theme.primary))
+    console.print(Panel(grid, box=box.ROUNDED, border_style=theme.primary))
 
     # 2. Tabla de Comandos Principales
     table = Table(
@@ -115,7 +116,7 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
         "📖 Ayuda"
     )
 
-    console.print(Panel(table, border_style=theme.secondary))
+    console.print(Panel(table, box=box.ROUNDED, border_style=theme.secondary))
 
     # 3. Capacidades Arquitectónicas Clave
     arch_table = Table.grid(expand=True, padding=(0, 2))
@@ -136,7 +137,7 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
     )
     arch_table.add_row(col1, col2)
 
-    console.print(Panel(arch_table, title="[bold]🔬 Arquitectura & Filosofía de DevBrain v3.0[/bold]", border_style=theme.accent))
+    console.print(Panel(arch_table, title="[bold]🔬 Arquitectura & Filosofía de DevBrain v3.0[/bold]", box=box.ROUNDED, border_style=theme.accent))
 
     # 4. Tópicos de Ayuda Detallada
     topics_text = Text()
@@ -148,7 +149,7 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
         topics_text.append(f"  • devbrain help {t_name:<7}", style=f"bold {theme.secondary}")
         topics_text.append(f" ──► {t_desc}\n", style=f"dim {theme.dim}")
 
-    console.print(Panel(topics_text, title="[bold]📚 Tópicos de Ayuda Especializada[/bold]", border_style=theme.dim))
+    console.print(Panel(topics_text, title="[bold]📚 Tópicos de Ayuda Especializada[/bold]", box=box.ROUNDED, border_style=theme.dim))
 
 
 def render_topic_help(console: Console, theme: ThemeColors, topic: str) -> None:
