@@ -54,6 +54,8 @@ class DevBrainShell:
             self.hud = DevBrainHUD(self.console, self.config_mgr)
         else:
             self.hud = hud
+        from agentic_engine import DevBrainAgent
+        self.agent = DevBrainAgent(self.config_mgr)
         self.running = True
 
     def render_workspace(self) -> None:
@@ -68,16 +70,12 @@ class DevBrainShell:
         dock_text = Text.assemble(
             (" 💬 WORKSPACE DOCK ", f"bold {self.theme.primary}"),
             ("│ ", f"dim {self.theme.dim}"),
-            ("Comandos: ", f"dim {self.theme.dim}"),
-            ("/search <query>", f"bold {self.theme.accent}"),
+            ("Pregunta en lenguaje natural o escribe: ", f"dim {self.theme.dim}"),
+            ("¿Cómo funciona...? / Crea tarea...", f"bold {self.theme.accent}"),
             (" • ", f"dim {self.theme.dim}"),
-            ("/odd <tarea>", f"bold {self.theme.accent}"),
+            ("/help", f"bold {self.theme.secondary}"),
             (" • ", f"dim {self.theme.dim}"),
-            ("/memory <query>", f"bold {self.theme.accent}"),
-            (" • ", f"dim {self.theme.dim}"),
-            ("/theme <nombre>", f"bold {self.theme.accent}"),
-            (" • ", f"dim {self.theme.dim}"),
-            ("/help", f"bold {self.theme.accent}"),
+            ("/theme", f"bold {self.theme.accent}"),
             (" │ ", f"dim {self.theme.dim}"),
             ("[Enter vacío = refrescar HUD]", f"italic dim {self.theme.dim}")
         )
@@ -249,7 +247,29 @@ class DevBrainShell:
                 self.console.print(f"[{self.theme.danger}]Error preparando feature: {e}[/{self.theme.danger}]")
 
         else:
-            self.console.print(f"[{self.theme.dim}]Comando no reconocido: '{cmd}'. Escribe /help para ver las opciones disponibles.[/{self.theme.dim}]")
+            # Entrada en Lenguaje Natural -> Agente Cognitivo DevBrain (Estilo OpenCode / Claude Code)
+            with self.console.status(f"[bold {self.theme.accent}]🧠 DevBrain procesando con neuroplasticidad...[/bold {self.theme.accent}]", spinner="dots"):
+                response = self.agent.process_prompt(cmd_str)
+
+            route_badge = f"[bold {self.theme.primary}][Ruta PLC: {response.plc_route}][/bold {self.theme.primary}]"
+            intent_badge = f"[dim {self.theme.dim}][{response.intent}][/dim {self.theme.dim}]"
+            title = f"🤖 [bold]DevBrain Agent[/bold] {route_badge} {intent_badge}"
+
+            footer_text = (
+                f"⚡ [bold]{response.latency_ms:.0f} ms[/bold] │ "
+                f"Tokens In/Out: [bold]{response.tokens_in}[/bold] / [bold]{response.tokens_out}[/bold] │ "
+                f"Sinapsis: [bold]{len(response.synapses_fired)} activas[/bold] │ "
+                f"Proveedor: [italic]{response.provider_used}[/italic]"
+            )
+
+            self.console.print(Panel(
+                Markdown(response.content),
+                title=title,
+                subtitle=footer_text,
+                box=box.ROUNDED,
+                border_style=self.theme.secondary,
+                padding=(1, 2)
+            ))
 
     def run(self) -> None:
         self.render_workspace()

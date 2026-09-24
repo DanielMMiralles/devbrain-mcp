@@ -80,12 +80,21 @@ def main():
     help_parser = subparsers.add_parser("help", help="Muestra la guía completa de comandos, tópicos y arquitectura")
     help_parser.add_argument("topic", nargs="?", default=None, help="Tópico específico (live, odd, mcp, hosts, neuro, shell)")
 
+    # devbrain ask / agente directo
+    ask_parser = subparsers.add_parser("ask", help="Consulta en lenguaje natural al Agente Cognitivo DevBrain")
+    ask_parser.add_argument("prompt", nargs="+", help="Pregunta, requerimiento o instrucción")
+
     def custom_print_help():
         from cli_help import render_help_overview
         theme = config_mgr.get_theme()
         render_help_overview(console, theme)
 
     parser.print_help = custom_print_help
+
+    # Si se pasa texto libre que no es subcomando, auto-enrutar a 'ask'
+    known_commands = list(subparsers.choices.keys()) + ["-h", "--help", "-v", "--version", "hud"]
+    if len(sys.argv) > 1 and sys.argv[1] not in known_commands and not sys.argv[1].startswith("-"):
+        sys.argv.insert(1, "ask")
 
     args = parser.parse_args()
 
@@ -94,6 +103,29 @@ def main():
         from cli_shell import DevBrainShell
         shell = DevBrainShell(console)
         shell.run()
+        return
+
+    if args.command == "ask":
+        from agentic_engine import DevBrainAgent
+        agent = DevBrainAgent(config_mgr)
+        prompt_text = " ".join(args.prompt)
+        theme = config_mgr.get_theme()
+        with console.status(f"[bold {theme.accent}]🧠 DevBrain procesando con neuroplasticidad...[/bold {theme.accent}]"):
+            res = agent.process_prompt(prompt_text)
+
+        route_badge = f"[bold {theme.primary}][Ruta PLC: {res.plc_route}][/bold {theme.primary}]"
+        intent_badge = f"[dim {theme.dim}][{res.intent}][/dim {theme.dim}]"
+        title = f"🤖 [bold]DevBrain Agent[/bold] {route_badge} {intent_badge}"
+        footer_text = f"⚡ {res.latency_ms:.0f} ms │ Tokens: {res.tokens_in}/{res.tokens_out} │ Sinapsis: {len(res.synapses_fired)} │ {res.provider_used}"
+
+        console.print(Panel(
+            Markdown(res.content),
+            title=title,
+            subtitle=footer_text,
+            box=box.ROUNDED,
+            border_style=theme.secondary,
+            padding=(1, 2)
+        ))
         return
 
     if args.command in ["live", "hud"]:

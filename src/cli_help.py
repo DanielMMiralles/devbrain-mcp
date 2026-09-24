@@ -19,7 +19,8 @@ AVAILABLE_TOPICS: dict[str, str] = {
     "mcp": "Catálogo completo de las 21 herramientas MCP de DevBrain y sus firmas",
     "hosts": "Guía de conexión para Google Antigravity (AGY), Cursor IDE y Claude Code",
     "neuro": "Motor de neuroplasticidad, regla de Hebb, LTP/LTD y bonus sináptico",
-    "shell": "Uso de la terminal interactiva REPL, comandos rápidos y dock questions"
+    "shell": "Uso de la terminal interactiva REPL, comandos rápidos y dock questions",
+    "agent": "Interfaz agéntica en lenguaje natural (estilo OpenCode), despacho dual y síntesis"
 }
 
 def render_help_overview(console: Console, theme: ThemeColors) -> None:
@@ -50,6 +51,13 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
     table.add_column("Descripción & Propósito", style=f"{theme.text}", ratio=5)
     table.add_column("Área", justify="center", style=f"dim {theme.dim}", ratio=2)
 
+    # Agente & Lenguaje Natural (OpenCode Style)
+    table.add_row(
+        "ask, \"prompt\"",
+        "devbrain ask \"<pregunta>\" / devbrain \"<pregunta>\"",
+        "Interfaz agéntica en lenguaje natural (estilo OpenCode). Clasifica intención, activa sinapsis y responde con conocimiento y directrices.",
+        "🤖 Agente"
+    )
     # Monitoreo & HUD
     table.add_row(
         "live, hud",
@@ -310,25 +318,38 @@ Al buscar en el cerebro con `search_knowledge`, el reranker compuesto calcula un
 """
         console.print(Panel(Markdown(content), title="[bold]🧬 Motor de Neuroplasticidad & Grafo Sináptico[/bold]", border_style=theme.primary))
 
-    elif t_clean in ["shell", "repl"]:
-        content = """### 💬 DevBrain Interactive Shell (`devbrain shell`)
+    elif t_clean in ["shell", "repl", "agent"]:
+        content = """### 🤖 Interfaz Agéntica en Lenguaje Natural (`devbrain shell` / `devbrain ask`)
 
-El Shell interactivo te permite dialogar y explorar el cerebro sin necesidad de abrir un IDE:
+DevBrain opera con un **motor agéntico completo al estilo de OpenCode / Claude Code / Gentle-Shell**:
 
-#### Comandos Slash Disponibles:
-- `/search <query>`: Búsqueda con reranking sináptico en Vault.
-- `/memory <query>`: Consulta decisiones arquitectónicas en Obsidian y Engram.
-- `/remember <título> | <detalle>`: Guarda una directriz en disco y en Engram.
-- `/odd <descripción>`: Clasificación ODD determinista.
-- `/feature <nombre> | <objetivo>`: Crea tarea ODD y espejo en Engram.
-- `/stats`: Muestra métricas de tokens y costos de la sesión.
+#### 1. Modo Libre en Lenguaje Natural (OpenCode Style):
+No necesitas recordar comandos con `/`. Puedes escribir directamente en el prompt:
+- *"¿Cómo estructuramos un pipeline RAG con reranker sináptico?"* -> Busca conocimiento y activa nodos en el cortex.
+- *"Necesito crear una tarea para implementar autenticación JWT"* -> Clasifica deterministamente bajo protocolo ODD y sugiere plantilla.
+- *"¿Qué decisiones tomamos sobre SQLite y persistencia?"* -> Consulta acuerdos arquitectónicos en Obsidian y Engram.
+- *"Revisa el estado de salud y entorno del sistema"* -> Ejecuta diagnóstico unificado.
+- *"Debatamos si conviene migrar a PostgreSQL"* -> Invoca el protocolo de debate y análisis de pros/contras.
+
+#### 2. Despacho Dual Inteligente:
+- **Con LLM / Gateway (`OMNI_ROUTE_URL`, Ollama en localhost:11434, o API Keys)**: Inyecta el contexto cognitivo recuperado (RAG + Engram + Sinapsis) al modelo seleccionado.
+- **Sin LLM / Modo 100% Offline (Zero Dependencies)**: El motor cognitivo heurístico sintetiza de inmediato una respuesta técnica estructurada, exhaustiva y accionable con citas wiki y enlaces a tus notas.
+
+#### 3. Atajos Directos (Comandos Slash):
+Si prefieres ejecución directa de herramientas específicas:
+- `/search <query>`: Búsqueda FTS5 con reranking sináptico.
+- `/memory <query>`: Consulta directa de memoria y acuerdos en Engram.
+- `/remember <título> | <detalle>`: Registra una nueva decisión en Vault y Engram.
+- `/odd <descripción>`: Clasificación ODD pura.
+- `/feature <nombre> | <objetivo>`: Genera `odd/tasks/<nombre>.md` y su espejo Engram.
+- `/stats`: Muestra métricas de tokens, latencias y costos.
 - `/doctor`: Diagnóstico del ecosistema Gentle-AI.
-- `/theme <paleta>`: Cambia el tema visual.
-- `/papa`: Alterna Modo Papa.
-- `/help [tema]`: Muestra la guía general o de un tópico.
+- `/theme <paleta>`: Cambia paleta de color (gentleman, cyberpunk, obsidian, monokai, papa).
+- `/papa`: Alterna Modo Papa de bajo consumo.
+- `/help [tema]`: Muestra guías especializadas (`live`, `odd`, `mcp`, `hosts`, `neuro`, `agent`).
 - `/exit` o `/quit`: Cierra la sesión interactiva.
 """
-        console.print(Panel(Markdown(content), title="[bold]💬 Terminal Interactiva Shell[/bold]", border_style=theme.secondary))
+        console.print(Panel(Markdown(content), title="[bold]🤖 Interfaz Agéntica & Terminal Shell[/bold]", border_style=theme.secondary))
 
     else:
         console.print(f"[red]Tópico desconocido: '{topic}'.[/red]")
