@@ -24,8 +24,10 @@ Esta habilidad dota al agente del criterio arquitectónico y la disciplina de in
    - Memoria Engram: `odd/<feature>/tasks`
 5. **Resolución Interactiva de Incertidumbre**:
    - En el Paso 3 (Resolver Incertidumbre), emplear el sistema nativo de preguntas en el dock de Gentle Shell (hasta 4 preguntas con opciones, selección simple/múltiple y texto libre, navegables por teclado).
-6. **Capa de Revisión Fail-Safe (Gentle-AI v3.5.0)**:
+6. **Capa de Revisión Fail-Safe & Modelos por Revisor (Gentle-AI v3.7.0)**:
    - Review viene PRENDIDO de fábrica por defecto. El análisis de riesgo es fail-closed: cualquier fallo se evalúa automáticamente como riesgoso/medio-alto. Se apaga solo por comando explícito del usuario (`gentle-ai review mode disable`).
+   - Permite **selección de modelos por revisor** para optimizar costos y foco cognitivo (Claude Code: modelos por revisor; OpenCode: implementer/explorer; Codex: agentes ODD y revisores con presets GPT-6) con fallback automático.
+   - Totalmente integrado con el CLI independiente `gentle-shell` (soporte `--link` e in-Pi review).
 7. **Controlador PLC & Grafo Sináptico (DevBrain v3.0)**:
    - Las decisiones y tareas ODD se benefician del enrutador PLC: DevBrain resuelve consultas de memoria y conocimiento en <5ms, mientras que delega la orquestación pesada y ejecución de subagentes a Gentle-PI/Shell.
    - Las conexiones entre tópicos (ej. ODD ↔ TDD ↔ Clean Architecture) se fortalecen orgánicamente con cada sesión mediante sinapsis hebbianas dinámicas.

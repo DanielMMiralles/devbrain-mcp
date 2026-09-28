@@ -29,7 +29,8 @@ AVAILABLE_TOPICS: dict[str, str] = {
     "hosts": "Guía de conexión para Google Antigravity (AGY), Cursor IDE y Claude Code",
     "neuro": "Motor de neuroplasticidad, regla de Hebb, LTP/LTD y bonus sináptico",
     "shell": "Uso de la terminal interactiva REPL, comandos rápidos y dock questions",
-    "agent": "Interfaz agéntica en lenguaje natural (estilo OpenCode), despacho dual y síntesis"
+    "agent": "Interfaz agéntica en lenguaje natural (estilo OpenCode), despacho dual y síntesis",
+    "gentle": "Novedades de la suite Gentle-AI v3.7.0, selección de modelos por revisor y Gentle-Shell"
 }
 
 def render_help_overview(console: Console, theme: ThemeColors) -> None:
@@ -110,7 +111,7 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
         table.add_row(
             "doctor",
             "devbrain doctor",
-            "Ejecuta diagnóstico de salud unificado: DevBrain, FTS5, Engram v2.0 y Gentle-AI v3.1+.",
+            "Ejecuta diagnóstico de salud unificado: DevBrain, FTS5, Engram v2.0, Gentle-AI v3.7.0 y Gentle-Shell.",
             "🩺 Salud"
         )
         # Conocimiento & Memoria
@@ -238,8 +239,14 @@ ODD reemplaza la burocracia rígida de los SDD tradicionales por un enfoque prag
    - Nuevos features, refactorizaciones de múltiples archivos, migraciones o trabajo con dependencias complejas (≥2 pasos).
    - **Acción OBLIGATORIA**: Invocar `prepare_odd_task` para generar `odd/tasks/<feature>.md` y su espejo persistente en Engram topic `odd/<feature>/tasks` antes de la primera edición de código.
 
-#### Ecosistema & Guardrails de Gentle-AI v3.5.0:
+#### Ecosistema & Guardrails de Gentle-AI v3.7.0:
+- **Selección de Modelos por Revisor (Per-Reviewer Model Selection)**:
+  * **Claude Code**: Asigna un modelo específico a cada uno de los 6 revisores (riesgo, resiliencia, legibilidad, etc.).
+  * **OpenCode**: Edita los modelos asignados a los agentes implementadores y exploradores.
+  * **Codex**: Configura modelos para agentes ODD y revisores, incluyendo presets para **GPT-6**.
+  * **Optimización de Presupuesto y Fallback**: Elige dónde invertir tokens (modelos más potentes para riesgo, económicos para formato) con degradación elegante a modelos soportados sin romper el flujo.
 - **Review (RDD) por Defecto**: El review viene encendido de fábrica con análisis de riesgo **fail-safe** (cualquier error de análisis se asume de alto riesgo por seguridad).
+- **Gentle-Shell Standalone (`gentle-shell`)**: Funciona en su propio entorno aislado (`~/.gentle-shell/agent`), soporta `--link` para compartir logins/modelos/chats con `pi`, y restaura el review con modelos in-Pi desde extensiones.
 - **Dock Questions Interactivo**: Para resolver incertidumbre (Paso 3 ODD), se despliegan preguntas navegables por teclado en el dock sin interrumpir el chat principal.
 """
         console.print(Panel(Markdown(content), title="[bold]🏷️ Guía Detallada: Protocolo ODD[/bold]", border_style=theme.primary))
@@ -375,10 +382,37 @@ Si prefieres ejecución directa de herramientas específicas:
 - `/doctor`: Diagnóstico del ecosistema Gentle-AI.
 - `/theme <paleta>`: Cambia paleta de color (gentleman, cyberpunk, obsidian, monokai, papa).
 - `/papa`: Alterna Modo Papa de bajo consumo.
-- `/help [tema]`: Muestra guías especializadas (`live`, `odd`, `mcp`, `hosts`, `neuro`, `agent`).
+- `/help [tema]`: Muestra guías especializadas (`live`, `odd`, `mcp`, `hosts`, `neuro`, `agent`, `gentle`).
 - `/exit` o `/quit`: Cierra la sesión interactiva.
 """
         console.print(Panel(Markdown(content), title="[bold]🤖 Interfaz Agéntica & Terminal Shell[/bold]", border_style=theme.secondary))
+
+    elif t_clean in ["gentle", "suite", "gentle-ai", "gentle-shell"]:
+        content = """### 🎩 Novedades de la Suite Gentle: Gentle-AI v3.7.0 & Gentle-Shell Independiente
+
+La suite Gentle unifica la orquestación, revisión de código (RDD), memoria (Engram) y desarrollo orgánico (ODD).
+
+#### 1. Selección de Modelos por Revisor (Per-Reviewer Model Selection):
+Ahora decides con precisión quirúrgica dónde invertir tu presupuesto de tokens:
+- **Claude Code**: Puedes asignarle un modelo específico a cada uno de los seis revisores (riesgo, resiliencia, legibilidad, seguridad, rendimiento, arquitectura).
+- **OpenCode**: Permite editar los modelos de los agentes que implementan y exploran de forma independiente.
+- **Codex**: Configura modelos de los agentes de ODD y revisores, con presets incluidos para **GPT-6**.
+- **Degradación Elegante (Fallback)**: Si el modelo configurado no está disponible en el entorno o proveedor, el sistema cae automáticamente a uno soportado en vez de fallar o interrumpir el flujo.
+
+#### 2. Gentle-Shell como CLI Independiente (`npm i -g gentle-pi`):
+- **Aislamiento Total**: Se instala con su propio comando `gentle-shell` y corre en una carpeta aislada (`~/.gentle-shell/agent`), sin tocar ni ensuciar tu instalación previa de `pi`.
+- **Flag `--link`**: Si deseas reutilizar logins, credenciales, modelos locales y el historial de chats existente de tu `pi`, ejecuta:
+  ```powershell
+  gentle-shell --link
+  ```
+- **Cero Configuración**: En el primer arranque provisiona automáticamente todas sus dependencias y arranca con el tema `Gentleman-Cute` por defecto. Si cambias de versión, se reconfigura solo.
+- **In-Pi Review**: Vuelve la compatibilidad completa de revisiones con modelos in-Pi provenientes de extensiones.
+
+#### 3. Estabilidad en Windows y Sincronización Automática (v3.6.x):
+- El hook de Claude Code opera de forma nativa y robusta en Windows con PowerShell.
+- `gentle-ai sync` detecta y desinstala automáticamente paquetes de preguntas de terceros conflictivos (como `rpiv-ask-user-question`), garantizando la supremacía del dock nativo de Gentle-Shell.
+"""
+        console.print(Panel(Markdown(content), title="[bold]🎩 Suite Gentle-AI v3.7.0 & Gentle-Shell[/bold]", border_style=theme.accent))
 
     else:
         console.print(f"[red]Tópico desconocido: '{topic}'.[/red]")

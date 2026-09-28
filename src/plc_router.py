@@ -90,13 +90,23 @@ class PLCRouter:
         if (current_time - self._last_probe) < self._probe_interval:
             return self._gentle_pi_available
 
-        # Realizar prueba muy ligera (filesystem)
-        # Revisar carpeta ~/.pi/gentle-ai/
+        # Realizar prueba muy ligera (filesystem / PATH)
+        if shutil.which("gentle-shell") is not None:
+            self._gentle_pi_available = True
+            self._last_probe = current_time
+            return True
+
         home_dir = os.path.expanduser('~')
+        gentle_shell_home = os.path.join(home_dir, '.gentle-shell', 'agent')
         pi_dir = os.path.join(home_dir, '.pi', 'gentle-ai')
+        appdata = os.environ.get('APPDATA', '')
+        global_pkg = os.path.join(appdata, 'npm', 'node_modules', 'gentle-pi', 'package.json') if appdata else ''
         
-        # Consideramos disponible si el directorio existe
-        is_available = os.path.exists(pi_dir) and os.path.isdir(pi_dir)
+        is_available = (
+            (os.path.exists(gentle_shell_home) and os.path.isdir(gentle_shell_home)) or
+            (os.path.exists(pi_dir) and os.path.isdir(pi_dir)) or
+            (bool(global_pkg) and os.path.exists(global_pkg) and os.path.isfile(global_pkg))
+        )
         
         self._gentle_pi_available = is_available
         self._last_probe = current_time
@@ -194,36 +204,64 @@ class GentlePIBridge:
         """Comprueba de forma ligera si la configuración de Gentle-PI existe.
         
         Returns:
-            True si existe el directorio de configuración o el package.json.
+            True si existe Gentle-Shell en PATH, su directorio dedicado o package.json.
         """
+        if shutil.which("gentle-shell") is not None:
+            return True
+
         home_dir = os.path.expanduser('~')
         
+        # Verificar home dedicado de gentle-shell
+        gentle_shell_home = os.path.join(home_dir, '.gentle-shell', 'agent')
+        if os.path.exists(gentle_shell_home) and os.path.isdir(gentle_shell_home):
+            return True
+
         # Verificar GENTLE_PI_CONFIG_HOME o ~/.pi/gentle-ai/
         config_home = os.environ.get('GENTLE_PI_CONFIG_HOME', os.path.join(home_dir, '.pi', 'gentle-ai'))
-        
         if os.path.exists(config_home) and os.path.isdir(config_home):
             return True
             
-        # Verificar package.json
+        # Verificar package.json global de npm (gentle-shell standalone)
+        appdata = os.environ.get('APPDATA', '')
+        if appdata:
+            global_pkg = os.path.join(appdata, 'npm', 'node_modules', 'gentle-pi', 'package.json')
+            if os.path.exists(global_pkg) and os.path.isfile(global_pkg):
+                return True
+            
+        # Verificar package.json local en ~/.pi/
         pkg_path = os.path.join(home_dir, '.pi', 'agent', 'npm', 'node_modules', 'gentle-pi', 'package.json')
         return os.path.exists(pkg_path) and os.path.isfile(pkg_path)
         
+    def is_gentle_shell_available(self) -> bool:
+        """Comprueba si el ejecutable gentle-shell está disponible en PATH."""
+        return shutil.which("gentle-shell") is not None
+
     def get_version(self) -> str | None:
-        """Intenta leer la versión instalada de Gentle-PI desde package.json.
+        """Intenta leer la versión instalada de Gentle-PI / Gentle-Shell desde package.json.
         
         Returns:
             Cadena de versión o None si no se pudo leer.
         """
         home_dir = os.path.expanduser('~')
-        pkg_path = os.path.join(home_dir, '.pi', 'agent', 'npm', 'node_modules', 'gentle-pi', 'package.json')
+        appdata = os.environ.get('APPDATA', '')
         
-        if os.path.exists(pkg_path) and os.path.isfile(pkg_path):
-            try:
-                with open(pkg_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    return data.get('version')
-            except Exception:
-                return None
+        # Buscar en orden de prioridad: global npm (gentle-shell standalone) -> dedicated home -> legacy pi
+        candidates = []
+        if appdata:
+            candidates.append(os.path.join(appdata, 'npm', 'node_modules', 'gentle-pi', 'package.json'))
+        candidates.append(os.path.join(home_dir, '.gentle-shell', 'agent', 'npm', 'node_modules', 'gentle-pi', 'package.json'))
+        candidates.append(os.path.join(home_dir, '.pi', 'agent', 'npm', 'node_modules', 'gentle-pi', 'package.json'))
+        
+        for pkg_path in candidates:
+            if os.path.exists(pkg_path) and os.path.isfile(pkg_path):
+                try:
+                    with open(pkg_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        ver = data.get('version')
+                        if ver:
+                            return ver
+                except Exception:
+                    continue
         return None
         
     def build_notification(self, session_id: str, target_session_id: str, payload: dict) -> str:

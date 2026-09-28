@@ -321,11 +321,11 @@ class DevBrainHUD:
                 ("[ 🛡️ Review: Fail-Safe ]", f"bold {self.theme.success}")
             )
             status_line = Text.assemble(
-                ("Gentle-AI v3.5.0 ", f"bold {self.theme.text}"),
+                ("Gentle-AI v3.7.0 ", f"bold {self.theme.text}"),
                 ("│ ", f"dim {self.theme.dim}"),
                 ("● engram v2.0 ", f"bold {self.theme.success}"),
                 ("│ ", f"dim {self.theme.dim}"),
-                ("● gentle-shell v3.4.0", f"bold {self.theme.accent}")
+                ("● gentle-shell v3.7.0 (independiente)", f"bold {self.theme.accent}")
             )
             grid.add_row(pipeline)
             grid.add_row(status_line)
@@ -344,11 +344,11 @@ class DevBrainHUD:
             )
             status_line = Text.assemble(
                 ("Ecosistema Gentle-AI: ", f"dim {self.theme.dim}"),
-                ("gentle-ai v3.5.0 ", f"bold {self.theme.text}"),
+                ("gentle-ai v3.7.0 ", f"bold {self.theme.text}"),
                 ("│ ", f"dim {self.theme.dim}"),
                 ("● engram v2.0 (conectado) ", f"bold {self.theme.success}"),
                 ("│ ", f"dim {self.theme.dim}"),
-                ("● gentle-shell v3.4.0 ", f"bold {self.theme.accent}"),
+                ("● gentle-shell v3.7.0 (independiente) ", f"bold {self.theme.accent}"),
                 ("│ ", f"dim {self.theme.dim}"),
                 ("● review: fail-safe activo", f"bold {self.theme.success}")
             )
