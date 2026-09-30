@@ -169,6 +169,28 @@
       box-shadow: 0 4px 16px rgba(168, 85, 247, 0.25);
     }
 
+    .btn-emerald {
+      border-color: rgba(16, 185, 129, 0.4) !important;
+      color: #6ee7b7 !important;
+      background: rgba(16, 185, 129, 0.12) !important;
+    }
+
+    .btn-emerald:hover {
+      border-color: var(--accent-emerald) !important;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25) !important;
+    }
+
+    .btn-purple {
+      border-color: rgba(168, 85, 247, 0.4) !important;
+      color: #e9d5ff !important;
+      background: rgba(168, 85, 247, 0.12) !important;
+    }
+
+    .btn-purple:hover {
+      border-color: var(--accent-purple) !important;
+      box-shadow: 0 4px 16px rgba(168, 85, 247, 0.25) !important;
+    }
+
     /* Left Stats & Filter Panel */
     .left-panel {
       top: 76px;
@@ -850,7 +872,7 @@
 
   <!-- Modal 2: Health Audit & 1-Click Link Repair -->
   <div class="modal-overlay" id="modal-health">
-    <div class="modal-card" style="width: 720px;">
+    <div class="modal-card" style="width: 760px; max-height: 90vh;">
       <div class="modal-header">
         <h3 style="color: var(--accent-emerald); display: flex; align-items: center; gap: 8px;">
           <span>🩺</span> Salud del Cortex & Auto-Mantenimiento Hebbiano
@@ -868,7 +890,7 @@
             <div class="metric-value" id="health-broken-val" style="color: var(--accent-rose);">0</div>
           </div>
           <div class="metric-box" style="flex: 1; text-align: center;">
-            <div class="metric-label">Duplicados</div>
+            <div class="metric-label">Duplicados Reales</div>
             <div class="metric-value" id="health-dups-val" style="color: var(--accent-amber);">0</div>
           </div>
           <div class="metric-box" style="flex: 1; text-align: center;">
@@ -877,14 +899,21 @@
           </div>
         </div>
 
-        <div class="panel-section-title">Enlaces Rotos Detectados (Reparación en 1-Click)</div>
-        <div id="broken-links-container" style="max-height: 220px; overflow-y: auto; margin-top: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div class="panel-section-title" style="margin: 0;">Enlaces Rotos Detectados (Reparación en 1-Click)</div>
+          <div id="health-batch-actions" style="display: flex; gap: 6px;"></div>
+        </div>
+
+        <div id="broken-links-container" style="max-height: 320px; overflow-y: auto; margin-top: 4px;">
           Cargando auditoría...
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn" onclick="closeModal('modal-health')">Cerrar</button>
-        <button class="btn btn-active" onclick="refreshHealthAudit()">Re-Escanear Vault</button>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.72rem; color: var(--text-muted);" id="health-scan-elapsed">Escaneo completado</span>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" onclick="closeModal('modal-health')">Cerrar</button>
+          <button class="btn btn-active" onclick="refreshHealthAudit()">Re-Escanear Vault</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1721,36 +1750,76 @@
       refreshHealthAudit();
     };
 
+    let cachedHealthData = null;
+
     async function refreshHealthAudit() {
       const container = document.getElementById('broken-links-container');
-      container.innerHTML = "<em>Escaneando integridad de enlaces y duplicados en el Vault...</em>";
+      const batchContainer = document.getElementById('health-batch-actions');
+      container.innerHTML = "<em>Escaneando integridad sináptica, enlaces y duplicados en el Vault...</em>";
+      if (batchContainer) batchContainer.innerHTML = "";
 
       try {
         const res = await fetch('/api/health');
         const data = await res.json();
+        cachedHealthData = data;
 
         document.getElementById('health-score-val').innerText = `${data.health_score}/100`;
-        document.getElementById('health-score-val').style.color = data.health_score >= 80 ? 'var(--accent-emerald)' : 'var(--accent-rose)';
+        document.getElementById('health-score-val').style.color = data.health_score >= 80 ? 'var(--accent-emerald)' : (data.health_score >= 50 ? 'var(--accent-amber)' : 'var(--accent-rose)');
         document.getElementById('health-broken-val').innerText = data.broken_links_count;
         document.getElementById('health-dups-val').innerText = data.duplicates_count;
         document.getElementById('health-stale-val').innerText = data.stale_notes_count;
+        const scanEl = document.getElementById('health-scan-elapsed');
+        if (scanEl) scanEl.innerText = `Auditadas ${data.total_notes} notas en ${data.elapsed_ms}ms (${data.status})`;
 
         if (!data.broken_links || data.broken_links.length === 0) {
-          container.innerHTML = `<p style="color: var(--accent-emerald); font-size: 0.85rem;">✓ ¡Excelente! No se encontraron enlaces rotos en el Vault.</p>`;
+          container.innerHTML = `<p style="color: var(--accent-emerald); font-size: 0.85rem; padding: 12px; text-align: center;">✓ ¡Excelente! No se encontraron enlaces rotos en el Vault.</p>`;
           return;
         }
 
-        container.innerHTML = data.broken_links.map(b => `
-          <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-            <div style="font-size: 0.78rem;">
-              En <code>[[${b.source_note}]]</code>: enlace roto a <strong style="color: var(--accent-rose);">[[${b.broken_target}]]</strong>
-              ${b.suggested_fix ? `<div style="color: var(--accent-emerald); margin-top: 3px;">➔ Sugerencia: <strong>[[${b.suggested_fix}]]</strong></div>` : ''}
+        const withSugg = data.broken_links.filter(b => b.suggested_fix && !b.is_folder);
+        if (batchContainer && withSugg.length > 0) {
+          batchContainer.innerHTML = `
+            <button class="btn btn-emerald" style="padding: 4px 10px; font-size: 0.72rem;" onclick="batchFixAll()">
+              ⚡ Auto-Reparar Todos (${withSugg.length})
+            </button>
+          `;
+        }
+
+        container.innerHTML = data.broken_links.map(b => {
+          const mBadge = b.match_type ? `<span style="font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,240,255,0.12); color: var(--accent-cyan); text-transform: uppercase;">${b.match_type}</span>` : '';
+          const folderBadge = b.is_folder ? `<span style="font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: rgba(139,92,246,0.15); color: var(--accent-purple);">CARPETA</span>` : '';
+
+          return `
+            <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+              <div style="font-size: 0.78rem; flex: 1;">
+                <div>
+                  En <code>[[${b.source_note}]]</code>: enlace a <strong style="color: var(--accent-rose);">[[${b.broken_target}]]</strong>
+                  ${folderBadge} ${mBadge}
+                </div>
+                ${b.suggested_fix && !b.is_folder ? `
+                  <div style="color: var(--accent-emerald); margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+                    <span>➔ Sugerencia:</span>
+                    <strong>[[${b.suggested_fix}]]</strong>
+                  </div>
+                ` : ''}
+                ${b.is_folder ? `
+                  <div style="color: var(--accent-purple); margin-top: 4px; font-size: 0.72rem;">
+                    📁 Apunta a una carpeta existente en el Vault. Puedes crear un MOC índice o mantener el enlace.
+                  </div>
+                ` : ''}
+              </div>
+              <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                ${b.suggested_fix && !b.is_folder ? `
+                  <button class="btn btn-emerald" style="padding: 4px 8px; font-size: 0.72rem;" onclick="fixLink1Click('${b.source_note.replace(/'/g, "\\'")}', '${b.broken_target.replace(/'/g, "\\'")}', '${b.suggested_fix.replace(/'/g, "\\'")}')" title="Reemplazar enlace por la sugerencia inteligente">🛠️ Reparar</button>
+                ` : ''}
+                <button class="btn" style="padding: 4px 8px; font-size: 0.72rem;" onclick="createNote1Click('${b.broken_target.replace(/'/g, "\\'")}')" title="Crear esta nota en 03-CONOCIMIENTO">➕ Crear Nota</button>
+                <button class="btn" style="padding: 4px 8px; font-size: 0.72rem; color: var(--text-muted);" onclick="unlink1Click('${b.source_note.replace(/'/g, "\\'")}', '${b.broken_target.replace(/'/g, "\\'")}')" title="Convertir a texto plano">🔗 Desvincular</button>
+              </div>
             </div>
-            ${b.suggested_fix ? `<button class="btn" style="padding: 4px 8px; font-size: 0.72rem;" onclick="fixLink1Click('${b.source_note}', '${b.broken_target}', '${b.suggested_fix}')">🛠️ Reparar</button>` : ''}
-          </div>
-        `).join('');
+          `;
+        }).join('');
       } catch (err) {
-        container.innerHTML = `<p style="color: var(--accent-rose);">Error: ${err.message}</p>`;
+        container.innerHTML = `<p style="color: var(--accent-rose); font-size: 0.85rem;">Error: ${err.message}</p>`;
       }
     }
 
@@ -1762,10 +1831,56 @@
           body: JSON.stringify({ source_note: source, broken_target: broken, suggested_fix: fix })
         });
         const data = await res.json();
-        showToast(data.message);
+        showToast(data.message || "Enlace reparado exitosamente");
         refreshHealthAudit();
       } catch (e) {
         alert("Error reparando: " + e.message);
+      }
+    }
+
+    async function createNote1Click(target) {
+      try {
+        const res = await fetch('/api/create_note', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note_name: target, folder: "03-CONOCIMIENTO" })
+        });
+        const data = await res.json();
+        showToast(data.message || "Nota creada exitosamente");
+        refreshHealthAudit();
+      } catch (e) {
+        alert("Error creando nota: " + e.message);
+      }
+    }
+
+    async function unlink1Click(source, broken) {
+      try {
+        const res = await fetch('/api/unlink', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source_note: source, broken_target: broken })
+        });
+        const data = await res.json();
+        showToast(data.message || "Enlace desvinculado");
+        refreshHealthAudit();
+      } catch (e) {
+        alert("Error desvinculando: " + e.message);
+      }
+    }
+
+    async function batchFixAll() {
+      showToast("⚡ Reparando enlaces con sugerencias inteligentes...");
+      try {
+        const res = await fetch('/api/fix_all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        showToast(data.message || "Reparación por lotes completada");
+        refreshHealthAudit();
+      } catch (e) {
+        alert("Error en auto-reparación: " + e.message);
       }
     }
 

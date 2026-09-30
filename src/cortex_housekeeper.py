@@ -86,36 +86,37 @@ class CortexHousekeeper:
         if not self.vault_dir.exists():
             return notes
 
-        search_dirs = [
-            self.vault_dir / "02-PROYECTOS",
-            self.vault_dir / "03-CONOCIMIENTO",
-            self.vault_dir / "04-APRENDIZAJES"
-        ]
-
-        # Si no tiene carpetas estándar, buscar en todo el vault excepto carpetas ocultas
-        has_subdirs = any(d.exists() for d in search_dirs)
-        target_roots = search_dirs if has_subdirs else [self.vault_dir]
-
-        for root_dir in target_roots:
-            if not root_dir.exists():
+        ignored = {".obsidian", ".git", ".devbrain_cache", ".trash", "node_modules", ".venv", "__pycache__"}
+        for p in self.vault_dir.rglob("*.md"):
+            if any(part in ignored or part.startswith(".") for part in p.parts):
                 continue
-            for p in root_dir.rglob("*.md"):
-                if any(part.startswith(".") for part in p.parts):
-                    continue
-                name_clean = p.stem.strip()
+            name_clean = p.stem.strip()
+            if name_clean:
                 notes[name_clean.lower()] = p
 
         return notes
 
+    def _discover_all_folders(self) -> dict[str, Path]:
+        """Mapea carpetas existentes en el Vault (nombre en minúsculas -> Path)."""
+        folders = {}
+        if not self.vault_dir.exists():
+            return folders
+        ignored = {".obsidian", ".git", ".devbrain_cache", ".trash", "node_modules", ".venv", "__pycache__"}
+        for p in self.vault_dir.rglob("*"):
+            if p.is_dir() and not any(part in ignored or part.startswith(".") for part in p.parts):
+                folders[p.name.strip().lower()] = p
+        return folders
+
     def _detect_broken_links(self, all_notes: dict[str, Path]) -> list[dict[str, Any]]:
-        """Busca referencias a notas que no existen en el Vault."""
+        """Busca referencias a notas que no existen en el Vault con emparejamiento sináptico inteligente."""
         broken = []
         note_keys = list(all_notes.keys())
+        folders = self._discover_all_folders()
 
         # Revisar una muestra representativa o todas las notas
         scanned_count = 0
         for name_lower, path in all_notes.items():
-            if scanned_count > 300:  # Límite de tiempo/performance
+            if scanned_count > 350:  # Límite de tiempo/performance
                 break
             scanned_count += 1
 
@@ -133,16 +134,56 @@ class CortexHousekeeper:
 
                 target_lower = target.lower()
                 if target_lower not in all_notes:
+                    # Emparejamiento sináptico inteligente
                     sugg = None
-                    if len(broken) < 15:
-                        suggestions = difflib.get_close_matches(target_lower, note_keys, n=1, cutoff=0.75)
-                        if suggestions and suggestions[0] in all_notes:
-                            sugg = all_notes[suggestions[0]].stem
+                    m_type = None
+                    is_folder = False
+
+                    # 1. ¿Es una carpeta del Vault?
+                    if target_lower in folders:
+                        f_path = folders[target_lower]
+                        is_folder = True
+                        for sub in f_path.glob("*.md"):
+                            if sub.stem.lower() in ["readme", "index", "arquitectura", target_lower]:
+                                sugg = sub.stem
+                                m_type = "folder_note"
+                                break
+                        if not sugg:
+                            sugg = f_path.name
+                            m_type = "folder"
+
+                    # 2. Acrónimo corto (<= 6 letras, p. ej. OIDC, EKS, KEDA)
+                    if not sugg and len(target_lower) <= 6:
+                        for k, p in all_notes.items():
+                            if f"({target_lower})" in k or f"[{target_lower}]" in k:
+                                sugg = p.stem
+                                m_type = "acronym"
+                                break
+
+                    # 3. Coincidencia por tokens y prefijo
+                    if not sugg:
+                        tok_matches = [
+                            p.stem for k, p in all_notes.items()
+                            if k.startswith(target_lower + " ") or k.startswith(target_lower + "-") or f" {target_lower} " in f" {k} "
+                        ]
+                        if tok_matches:
+                            core = [m for m in tok_matches if "core principles" in m.lower() or "architecture" in m.lower()]
+                            sugg = min(core, key=len) if core else min(tok_matches, key=len)
+                            m_type = "token"
+
+                    # 4. Fallback difflib (cutoff 0.55)
+                    if not sugg:
+                        close = difflib.get_close_matches(target_lower, note_keys, n=1, cutoff=0.55)
+                        if close:
+                            sugg = all_notes[close[0]].stem
+                            m_type = "similarity"
 
                     broken.append({
                         "source_note": path.stem,
                         "broken_target": target,
-                        "suggested_fix": sugg
+                        "suggested_fix": sugg,
+                        "match_type": m_type,
+                        "is_folder": is_folder
                     })
                     if len(broken) >= 50:
                         break
@@ -152,26 +193,144 @@ class CortexHousekeeper:
         return broken
 
     def _detect_semantic_duplicates(self, all_notes: dict[str, Path]) -> list[dict[str, Any]]:
-        """Detecta notas con títulos casi idénticos mediante agrupamiento por prefijos y similitud local rápida."""
+        """Detecta notas con títulos redundantes o duplicadas en el Vault."""
         duplicates = []
         names = sorted(list(all_notes.keys()))
 
-        # Comparar solo elementos adyacentes en la lista ordenada (O(N))
+        SUBSECTION_SUFFIXES = [
+            'core principles & architecture', 'integration & verification runbook',
+            'performance tuning & benchmarks', 'production gotchas & anti-patterns',
+            'safety, formal invariants & proofs', 'security hardening & zero trust',
+            'core principles & mechanics', 'safety, alignment & invariants',
+            'benchmark & performance tuning', 'cheat sheet', 'deep dive', 'architecture', 'runbook'
+        ]
+        DATE_PATTERN = re.compile(r'(\b\d{4}[-_]\d{2}[-_]\d{2}\b|\b\d{2}[-_]\d{2}[-_]\d{2,4}\b)')
+        VERSION_PATTERN = re.compile(r'[-@_]v?\d+(\.\d+)+')
+
         for i in range(len(names) - 1):
             n1 = names[i]
             n2 = names[i + 1]
-            # Si comparten prefijo significativo
-            if n1[:8] == n2[:8] and len(n1) > 8:
-                ratio = difflib.SequenceMatcher(None, n1, n2).quick_ratio()
-                if 0.85 <= ratio < 1.0:
-                    duplicates.append({
-                        "note_a": all_notes[n1].name,
-                        "note_b": all_notes[n2].name,
-                        "similarity": round(ratio * 100, 1)
-                    })
-                    if len(duplicates) >= 20:
-                        break
+
+            # Ignorar bitácoras o notas fechadas con misma plantilla
+            if DATE_PATTERN.search(n1) and DATE_PATTERN.search(n2):
+                continue
+
+            # Ignorar releases con versiones distintas
+            if VERSION_PATTERN.search(n1) and VERSION_PATTERN.search(n2):
+                n1_no_ver = VERSION_PATTERN.sub('', n1)
+                n2_no_ver = VERSION_PATTERN.sub('', n2)
+                if n1_no_ver == n2_no_ver:
+                    continue
+
+            # Ignorar subseries de un mismo tema modular (p. ej. Runbook vs Architecture)
+            is_series = False
+            for s1 in SUBSECTION_SUFFIXES:
+                if s1 in n1:
+                    for s2 in SUBSECTION_SUFFIXES:
+                        if s2 in n2 and s1 != s2:
+                            is_series = True
+                            break
+            if is_series:
+                continue
+
+            ratio = difflib.SequenceMatcher(None, n1, n2).quick_ratio()
+            if ratio >= 0.88:
+                duplicates.append({
+                    "note_a": all_notes[n1].name,
+                    "note_b": all_notes[n2].name,
+                    "similarity": round(ratio * 100, 1)
+                })
+                if len(duplicates) >= 20:
+                    break
         return duplicates
+
+    def fix_broken_link(self, source_note: str, broken_target: str, fix_target: str) -> dict[str, Any]:
+        """Reemplaza un enlace roto [[broken_target]] por [[fix_target]] en el archivo fuente."""
+        all_notes = self._discover_all_notes()
+        path = all_notes.get(source_note.lower())
+        if not path or not path.exists():
+            return {"success": False, "message": f"Nota fuente '{source_note}' no encontrada en el Vault."}
+
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+            pattern = re.compile(rf"\[\[{re.escape(broken_target)}(\|[a-zA-Z0-9_\-\s]+)?\]\]")
+            def replacer(m):
+                alias = m.group(1) or ""
+                return f"[[{fix_target}{alias}]]"
+            new_content, count = pattern.subn(replacer, content)
+            if count > 0:
+                path.write_text(new_content, encoding="utf-8")
+                return {"success": True, "count": count, "message": f"Enlace reparado: [[{broken_target}]] ➔ [[{fix_target}]] ({count} ocurrencia(s))."}
+            return {"success": False, "message": f"No se encontró el patrón [[{broken_target}]] en la nota."}
+        except Exception as e:
+            return {"success": False, "message": f"Error al escribir en archivo: {e}"}
+
+    def create_missing_note(self, note_name: str, folder: str = "03-CONOCIMIENTO") -> dict[str, Any]:
+        """Crea una nueva nota vacía en el Vault para satisfacer un enlace roto."""
+        target_dir = self.vault_dir / folder
+        if not target_dir.exists():
+            target_dir = self.vault_dir
+        clean_name = note_name.strip().replace("/", "-").replace("\\", "-")
+        target_path = target_dir / f"{clean_name}.md"
+
+        if target_path.exists():
+            return {"success": True, "path": str(target_path), "message": f"La nota '{clean_name}.md' ya existe en el Vault."}
+
+        template = f"""---
+tags: [concepto, devbrain]
+creado_por: DevBrain Cortex
+fecha: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}
+---
+
+# {clean_name}
+
+> Nota conceptual inicializada automáticamente por DevBrain Cortex para resolver sinapsis pendientes.
+
+## Contexto y Definición
+- 
+
+## Conexiones y Referencias
+- 
+"""
+        try:
+            target_path.write_text(template, encoding="utf-8")
+            return {"success": True, "path": str(target_path), "message": f"Nota creada exitosamente en {folder}/{clean_name}.md"}
+        except Exception as e:
+            return {"success": False, "message": f"Error creando nota: {e}"}
+
+    def unlink_broken_link(self, source_note: str, broken_target: str) -> dict[str, Any]:
+        """Convierte [[broken_target]] en texto plano broken_target en la nota fuente."""
+        all_notes = self._discover_all_notes()
+        path = all_notes.get(source_note.lower())
+        if not path or not path.exists():
+            return {"success": False, "message": f"Nota fuente '{source_note}' no encontrada."}
+
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+            pattern = re.compile(rf"\[\[{re.escape(broken_target)}\]\]")
+            new_content, count = pattern.subn(broken_target, content)
+            if count > 0:
+                path.write_text(new_content, encoding="utf-8")
+                return {"success": True, "count": count, "message": f"Enlace desvinculado a texto plano '{broken_target}'."}
+            return {"success": False, "message": f"No se encontró [[{broken_target}]] en la nota."}
+        except Exception as e:
+            return {"success": False, "message": f"Error desvinculando: {e}"}
+
+    def batch_fix_all_suggestions(self) -> dict[str, Any]:
+        """Aplica automáticamente todas las reparaciones de enlaces que tienen sugerencias de alta confianza."""
+        all_notes = self._discover_all_notes()
+        broken = self._detect_broken_links(all_notes)
+        repaired = 0
+        for b in broken:
+            if b.get("suggested_fix") and not b.get("is_folder"):
+                res = self.fix_broken_link(b["source_note"], b["broken_target"], b["suggested_fix"])
+                if res.get("success"):
+                    repaired += 1
+        return {
+            "repaired_count": repaired,
+            "total_broken": len(broken),
+            "message": f"Se repararon automáticamente {repaired} enlaces con sugerencias inteligentes."
+        }
 
     def _detect_stale_notes(self, all_notes: dict[str, Path], days_threshold: int = 90) -> list[dict[str, Any]]:
         """Identifica notas que no se han tocado en más de days_threshold días."""

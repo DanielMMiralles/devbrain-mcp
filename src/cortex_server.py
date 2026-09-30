@@ -300,6 +300,12 @@ class CortexHTTPHandler(SimpleHTTPRequestHandler):
             self._handle_compress_api()
         elif parsed.path == "/api/fix_link":
             self._handle_fix_link_api()
+        elif parsed.path == "/api/create_note":
+            self._handle_create_note_api()
+        elif parsed.path == "/api/unlink":
+            self._handle_unlink_api()
+        elif parsed.path == "/api/fix_all":
+            self._handle_fix_all_api()
         else:
             self.send_error(HTTPStatus.NOT_FOUND, "Ruta no encontrada")
 
@@ -612,6 +618,77 @@ class CortexHTTPHandler(SimpleHTTPRequestHandler):
             self.wfile.write(resp)
         except Exception as e:
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"Error reparando enlace: {e}")
+
+    def _handle_create_note_api(self) -> None:
+        """Crea una nota conceptual vacía en el Vault para resolver un enlace roto."""
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length).decode("utf-8", errors="replace")
+            data = json.loads(body)
+            note_name = data.get("note_name", "").strip()
+            folder = data.get("folder", "03-CONOCIMIENTO").strip()
+
+            if not note_name:
+                self.send_error(HTTPStatus.BAD_REQUEST, "Parámetro 'note_name' requerido")
+                return
+
+            hk = CortexHousekeeper(self.vault_dir)
+            result = hk.create_missing_note(note_name, folder)
+            self._record_live_event("create_note", result)
+
+            resp = json.dumps(result).encode("utf-8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(resp)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(resp)
+        except Exception as e:
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"Error creando nota: {e}")
+
+    def _handle_unlink_api(self) -> None:
+        """Convierte un enlace roto a texto plano en el archivo fuente."""
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length).decode("utf-8", errors="replace")
+            data = json.loads(body)
+            source = data.get("source_note", "").strip()
+            broken = data.get("broken_target", "").strip()
+
+            if not source or not broken:
+                self.send_error(HTTPStatus.BAD_REQUEST, "Parámetros 'source_note' y 'broken_target' requeridos")
+                return
+
+            hk = CortexHousekeeper(self.vault_dir)
+            result = hk.unlink_broken_link(source, broken)
+            self._record_live_event("unlink", result)
+
+            resp = json.dumps(result).encode("utf-8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(resp)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(resp)
+        except Exception as e:
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"Error desvinculando enlace: {e}")
+
+    def _handle_fix_all_api(self) -> None:
+        """Repara automáticamente en lote todos los enlaces con sugerencias de alta confianza."""
+        try:
+            hk = CortexHousekeeper(self.vault_dir)
+            result = hk.batch_fix_all_suggestions()
+            self._record_live_event("batch_fix_links", result)
+
+            resp = json.dumps(result).encode("utf-8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(resp)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(resp)
+        except Exception as e:
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"Error en reparación por lotes: {e}")
 
     def _handle_sleep_status_api(self) -> None:
         """Devuelve el estado de automatización del ciclo de sueño por inactividad."""
