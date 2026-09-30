@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧠 DevBrain 3D Cortex — Visualizador de Red Neuronal & Pensamiento en Vivo</title>
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --card-bg: rgba(13, 17, 28, 0.85);
+      --border-color: rgba(0, 240, 255, 0.25);
+      --accent-cyan: #00f0ff;
+      --accent-purple: #a855f7;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Glassmorphism HUD UI */
+    .hud-overlay {
+      position: absolute;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* Header Bar */
+    .header-bar {
+      top: 16px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-badge {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0, 240, 255, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #00f0ff 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-emerald);
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent-emerald);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Right Controls */
+    .controls-panel {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    /* Thought Tracker Panel */
+    .thought-card {
+      bottom: 24px;
+      left: 20px;
+      width: 440px;
+      max-width: calc(100vw - 40px);
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .thought-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 8px;
+    }
+
+    .thought-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .thought-tool {
+      font-size: 0.75rem;
+      color: var(--accent-purple);
+      font-family: monospace;
+      background: rgba(168, 85, 247, 0.15);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    .thought-body {
+      font-size: 0.9rem;
+      line-height: 1.45;
+      color: var(--text-main);
+      max-height: 120px;
+      overflow-y: auto;
+      font-style: italic;
+    }
+
+    /* Stats & Lobes Panel */
+    .stats-card {
+      top: 80px;
+      right: 20px;
+      width: 280px;
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 16px;
+      backdrop-filter: blur(14px);
+    }
+
+    .stats-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+    }
+
+    .stat-val {
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--accent-cyan);
+    }
+
+    .lobe-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      margin-top: 6px;
+      color: var(--text-muted);
+    }
+
+    .lobe-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Search Bar */
+    .search-box {
+      margin-top: 12px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+    }
+
+    /* Modal / Tooltip */
+    #node-modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--card-bg);
+      border: 1px solid var(--accent-cyan);
+      box-shadow: 0 20px 60px rgba(0, 240, 255, 0.25);
+      border-radius: 14px;
+      padding: 24px;
+      min-width: 340px;
+      max-width: 90vw;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(20px);
+    }
+
+    #node-modal.active {
+      display: block;
+      animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: translate(-50%, -46%) scale(0.95); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Canvas Container -->
+  <div id="canvas-container">
+    <canvas id="cortex-canvas"></canvas>
+  </div>
+
+  <!-- Header Bar -->
+  <div class="hud-overlay header-bar">
+    <div class="logo-badge interactive">
+      <span style="font-size: 1.4rem;">🧠</span>
+      <div>
+        <div class="logo-title">DEVBRAIN CORTEX 3D</div>
+        <div style="font-size: 0.72rem; color: var(--text-muted);">Grafo Sináptico Hebbiano & Orquestación en Vivo</div>
+      </div>
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span id="conn-status">SSE ACTIVO • 60 FPS</span>
+      </div>
+    </div>
+
+    <div class="controls-panel interactive">
+      <button class="btn" id="btn-dream" title="Consolida sinapsis y limpia FTS5">
+        <span>🌙</span> Modo Sueño
+      </button>
+      <button class="btn" id="btn-health" title="Audita integridad, enlaces rotos y LTD">
+        <span>🩺</span> Salud Cortex
+      </button>
+      <button class="btn" id="btn-reset" title="Reinicia la perspectiva orbital">
+        <span>🔄</span> Reset Vista
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats & Lobes Panel -->
+  <div class="hud-overlay stats-card interactive">
+    <div class="stats-title">Métricas de Red Neuronal</div>
+    <div class="stat-row">
+      <span>Neuronas Totales</span>
+      <span class="stat-val" id="stat-neurons">19,000</span>
+    </div>
+    <div class="stat-row">
+      <span>Notas en Vault</span>
+      <span class="stat-val" id="stat-vault" style="color: var(--accent-emerald);">6,206</span>
+    </div>
+    <div class="stat-row">
+      <span>Sinapsis Activas</span>
+      <span class="stat-val" id="stat-synapses" style="color: var(--accent-purple);">2,500</span>
+    </div>
+    <div class="stat-row">
+      <span>FPS de Render</span>
+      <span class="stat-val" id="stat-fps" style="color: #38bdf8;">60.0</span>
+    </div>
+
+    <div style="border-top: 1px solid rgba(255,255,255,0.08); margin: 10px 0;"></div>
+    <div class="stats-title" style="margin-bottom: 6px;">Lóbulos Cerebrales</div>
+    <div class="lobe-indicator"><div class="lobe-dot" style="background: #00f0ff;"></div> Lóbulo Frontal (ODD & Decisiones)</div>
+    <div class="lobe-indicator"><div class="lobe-dot" style="background: #a855f7;"></div> Lóbulo Temporal (Memoria & Engram)</div>
+    <div class="lobe-indicator"><div class="lobe-dot" style="background: #10b981;"></div> Lóbulo Parietal (Arquitectura & Código)</div>
+    <div class="lobe-indicator"><div class="lobe-dot" style="background: #f59e0b;"></div> Lóbulo Occipital (Logs & Telemetría)</div>
+
+    <div class="search-box">
+      <input type="text" class="search-input" id="search-input" placeholder="🔍 Buscar neurona o nota..." autocomplete="off">
+    </div>
+  </div>
+
+  <!-- Thought & Activity Panel -->
+  <div class="hud-overlay thought-card interactive">
+    <div class="thought-header">
+      <div class="thought-title">
+        <span>💡</span> Rastro de Pensamiento
+      </div>
+      <div class="thought-tool" id="active-tool">standby</div>
+    </div>
+    <div class="thought-body" id="thought-text">
+      "Cortex conectado al bus de eventos local. Listo para visualizar en 3D cada pensamiento, activación sináptica y consulta del agente en tiempo real."
+    </div>
+  </div>
+
+  <!-- Node Inspection Modal -->
+  <div class="interactive" id="node-modal">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+      <h3 id="modal-title" style="font-size: 1.15rem; color: var(--accent-cyan);">[[Nombre Nota]]</h3>
+      <button class="btn" style="padding: 4px 8px;" onclick="closeModal()">✕</button>
+    </div>
+    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
+      Región: <span id="modal-region" style="font-weight: 600; color: var(--text-main);">Lóbulo Frontal</span>
+    </div>
+    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
+      Peso Sináptico Hebbiano: <span id="modal-weight" style="font-weight: 700; color: var(--accent-emerald);">1.00</span>
+    </div>
+    <div style="margin-top: 16px; display: flex; gap: 8px;">
+      <button class="btn" style="flex: 1;" onclick="focusCurrentNode()">🎯 Centrar Vista</button>
+    </div>
+  </div>
+
+  <!-- Vanilla WebGL 3D Engine (Zero External Dependencies) -->
+  <script>
+    const canvas = document.getElementById('cortex-canvas');
+    const gl = canvas.getContext('webgl2', { antialias: true, alpha: false });
+
+    if (!gl) {
+      alert("WebGL2 no soportado en este navegador.");
+    }
+
+    // Shaders de Puntos Neuronales
+    const vsPoints = `#version 300 es
+      in vec3 a_position;
+      in vec3 a_color;
+      in float a_size;
+      in float a_glow;
+
+      uniform mat4 u_matrix;
+      uniform float u_time;
+
+      out vec3 v_color;
+      out float v_glow;
+
+      void main() {
+        gl_Position = u_matrix * vec4(a_position, 1.0);
+        float dist = gl_Position.z;
+        gl_PointSize = max(1.8, (a_size * 280.0) / (dist + 120.0));
+        v_color = a_color;
+        v_glow = a_glow;
+      }
+    `;
+
+    const fsPoints = `#version 300 es
+      precision highp float;
+      in vec3 v_color;
+      in float v_glow;
+      out vec4 outColor;
+
+      void main() {
+        vec2 coord = gl_PointCoord - vec2(0.5);
+        float r = length(coord);
+        if (r > 0.5) discard;
+        
+        // Brillo radial suave (glow con núcleo blanco)
+        float intensity = 1.0 - smoothstep(0.0, 0.5, r);
+        float core = 1.0 - smoothstep(0.0, 0.15, r);
+        vec3 finalColor = mix(v_color, vec3(1.0), core * 0.8) + (v_color * v_glow * 0.6);
+        outColor = vec4(finalColor, intensity);
+      }
+    `;
+
+    // Shaders de Fibras / Sinapsis
+    const vsLines = `#version 300 es
+      in vec3 a_position;
+      in vec3 a_color;
+      in float a_alpha;
+
+      uniform mat4 u_matrix;
+      out vec3 v_color;
+      out float v_alpha;
+
+      void main() {
+        gl_Position = u_matrix * vec4(a_position, 1.0);
+        v_color = a_color;
+        v_alpha = a_alpha;
+      }
+    `;
+
+    const fsLines = `#version 300 es
+      precision highp float;
+      in vec3 v_color;
+      in float v_alpha;
+      out vec4 outColor;
+
+      void main() {
+        outColor = vec4(v_color, v_alpha);
+      }
+    `;
+
+    function createShader(gl, type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+
+    function createProgram(gl, vsSource, fsSource) {
+      const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
+      const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+      const program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      return program;
+    }
+
+    const progPoints = createProgram(gl, vsPoints, fsPoints);
+    const progLines = createProgram(gl, vsLines, fsLines);
+
+    // Estado del Grafo y Cámara
+    let nodesData = [];
+    let linksData = [];
+    let pointPositions = [];
+    let pointColors = [];
+    let pointSizes = [];
+    let pointGlows = [];
+
+    let linePositions = [];
+    let lineColors = [];
+    let lineAlphas = [];
+
+    let starsPositions = [];
+    let starsColors = [];
+
+    // Cámara Orbital
+    let rotX = 0.2;
+    let rotY = -0.5;
+    let zoom = 140.0;
+    let targetZoom = 140.0;
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let autoRotate = true;
+
+    // Métricas
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+    let activeNeuronGlowTimer = 0;
+    let selectedNode = null;
+
+    // 1. Inicializar Estrellas de Fondo (Starfield 3D)
+    function initStarfield(count = 3500) {
+      for (let i = 0; i < count; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(Math.random() * 2 - 1);
+        const r = 250 + Math.random() * 200;
+        starsPositions.push(r * Math.sin(phi) * Math.cos(theta));
+        starsPositions.push(r * Math.sin(phi) * Math.sin(theta));
+        starsPositions.push(r * Math.cos(phi));
+        starsColors.push(0.6 + Math.random() * 0.4, 0.7 + Math.random() * 0.3, 0.9 + Math.random() * 0.1);
+      }
+    }
+    initStarfield();
+
+    // 2. Cargar Grafo desde API
+    async function loadGraphData() {
+      try {
+        const res = await fetch('/api/graph');
+        const data = await res.json();
+        nodesData = data.nodes || [];
+        linksData = data.links || [];
+
+        document.getElementById('stat-neurons').innerText = nodesData.length.toLocaleString();
+        document.getElementById('stat-vault').innerText = (data.real_notes_count || 6206).toLocaleString();
+        document.getElementById('stat-synapses').innerText = linksData.length.toLocaleString();
+
+        buildBuffers();
+      } catch (err) {
+        console.error("Error cargando grafo cerebral:", err);
+      }
+    }
+
+    function hexToRgb(hex) {
+      const bigint = parseInt(hex.replace('#', ''), 16);
+      return [(bigint >> 16 & 255) / 255, (bigint >> 8 & 255) / 255, (bigint & 255) / 255];
+    }
+
+    function buildBuffers() {
+      pointPositions = [];
+      pointColors = [];
+      pointSizes = [];
+      pointGlows = [];
+
+      nodesData.forEach(n => {
+        pointPositions.push(n.x, n.y, n.z);
+        const rgb = hexToRgb(n.color || "#00f0ff");
+        pointColors.push(rgb[0], rgb[1], rgb[2]);
+        pointSizes.push(n.is_real ? 1.4 : 0.8);
+        pointGlows.push(0.0);
+      });
+
+      linePositions = [];
+      lineColors = [];
+      lineAlphas = [];
+
+      const nodeMap = new Map();
+      nodesData.forEach((n, idx) => nodeMap.set(n.id, idx));
+
+      linksData.forEach(l => {
+        const sIdx = nodeMap.get(l.source);
+        const tIdx = nodeMap.get(l.target);
+        if (sIdx !== undefined && tIdx !== undefined) {
+          const s = nodesData[sIdx];
+          const t = nodesData[tIdx];
+          linePositions.push(s.x, s.y, s.z, t.x, t.y, t.z);
+          const rgb = hexToRgb(s.color || "#a855f7");
+          lineColors.push(rgb[0], rgb[1], rgb[2], rgb[0], rgb[1], rgb[2]);
+          lineAlphas.push(0.18, 0.18);
+        }
+      });
+    }
+
+    // 3. Matriz 3D
+    function createPerspectiveMatrix(fov, aspect, near, far) {
+      const f = 1.0 / Math.tan(fov / 2);
+      const nf = 1 / (near - far);
+      return [
+        f / aspect, 0, 0, 0,
+        0, f, 0, 0,
+        0, 0, (far + near) * nf, -1,
+        0, 0, 2 * far * near * nf, 0
+      ];
+    }
+
+    function multiplyMatrices(a, b) {
+      const out = new Array(16);
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          out[i * 4 + j] = a[i * 4 + 0] * b[0 * 4 + j] +
+                           a[i * 4 + 1] * b[1 * 4 + j] +
+                           a[i * 4 + 2] * b[2 * 4 + j] +
+                           a[i * 4 + 3] * b[3 * 4 + j];
+        }
+      }
+      return out;
+    }
+
+    function getTransformationMatrix(width, height) {
+      const aspect = width / height;
+      const proj = createPerspectiveMatrix(Math.PI / 4, aspect, 1.0, 1000.0);
+
+      // Rotaciones
+      const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+      const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+
+      const rotMat = [
+        cosY, sinX * sinY, -cosX * sinY, 0,
+        0, cosX, sinX, 0,
+        sinY, -sinX * cosY, cosX * cosY, 0,
+        0, 0, -zoom, 1
+      ];
+
+      return multiplyMatrices(rotMat, proj);
+    }
+
+    // 4. Render Loop
+    function render(now) {
+      resizeCanvas();
+
+      if (autoRotate && !isDragging) {
+        rotY += 0.0025;
+      }
+      zoom += (targetZoom - zoom) * 0.1;
+
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.clearColor(0.027, 0.035, 0.055, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE); // Additive blending para sinapsis luminosas
+
+      const matrix = getTransformationMatrix(canvas.width, canvas.height);
+
+      // A. Dibujar Líneas / Fibras
+      if (linePositions.length > 0) {
+        gl.useProgram(progLines);
+        const uMatLines = gl.getUniformLocation(progLines, 'u_matrix');
+        gl.uniformMatrix4fv(uMatLines, false, new Float32Array(matrix));
+
+        // Buffer pos
+        const bufLinePos = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufLinePos);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(linePositions), gl.STATIC_DRAW);
+        const aPosL = gl.getAttribLocation(progLines, 'a_position');
+        gl.enableVertexAttribArray(aPosL);
+        gl.vertexAttribPointer(aPosL, 3, gl.FLOAT, false, 0, 0);
+
+        // Buffer color
+        const bufLineCol = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufLineCol);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineColors), gl.STATIC_DRAW);
+        const aColL = gl.getAttribLocation(progLines, 'a_color');
+        gl.enableVertexAttribArray(aColL);
+        gl.vertexAttribPointer(aColL, 3, gl.FLOAT, false, 0, 0);
+
+        // Buffer alpha
+        const bufLineA = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufLineA);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineAlphas), gl.STATIC_DRAW);
+        const aAlphaL = gl.getAttribLocation(progLines, 'a_alpha');
+        gl.enableVertexAttribArray(aAlphaL);
+        gl.vertexAttribPointer(aAlphaL, 1, gl.FLOAT, false, 0, 0);
+
+        gl.drawArrays(gl.LINES, 0, linePositions.length / 3);
+      }
+
+      // B. Dibujar Puntos Neuronales
+      if (pointPositions.length > 0) {
+        gl.useProgram(progPoints);
+        const uMatPoints = gl.getUniformLocation(progPoints, 'u_matrix');
+        const uTimePoints = gl.getUniformLocation(progPoints, 'u_time');
+        gl.uniformMatrix4fv(uMatPoints, false, new Float32Array(matrix));
+        gl.uniform1f(uTimePoints, now * 0.001);
+
+        // Combinar con estrellas
+        const allPos = pointPositions.concat(starsPositions);
+        const allCol = pointColors.concat(starsColors);
+        const allSizes = pointSizes.concat(new Array(starsPositions.length / 3).fill(0.4));
+        const allGlows = pointGlows.concat(new Array(starsPositions.length / 3).fill(0.0));
+
+        const bufPtPos = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufPtPos);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allPos), gl.STATIC_DRAW);
+        const aPosP = gl.getAttribLocation(progPoints, 'a_position');
+        gl.enableVertexAttribArray(aPosP);
+        gl.vertexAttribPointer(aPosP, 3, gl.FLOAT, false, 0, 0);
+
+        const bufPtCol = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufPtCol);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allCol), gl.STATIC_DRAW);
+        const aColP = gl.getAttribLocation(progPoints, 'a_color');
+        gl.enableVertexAttribArray(aColP);
+        gl.vertexAttribPointer(aColP, 3, gl.FLOAT, false, 0, 0);
+
+        const bufPtSize = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufPtSize);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allSizes), gl.STATIC_DRAW);
+        const aSizeP = gl.getAttribLocation(progPoints, 'a_size');
+        gl.enableVertexAttribArray(aSizeP);
+        gl.vertexAttribPointer(aSizeP, 1, gl.FLOAT, false, 0, 0);
+
+        const bufPtGlow = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufPtGlow);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allGlows), gl.STATIC_DRAW);
+        const aGlowP = gl.getAttribLocation(progPoints, 'a_glow');
+        gl.enableVertexAttribArray(aGlowP);
+        gl.vertexAttribPointer(aGlowP, 1, gl.FLOAT, false, 0, 0);
+
+        gl.drawArrays(gl.POINTS, 0, allPos.length / 3);
+      }
+
+      // FPS Counter
+      frameCount++;
+      if (now - lastFrameTime >= 1000) {
+        document.getElementById('stat-fps').innerText = frameCount.toFixed(1);
+        frameCount = 0;
+        lastFrameTime = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function resizeCanvas() {
+      const displayWidth = window.innerWidth;
+      const displayHeight = window.innerHeight;
+      if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+        canvas.width = displayWidth;
+        canvas.height = displayHeight;
+      }
+    }
+
+    // 5. Interacción del Ratón (Orbit Controls)
+    window.addEventListener('mousedown', e => {
+      if (e.target.closest('.interactive')) return;
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      rotY += dx * 0.008;
+      rotX += dy * 0.008;
+      rotX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, rotX));
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => isDragging = false);
+
+    window.addEventListener('wheel', e => {
+      targetZoom += e.deltaY * 0.08;
+      targetZoom = Math.max(35.0, Math.min(300.0, targetZoom));
+    });
+
+    // 6. SSE Event Stream (Pensamiento en Vivo)
+    function setupSSE() {
+      const evtSource = new EventSource('/api/events');
+
+      evtSource.onmessage = function(event) {
+        try {
+          const payload = JSON.parse(event.data);
+          handleLiveEvent(payload);
+        } catch (e) {}
+      };
+
+      evtSource.onerror = function() {
+        document.getElementById('conn-status').innerText = 'RECONECTANDO...';
+        document.getElementById('conn-status').style.color = '#f59e0b';
+      };
+
+      evtSource.onopen = function() {
+        document.getElementById('conn-status').innerText = 'SSE ACTIVO • 60 FPS';
+        document.getElementById('conn-status').style.color = 'var(--accent-emerald)';
+      };
+    }
+
+    function handleLiveEvent(evt) {
+      if (evt.type === 'agent_thought' || evt.data?.thought) {
+        const text = evt.data.thought || evt.data.message || JSON.stringify(evt.data);
+        document.getElementById('thought-text').innerText = `"${text}"`;
+        triggerSynapticWave(evt.data.node || "core");
+      } else if (evt.type === 'tool_call' || evt.tool) {
+        const tool = evt.tool || evt.data?.tool || 'mcp';
+        document.getElementById('active-tool').innerText = tool;
+        triggerSynapticWave(tool);
+      } else if (evt.type === 'sleep_mode') {
+        document.getElementById('thought-text').innerText = "🌙 Modo Sueño: Consolidación profunda completada. El cerebro reposa a 60 FPS.";
+      }
+    }
+
+    function triggerSynapticWave(seed) {
+      // Activar destello de glow en neuronas
+      for (let i = 0; i < 40; i++) {
+        const idx = Math.floor(Math.random() * nodesData.length);
+        if (pointGlows[idx] !== undefined) {
+          pointGlows[idx] = 2.5;
+          setTimeout(() => { pointGlows[idx] = 0.0; }, 800 + (i * 20));
+        }
+      }
+    }
+
+    // 7. Acciones de Botones y Búsqueda
+    document.getElementById('btn-reset').onclick = () => {
+      rotX = 0.2;
+      rotY = -0.5;
+      targetZoom = 140.0;
+    };
+
+    document.getElementById('btn-dream').onclick = async () => {
+      const btn = document.getElementById('btn-dream');
+      btn.innerText = '🌙 Soñando...';
+      try {
+        const res = await fetch('/api/sleep', { method: 'POST' });
+        const data = await res.json();
+        alert(`🌙 Ciclo de Sueño Completado:\n- Sinapsis procesadas: ${data.decayed_synapses}\n- Base SQLite optimizada.`);
+      } finally {
+        btn.innerHTML = '<span>🌙</span> Modo Sueño';
+      }
+    };
+
+    document.getElementById('btn-health').onclick = async () => {
+      const res = await fetch('/api/health');
+      const data = await res.json();
+      alert(`🩺 Salud del Cortex: ${data.health_score}/100 (${data.status})\n- Enlaces rotos: ${data.broken_links_count}\n- Duplicados: ${data.duplicates_count}\n- Notas sin activar: ${data.stale_notes_count}`);
+    };
+
+    document.getElementById('search-input').onkeydown = e => {
+      if (e.key === 'Enter') {
+        const query = e.target.value.toLowerCase().trim();
+        const found = nodesData.find(n => n.label.toLowerCase().includes(query));
+        if (found) {
+          showModal(found);
+          focusNode(found);
+        } else {
+          alert(`No se encontró neurona con el término '${query}'.`);
+        }
+      }
+    };
+
+    function showModal(node) {
+      selectedNode = node;
+      document.getElementById('modal-title').innerText = `[[${node.label}]]`;
+      document.getElementById('modal-region').innerText = node.category.toUpperCase();
+      document.getElementById('modal-weight').innerText = (node.weight || 1.0).toFixed(2);
+      document.getElementById('node-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('node-modal').classList.remove('active');
+    }
+
+    function focusNode(node) {
+      targetZoom = 70.0;
+      rotY = -Math.atan2(node.x, node.z);
+      rotX = 0.1;
+    }
+
+    function focusCurrentNode() {
+      if (selectedNode) focusNode(selectedNode);
+    }
+
+    // Arranque
+    loadGraphData();
+    setupSSE();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

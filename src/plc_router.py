@@ -32,7 +32,7 @@ class PLCRouter:
     LOCAL_FAST: set[str] = {
         'search_knowledge', 'recall_memory', 'remember_decision',
         'classify_odd_task', 'list_projects', 'get_project_context',
-        'route_model_dispatch', 'get_spec_questions'
+        'route_model_dispatch', 'get_spec_questions', 'optimize_token_budget'
     }
 
     # Tools that CAN be delegated to Gentle-PI if available
@@ -41,7 +41,7 @@ class PLCRouter:
         'sync_project_graph', 'query_code_graph',
         'package_project_context', 'audit_project_health',
         'generate_scaffold', 'propose_spec', 'validate_spec',
-        'debate_project_feasibility', 'audit_ponytail_complexity'
+        'debate_project_feasibility', 'audit_cortex_health'
     }
 
     # Tools that REQUIRE Gentle-PI for full orchestration

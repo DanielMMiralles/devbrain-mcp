@@ -24,8 +24,11 @@ from cli_theme import ThemeColors
 
 AVAILABLE_TOPICS: dict[str, str] = {
     "live": "Opciones del HUD en vivo a 60fps, paneles y telemetría en tiempo real",
+    "brain": "Visualizador 3D WebGL a 60fps de 19,000 neuronas, servidor SSE en vivo y auto-mantenimiento",
+    "cortex": "Motor de auto-revisión e integridad: enlaces rotos, duplicados y ciclo de sueño",
+    "tokens": "Optimizador de tokens: AST slicing, chunking sináptico y deduplicación diferencial",
     "odd": "Protocolo Organic Driven Development (ODD), clasificaciones y ciclo de trabajo",
-    "mcp": "Catálogo completo de las 21 herramientas MCP de DevBrain y sus firmas",
+    "mcp": "Catálogo completo de las 22 herramientas MCP de DevBrain y sus firmas",
     "hosts": "Guía de conexión para Google Antigravity (AGY), Cursor IDE y Claude Code",
     "neuro": "Motor de neuroplasticidad, regla de Hebb, LTP/LTD y bonus sináptico",
     "shell": "Uso de la terminal interactiva REPL, comandos rápidos y dock questions",
@@ -65,6 +68,10 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
         table.add_column("Descripción & Sintaxis", style=f"{theme.text}", ratio=7)
 
         table.add_row("ask, \"prompt\"", "devbrain ask \"<pregunta>\" • Interfaz agéntica en lenguaje natural (OpenCode style).")
+        table.add_row("brain", "devbrain brain [--port 8765] • Servidor WebGL 3D a 60fps con 19k neuronas y SSE en vivo.")
+        table.add_row("cortex, health", "devbrain cortex [--prune] • Auto-mantenimiento: enlaces rotos, duplicados y notas viejas (LTD).")
+        table.add_row("sleep, dream", "devbrain sleep • Reposo, consolidación sináptica y optimización SQLite FTS.")
+        table.add_row("compress, tokens", "devbrain compress <archivo> • Compresión AST y chunking por Token Budget (-60% a -80%).")
         table.add_row("live, hud", "devbrain live [--papa] • Inicia el Cognitive HUD en vivo a 60fps.")
         table.add_row("stats", "devbrain stats • Consumo de tokens, latencias p50/p95 y costo USD.")
         table.add_row("shell", "devbrain shell • Workspace dock interactivo estilo Gentle-Shell.")
@@ -87,6 +94,31 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
             "devbrain ask \"<pregunta>\" / devbrain \"<pregunta>\"",
             "Interfaz agéntica en lenguaje natural (estilo OpenCode). Clasifica intención, activa sinapsis y responde con conocimiento y directrices.",
             "🤖 Agente"
+        )
+        # Visualizador 3D & Cortex
+        table.add_row(
+            "brain",
+            "devbrain brain [--port 8765] [--no-open]",
+            "Inicia el servidor local SSE y abre el visualizador 3D WebGL con 19,000 neuronas, fibras y polvo estelar a 60 FPS.",
+            "🌌 3D Cortex"
+        )
+        table.add_row(
+            "cortex, health",
+            "devbrain cortex [--prune]",
+            "Auditoría de integridad del cerebro: detecta enlaces rotos [[...]], duplicados semánticos, notas inactivas (LTD) y poda opcional.",
+            "🩺 Auto-Revisión"
+        )
+        table.add_row(
+            "sleep, dream",
+            "devbrain sleep / devbrain dream",
+            "Consolida el grafo sináptico (Modo Sueño): decaimiento de axones inactivos, poda de pesos residuales y optimización FTS SQLite.",
+            "🌙 Sueño"
+        )
+        table.add_row(
+            "compress, tokens",
+            "devbrain compress <archivo|texto> [--tokens N]",
+            "Optimiza presupuesto de tokens: AST slicing de código (Python/TS), troceado sináptico de notas y deduplicación diferencial (-60% a -80%).",
+            "⚡ Tokens"
         )
         # Monitoreo & HUD
         table.add_row(
@@ -222,6 +254,73 @@ El HUD es un dashboard interactivo de terminal a 60fps renderizado con **Rich**,
 """
         console.print(Panel(Markdown(content), title="[bold]🖥️ Guía Detallada: Live Cognitive HUD[/bold]", border_style=theme.secondary))
 
+    elif t_clean in ["brain", "3d", "cortex_3d", "webgl"]:
+        content = """### 🌌 DevBrain 3D Cortex & Servidor SSE en Vivo (`devbrain brain`)
+
+Visualizador WebGL 3D nativo que renderiza **19,000 neuronas y fibras neuronales a 60 FPS**, conectado en tiempo real al flujo de pensamiento de tus agentes de IA:
+
+#### 1. Arquitectura 100% Offline y Local:
+- **Cero dependencias npm/CDN**: Shaders WebGL2 embebidos de una sola pasada (`drawArrays` con `POINTS` y `LINES`).
+- **Consumo de memoria ultraligero**: <15 MB VRAM en GPU local.
+- **Topología Bihemisférica Humana**: Las neuronas se distribuyen morfológicamente en 5 lóbulos cerebrales (Frontal, Temporal, Parietal, Occipital, Núcleo Central).
+- **Polvo estelar**: 3,500 estrellas en 3D para una atmósfera inmersiva.
+
+#### 2. Servidor SSE (`src/cortex_server.py` en `http://localhost:8765`):
+- **Endpoint `/api/graph`**: Transmite las posiciones 3D de las notas y sus sinapsis en formato binario/JSON liviano.
+- **Endpoint `/api/events` (SSE)**: Transmite eventos de cognición en tiempo real (<10ms latencia) leyendo el bus desacoplado `~/.devbrain/live_events.jsonl`.
+- **Endpoint `/api/hook` (POST)**: Permite a hooks externos de Claude Code, Cursor o AGY inyectar trazas de pensamiento de subagentes en vivo.
+- **Controles de Cámara**: Arrastra con el ratón para rotar en 3D, rueda para hacer zoom in/out, clic en cualquier neurona para inspeccionar su contenido markdown.
+"""
+        console.print(Panel(Markdown(content), title="[bold]🌌 Guía: Visualizador 3D Cortex & Servidor SSE[/bold]", border_style=theme.primary))
+
+    elif t_clean in ["cortex", "health", "housekeeper", "mantenimiento", "dream", "sleep"]:
+        content = """### 🩺 Cortex Housekeeper & Ciclo de Reposo (`devbrain cortex` / `devbrain sleep`)
+
+Motor de auto-revisión e integridad cognitiva ("se revisa solo: avisa si algo que sabe quedó viejo, roto o repetido, sin perder información"):
+
+#### 1. Detección de Enlaces Rotos (Sinapsis Huérfanas):
+- Escanea todas las notas del Vault buscando referencias `[[NotaInexistente]]`.
+- Utiliza concordancia aproximada (`difflib`) para sugerir correcciones automáticas de nombres renombrados.
+
+#### 2. Detección de Solapamiento Semántico & Duplicados:
+- Algoritmo de clustering por prefijo con comparación lineal optimizada.
+- Audita +6,000 notas en **1.36 segundos** en Windows local.
+- Muestra el porcentaje de similitud entre notas redundantes para evitar duplicación cognitiva.
+
+#### 3. Depresión a Largo Plazo (LTD) y Notas Inactivas:
+- Detecta conceptos no consultados en >90 días.
+- Permite podar sinapsis residuales (`--prune`) con peso $<0.1$.
+
+#### 4. Modo Sueño / Consolidación Profunda (`devbrain sleep`):
+- Consolida las memorias del día mientras el desarrollador descansa.
+- Aplica decaimiento biológico suave ($w \\cdot 2^{-\\Delta t / 30}$) a conexiones inactivas.
+- Ejecuta `PRAGMA optimize` y optimización de índices SQLite FTS5.
+"""
+        console.print(Panel(Markdown(content), title="[bold]🩺 Guía: Cortex Housekeeper & Modo Sueño[/bold]", border_style=theme.secondary))
+
+    elif t_clean in ["tokens", "optimizer", "compress", "ast"]:
+        content = """### ⚡ Token Budget Optimizer & Compresión Sintáctica (`devbrain compress`)
+
+Estrategia determinista de ahorro de tokens (**-60% a -80% real**) que reemplaza heurísticas vacías por transformaciones sintácticas reales:
+
+#### 1. AST Code Slicing (Python & TypeScript):
+- Analiza el árbol sintáctico abstracto (`ast` en Python, regex estructurado en TypeScript/JS).
+- Poda los cuerpos de funciones y métodos internos, manteniendo firmas, interfaces, decoradores, tipos de retorno y docstrings esenciales.
+- Reduce un archivo de 2,500 tokens a solo 350 tokens sin perder legibilidad contractual.
+
+#### 2. Synaptic Chunking de Notas:
+- Trocea notas markdown largas por encabezados (`#`, `##`, `###`).
+- Clasifica cada sección calculando un score ponderado por la regla de Hebb y los nodos activos en la sesión actual.
+- Selecciona únicamente los bloques más relevantes que encajen estrictamente en el `--tokens` asignado (ej. 450 tokens).
+
+#### 3. Deduplicación Diferencial de Sesión:
+- Hashea cada bloque inyectado mediante SHA256.
+- Si un bloque de directrices o memoria ya fue enviado en turnos previos de la misma sesión, lo reemplaza por un puntero ligero:
+  `> 📌 [Contexto Ya Cargado en Sesión]: Resumen (ID: a7f2...)`
+- Elimina redundancia y mantiene el context window limpio para razonamiento puro.
+"""
+        console.print(Panel(Markdown(content), title="[bold]⚡ Guía: Token Budget Optimizer[/bold]", border_style=theme.accent))
+
     elif t_clean in ["odd"]:
         content = """### 🏷️ Protocolo Organic Driven Development (ODD)
 
@@ -252,7 +351,7 @@ ODD reemplaza la burocracia rígida de los SDD tradicionales por un enfoque prag
         console.print(Panel(Markdown(content), title="[bold]🏷️ Guía Detallada: Protocolo ODD[/bold]", border_style=theme.primary))
 
     elif t_clean in ["mcp", "tools"]:
-        table = Table(title="🛠️ Las 21 Herramientas MCP de DevBrain v3.0", box=None, expand=True, padding=(0, 1))
+        table = Table(title="🛠️ Las 22 Herramientas MCP de DevBrain v3.0", box=None, expand=True, padding=(0, 1))
         table.add_column("Categoría", style=f"bold {theme.primary}", ratio=2)
         table.add_column("Herramienta MCP", style=f"bold {theme.accent}", ratio=3)
         table.add_column("Propósito & Comportamiento", style=f"{theme.text}", ratio=5)
@@ -273,7 +372,9 @@ ODD reemplaza la burocracia rígida de los SDD tradicionales por un enfoque prag
         table.add_row("🛡️ Gobernanza", "package_project_context", "Bundle markdown ultracompacto del código real.", "[yellow]DELEGATABLE[/yellow]")
         table.add_row("🛡️ Gobernanza", "audit_project_health", "Auditoría con diagnóstico en vivo de Gentle-AI doctor.", "[yellow]DELEGATABLE[/yellow]")
         table.add_row("🛡️ Gobernanza", "debate_project_feasibility", "Modo Debate Sin Filtros (Red Team) contra SPOF y costos.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("🛡️ Gobernanza", "audit_ponytail_complexity", "Auditoría YAGNI para podar sobre-ingeniería.", "[yellow]DELEGATABLE[/yellow]")
+        table.add_row("🩺 Auto-Revisión", "audit_cortex_health", "Audita enlaces rotos, notas viejas (LTD), duplicados y poda sinapsis.", "[yellow]DELEGATABLE[/yellow]")
+        table.add_row("⚡ Optimización", "optimize_token_budget", "Compresión AST de código y chunking sináptico por Token Budget.", "[green]LOCAL_FAST[/green]")
+        table.add_row("⚡ Optimización", "route_model_dispatch", "Recomienda LLM costo-eficiente (Fast, Frontier, Coder).", "[green]LOCAL_FAST[/green]")
 
         table.add_row("🌲 Grafo AST", "query_code_graph", "Consulta grafo sintáctico AST de símbolos y clases.", "[yellow]DELEGATABLE[/yellow]")
         table.add_row("🌲 Grafo AST", "sync_project_graph", "Indexa código fuente y genera relaciones AST Graphify.", "[yellow]DELEGATABLE[/yellow]")
@@ -282,7 +383,6 @@ ODD reemplaza la burocracia rígida de los SDD tradicionales por un enfoque prag
         table.add_row("🏷️ ODD & Sesión", "prepare_odd_task", "Crea odd/tasks/<feature>.md y espejo en Engram topic.", "[yellow]DELEGATABLE[/yellow]")
         table.add_row("🏷️ ODD & Sesión", "reconcile_odd_resume", "Reconcilia estado local con memoria Engram tras reinicio.", "[yellow]DELEGATABLE[/yellow]")
         table.add_row("🏷️ ODD & Sesión", "orchestrator_session_bridge", "Mensajería inter-orquestador con ACK de Gentle-Shell.", "[red]ORCHESTRATE[/red]")
-        table.add_row("⚡ Optimización", "route_model_dispatch", "Recomienda LLM costo-eficiente (Fast, Frontier, Coder).", "[green]LOCAL_FAST[/green]")
 
         console.print(Panel(table, title="[bold]🛠️ Catálogo Oficial de Herramientas MCP & Rutas PLC[/bold]", border_style=theme.accent))
 

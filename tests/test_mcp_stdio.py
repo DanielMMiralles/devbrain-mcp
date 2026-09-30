@@ -7,6 +7,11 @@ import json
 import sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 SERVER_SCRIPT = Path(__file__).resolve().parent.parent / "src" / "devbrain_mcp.py"
 
 def run_test():
@@ -54,7 +59,11 @@ def run_test():
     print(f"  [OK] tools/list returned {len(tools)} tools:")
     for t in tools:
         print(f"       - {t['name']}: {t['description'][:60]}...")
-    assert len(tools) == 21, f"Expected 21 tools, got {len(tools)}"
+    assert len(tools) == 22, f"Expected 22 tools, got {len(tools)}"
+    tool_names = [t["name"] for t in tools]
+    assert "optimize_token_budget" in tool_names, "optimize_token_budget missing from tools list"
+    assert "audit_cortex_health" in tool_names, "audit_cortex_health missing from tools list"
+    assert "audit_ponytail_complexity" not in tool_names, "audit_ponytail_complexity should have been retired"
 
     # 3. Test tools/call (classify_odd_task)
     odd_request = {
@@ -78,10 +87,34 @@ def run_test():
     assert "[SUBSTANTIAL_ODD]" in odd_content[0]["text"], "Classification mismatch"
     print("  [OK] tools/call (classify_odd_task) returned [SUBSTANTIAL_ODD] successfully")
 
-    # 4. Test tools/call (list_projects)
-    call_request = {
+    # 4. Test tools/call (optimize_token_budget)
+    opt_request = {
         "jsonrpc": "2.0",
         "id": 4,
+        "method": "tools/call",
+        "params": {
+            "name": "optimize_token_budget",
+            "arguments": {
+                "target_text": "def compute_total(items):\n    # docstring\n    total = 0\n    for item in items:\n        total += item.price\n    return total\n",
+                "mode": "ast",
+                "language": "python"
+            }
+        }
+    }
+    proc.stdin.write(json.dumps(opt_request) + "\n")
+    proc.stdin.flush()
+    opt_response = json.loads(proc.stdout.readline())
+    assert "result" in opt_response, "tools/call optimize_token_budget failed"
+    opt_content = opt_response["result"].get("content", [])
+    assert len(opt_content) > 0, "tools/call optimize_token_budget returned empty"
+    print(f"       Debug optimize_token_budget response: {opt_content[0]['text'][:100]}")
+    assert "Code AST Slicing" in opt_content[0]["text"], "AST slicing result missing header"
+    print("  [OK] tools/call (optimize_token_budget) executed successfully")
+
+    # 5. Test tools/call (list_projects)
+    call_request = {
+        "jsonrpc": "2.0",
+        "id": 5,
         "method": "tools/call",
         "params": {
             "name": "list_projects",
@@ -98,8 +131,8 @@ def run_test():
     for line in content_list[0]["text"].splitlines()[:4]:
         print(f"       {line}")
 
-    # 5. Test ping
-    ping_request = {"jsonrpc": "2.0", "id": 5, "method": "ping"}
+    # 6. Test ping
+    ping_request = {"jsonrpc": "2.0", "id": 6, "method": "ping"}
     proc.stdin.write(json.dumps(ping_request) + "\n")
     proc.stdin.flush()
     ping_response = json.loads(proc.stdout.readline())

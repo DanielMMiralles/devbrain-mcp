@@ -389,14 +389,30 @@ TOOLS_MANIFEST = [
         }
     },
     {
-        "name": "audit_ponytail_complexity",
-        "description": "Audita una solucion buscando violaciones a YAGNI o sobre-abstraccion segun reglas Ponytail.",
+        "name": "optimize_token_budget",
+        "description": "Optimiza y comprime contexto (AST slicing de código, chunking sináptico de notas con presupuesto estricto de tokens y deduplicación diferencial).",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "target_description": {"type": "string", "description": "Descripcion de lo que se desea implementar"}
+                "target_text": {"type": "string", "description": "Texto de código fuente, notas o contexto a optimizar"},
+                "context_type": {"type": "string", "description": "Tipo de contexto: 'code', 'knowledge' o 'session'", "default": "code"},
+                "max_tokens": {"type": "integer", "description": "Límite superior de tokens deseado", "default": 1200},
+                "language": {"type": "string", "description": "Lenguaje de programación ('python', 'typescript', 'auto')", "default": "auto"},
+                "focus_symbol": {"type": "string", "description": "Símbolo, función o tema al que dar prioridad de detalle"}
             },
-            "required": ["target_description"]
+            "required": ["target_text"]
+        }
+    },
+    {
+        "name": "audit_cortex_health",
+        "description": "Audita la integridad del cerebro: enlaces rotos ([[...]]), notas obsoletas (LTD), duplicados semánticos y poda sináptica.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "auto_prune": {"type": "boolean", "description": "Si es true, poda automáticamente sinapsis residuales débiles (<0.1)", "default": False},
+                "scan_broken_links": {"type": "boolean", "description": "Escanea enlaces rotos a notas inexistentes", "default": True},
+                "scan_duplicates": {"type": "boolean", "description": "Detecta notas con solapamiento semántico o títulos redundantes", "default": True}
+            }
         }
     },
     {
@@ -1267,17 +1283,94 @@ def handle_debate_project_feasibility(args):
                f"2. **Sobrecosto Cognitivo**: Evaluar si introduce dependencias no justificadas por el tráfico actual.\n" \
                f"3. **Plan de Reversibilidad**: ¿Qué coste tiene dar marcha atrás si la solución falla en producción?\n"
 
-def handle_audit_ponytail_complexity(args):
-    target = args.get("target_description", "")
+def handle_optimize_token_budget(args):
+    text = args.get("target_text", "")
+    if not text:
+        return "Error: Se requiere 'target_text' para optimizar el contexto."
+    
+    ctype = args.get("context_type", "code").lower()
+    max_tok = int(args.get("max_tokens", 1200))
+    lang = args.get("language", "auto")
+    focus = args.get("focus_symbol", "")
+    
     try:
-        from devbrain_debate import audit_complexity
-        return audit_complexity(target)
-    except Exception:
-        return f"# ✂️ Auditoría Ponytail / YAGNI\n\n" \
-               f"Objetivo: '{target[:150]}...'\n" \
-               f"- Regla 1: No introducir microservicios si un monolito modular resuelve el problema.\n" \
-               f"- Regla 2: Eliminar capas de indirección que no tengan al menos dos implementaciones concretas.\n" \
-               f"- Veredicto: Mantener la solución más simple que cumpla el contrato de negocio."
+        from token_optimizer import TokenOptimizer
+        opt = TokenOptimizer()
+        if ctype == "knowledge":
+            active_syn = SYNAPSE_ENGINE.get_session_nodes(CURRENT_SESSION_ID) if SYNAPSE_ENGINE else []
+            res = opt.optimize_knowledge_chunks(text, topic=focus, max_tokens=max_tok, active_session_synapses=active_syn)
+            return (
+                f"# ⚡ Token Budget Optimizer [Knowledge Chunks]\n\n"
+                f"- **Tokens Originales**: ~{res['original_tokens']}\n"
+                f"- **Tokens Optimizados**: ~{res['optimized_tokens']} (Ahorro: **{res['savings_percent']}%** / -{res['savings_tokens']} tokens)\n"
+                f"- **Secciones Seleccionadas**: {res['chunks_kept']}\n\n"
+                f"### Contexto Sináptico Comprimido:\n\n{res['optimized_text']}"
+            )
+        elif ctype == "session":
+            res = opt.deduplicate_session_context(text, session_id=CURRENT_SESSION_ID or "default")
+            dedup_str = "SÍ (puntero compacto emitido)" if res['was_deduplicated'] else "NO (primera aparición)"
+            return (
+                f"# ⚡ Token Budget Optimizer [Session Deduplication]\n\n"
+                f"- **Deduplicado**: {dedup_str}\n"
+                f"- **Tokens Originales**: ~{res['original_tokens']} ➔ **Tokens Optimizados**: ~{res['optimized_tokens']} (Ahorro: **{res['savings_percent']}%**)\n\n"
+                f"{res['deduplicated_text']}"
+            )
+        else:
+            res = opt.optimize_code_context(text, language=lang, max_tokens=max_tok, focus_symbol=focus)
+            return (
+                f"# ⚡ Token Budget Optimizer [Code AST Slicing]\n\n"
+                f"- **Estrategia**: `{res['strategy']}`\n"
+                f"- **Tokens Originales**: ~{res['original_tokens']}\n"
+                f"- **Tokens Optimizados**: ~{res['optimized_tokens']} (Ahorro: **{res['savings_percent']}%** / -{res['savings_tokens']} tokens)\n\n"
+                f"```{lang if lang != 'auto' else 'text'}\n{res['optimized_code']}\n```"
+            )
+    except Exception as e:
+        return f"Error en optimización de tokens: {e}"
+
+def handle_audit_cortex_health(args):
+    auto_prune = bool(args.get("auto_prune", False))
+    scan_broken = bool(args.get("scan_broken_links", True))
+    scan_dups = bool(args.get("scan_duplicates", True))
+    
+    try:
+        from cortex_housekeeper import CortexHousekeeper
+        db_p = INDEXER.db_path if INDEXER else None
+        hk = CortexHousekeeper(VAULT_DIR, db_path=db_p)
+        res = hk.audit_cortex_health(
+            scan_broken_links=scan_broken,
+            scan_duplicates=scan_dups,
+            auto_prune=auto_prune
+        )
+        
+        broken_report = ""
+        if res['broken_links']:
+            broken_report = "\n### 🔗 Enlaces Rotos Detectados (Muestra):\n"
+            for b in res['broken_links'][:6]:
+                fix = f" ➔ Sugerencia: `[[{b['suggested_fix']}]]`" if b['suggested_fix'] else ""
+                broken_report += f"- En `[[{b['source_note']}]]`: Enlace a `[[{b['broken_target']}]]` no existe{fix}\n"
+        
+        dups_report = ""
+        if res['duplicates']:
+            dups_report = "\n### 📑 Posibles Duplicados / Solapamientos:\n"
+            for d in res['duplicates'][:4]:
+                dups_report += f"- `{d['note_a']}` ↔ `{d['note_b']}` (Similitud: {d['similarity']}%)\n"
+
+        recs = "\n".join(f"- {r}" for r in res['recommendations'])
+        
+        return (
+            f"# 🧠 Auditoría de Salud del Cortex: {res['health_score']}/100 [{res['status']}]\n\n"
+            f"- **Notas Totales**: {res['total_notes']}\n"
+            f"- **Enlaces Rotos**: {res['broken_links_count']}\n"
+            f"- **Duplicados Semánticos**: {res['duplicates_count']}\n"
+            f"- **Notas Inactivas (>90d)**: {res['stale_notes_count']}\n"
+            f"- **Sinapsis en Grafo**: {res['synapses_total']} (Débiles: {res['weak_synapses']}, Podadas: {res['pruned_synapses']})\n"
+            f"- **Tiempo de Análisis**: {res['elapsed_ms']} ms\n"
+            f"{broken_report}"
+            f"{dups_report}\n"
+            f"### Recomendaciones:\n{recs}"
+        )
+    except Exception as e:
+        return f"Error auditando la salud del cortex: {e}"
 
 def handle_query_code_graph(args):
     project = args.get("project_name", "")
@@ -1366,7 +1459,8 @@ def process_request(request):
             elif name == "package_project_context": text = handle_package_project_context(args)
             elif name == "audit_project_health": text = handle_audit_project_health(args)
             elif name == "debate_project_feasibility": text = handle_debate_project_feasibility(args)
-            elif name == "audit_ponytail_complexity": text = handle_audit_ponytail_complexity(args)
+            elif name == "optimize_token_budget": text = handle_optimize_token_budget(args)
+            elif name == "audit_cortex_health": text = handle_audit_cortex_health(args)
             elif name == "query_code_graph": text = handle_query_code_graph(args)
             elif name == "sync_project_graph": text = handle_sync_project_graph(args)
             elif name == "route_model_dispatch": text = handle_route_model_dispatch(args)
