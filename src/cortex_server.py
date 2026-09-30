@@ -362,6 +362,25 @@ def start_cortex_server(
     return httpd
 
 
+def run_server(
+    port: int = DEFAULT_PORT,
+    vault_dir: Path | None = None,
+    open_browser: bool = False
+) -> None:
+    """Inicia el servidor Cortex y bloquea el hilo principal atendiendo peticiones hasta Ctrl+C."""
+    srv = start_cortex_server(port=port, vault_dir=vault_dir, open_browser=open_browser)
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        sys.stdout.write("\n[DevBrain] Cerrando servidor Cortex...\n")
+    finally:
+        try:
+            srv.shutdown()
+            srv.server_close()
+        except Exception:
+            pass
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="DevBrain Cortex 3D WebGL & SSE Server")
@@ -371,9 +390,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     v_path = Path(args.vault) if args.vault else VAULT_DEFAULT
-    srv = start_cortex_server(port=args.port, vault_dir=v_path, open_browser=not args.no_open)
-    try:
-        srv.serve_forever()
-    except KeyboardInterrupt:
-        sys.stdout.write("\nCerrando servidor Cortex...\n")
-        srv.server_close()
+    run_server(port=args.port, vault_dir=v_path, open_browser=not args.no_open)

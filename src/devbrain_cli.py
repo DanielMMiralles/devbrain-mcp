@@ -219,15 +219,9 @@ def main():
             border_style=theme.secondary,
             title="🌌 [bold]3D Cortex Engine[/bold]"
         ))
-        import webbrowser
-        if not no_open:
-            try:
-                webbrowser.open(f"http://localhost:{port}")
-            except Exception:
-                pass
         from cortex_server import run_server
         try:
-            run_server(port=port)
+            run_server(port=port, open_browser=not no_open)
         except KeyboardInterrupt:
             console.print(f"\n[{theme.dim}]Servidor 3D Cortex detenido.[/{theme.dim}]")
 
