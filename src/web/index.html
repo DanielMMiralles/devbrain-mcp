@@ -3,25 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🧠 DevBrain 3D Cortex — Visualizador de Red Neuronal & Pensamiento en Vivo</title>
+  <title>🧠 DevBrain 3D Cortex — Cockpit Cognitivo & Visualizador Interactivo a 60 FPS</title>
   <style>
     :root {
-      --bg-dark: #07090e;
-      --card-bg: rgba(13, 17, 28, 0.85);
-      --border-color: rgba(0, 240, 255, 0.25);
+      --bg-dark: #06080e;
+      --card-bg: rgba(11, 15, 26, 0.88);
+      --card-hover: rgba(20, 27, 45, 0.95);
+      --border-cyan: rgba(0, 240, 255, 0.28);
+      --border-subtle: rgba(255, 255, 255, 0.1);
       --accent-cyan: #00f0ff;
       --accent-purple: #a855f7;
       --accent-emerald: #10b981;
       --accent-amber: #f59e0b;
-      --text-main: #f1f5f9;
+      --accent-rose: #f43f5e;
+      --accent-blue: #38bdf8;
+      --text-main: #f8fafc;
       --text-muted: #94a3b8;
+      --font-code: "JetBrains Mono", Consolas, "Fira Code", monospace;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      user-select: none;
     }
 
     body {
@@ -31,8 +35,10 @@
       overflow: hidden;
       width: 100vw;
       height: 100vh;
+      user-select: none;
     }
 
+    /* 3D Canvas */
     #canvas-container {
       width: 100%;
       height: 100%;
@@ -48,8 +54,8 @@
       height: 100%;
     }
 
-    /* Glassmorphism HUD UI */
-    .hud-overlay {
+    /* HUD Layout */
+    .hud-layer {
       position: absolute;
       z-index: 10;
       pointer-events: none;
@@ -61,28 +67,29 @@
 
     /* Header Bar */
     .header-bar {
-      top: 16px;
-      left: 20px;
-      right: 20px;
+      top: 14px;
+      left: 18px;
+      right: 18px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
     }
 
-    .logo-badge {
+    .logo-card {
       background: var(--card-bg);
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border-cyan);
       border-radius: 12px;
-      padding: 10px 18px;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 8px 32px rgba(0, 240, 255, 0.1);
+      padding: 8px 16px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 8px 32px rgba(0, 240, 255, 0.12);
       display: flex;
       align-items: center;
       gap: 12px;
     }
 
     .logo-title {
-      font-size: 1.15rem;
+      font-size: 1.05rem;
       font-weight: 800;
       letter-spacing: 0.5px;
       background: linear-gradient(135deg, #00f0ff 0%, #a855f7 100%);
@@ -90,315 +97,843 @@
       -webkit-text-fill-color: transparent;
     }
 
-    .status-badge {
-      display: flex;
+    .status-pill {
+      display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
       color: var(--accent-emerald);
-      padding: 4px 10px;
-      border-radius: 20px;
       background: rgba(16, 185, 129, 0.12);
       border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 3px 8px;
+      border-radius: 20px;
     }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--accent-emerald);
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      box-shadow: 0 0 10px var(--accent-emerald);
-      animation: pulse 2s infinite;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
+      animation: pulseDot 2s infinite;
     }
 
-    @keyframes pulse {
+    @keyframes pulseDot {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.4; transform: scale(0.85); }
     }
 
-    /* Right Controls */
-    .controls-panel {
+    .header-actions {
       display: flex;
-      gap: 10px;
+      align-items: center;
+      gap: 8px;
     }
 
     .btn {
       background: var(--card-bg);
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border-subtle);
       color: var(--text-main);
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 0.85rem;
+      padding: 8px 14px;
+      border-radius: 9px;
+      font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
-      backdrop-filter: blur(8px);
-      transition: all 0.25s ease;
-      display: flex;
+      backdrop-filter: blur(12px);
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .btn:hover {
-      background: rgba(0, 240, 255, 0.15);
+      background: var(--card-hover);
       border-color: var(--accent-cyan);
-      box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
+      box-shadow: 0 4px 16px rgba(0, 240, 255, 0.2);
       transform: translateY(-1px);
     }
 
-    /* Thought Tracker Panel */
-    .thought-card {
-      bottom: 24px;
-      left: 20px;
-      width: 440px;
-      max-width: calc(100vw - 40px);
+    .btn-active {
+      background: rgba(0, 240, 255, 0.15) !important;
+      border-color: var(--accent-cyan) !important;
+      color: var(--accent-cyan) !important;
+    }
+
+    .btn-auto-sleep {
+      border-color: rgba(168, 85, 247, 0.4);
+      color: #e9d5ff;
+    }
+
+    .btn-auto-sleep:hover {
+      border-color: var(--accent-purple);
+      box-shadow: 0 4px 16px rgba(168, 85, 247, 0.25);
+    }
+
+    /* Left Stats & Filter Panel */
+    .left-panel {
+      top: 76px;
+      left: 18px;
+      width: 290px;
+      max-height: calc(100vh - 180px);
       background: var(--card-bg);
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border-subtle);
       border-radius: 14px;
       padding: 16px;
       backdrop-filter: blur(16px);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .thought-header {
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      padding-bottom: 8px;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
     }
 
-    .thought-title {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--accent-cyan);
+    .panel-section-title {
+      font-size: 0.72rem;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 1px;
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-box {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .metric-label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-top: 2px;
+      font-family: var(--font-code);
+    }
+
+    /* Filter Chips */
+    .chip-container {
       display: flex;
-      align-items: center;
+      flex-wrap: wrap;
       gap: 6px;
     }
 
-    .thought-tool {
-      font-size: 0.75rem;
-      color: var(--accent-purple);
-      font-family: monospace;
-      background: rgba(168, 85, 247, 0.15);
-      padding: 3px 8px;
-      border-radius: 6px;
-      border: 1px solid rgba(168, 85, 247, 0.3);
-    }
-
-    .thought-body {
-      font-size: 0.9rem;
-      line-height: 1.45;
-      color: var(--text-main);
-      max-height: 120px;
-      overflow-y: auto;
-      font-style: italic;
-    }
-
-    /* Stats & Lobes Panel */
-    .stats-card {
-      top: 80px;
-      right: 20px;
-      width: 280px;
-      background: var(--card-bg);
+    .chip {
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 4px 9px;
       border-radius: 14px;
-      padding: 16px;
-      backdrop-filter: blur(14px);
-    }
-
-    .stats-title {
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      margin-bottom: 12px;
-      letter-spacing: 0.5px;
-    }
-
-    .stat-row {
-      display: flex;
-      justify-content: space-between;
+      font-size: 0.72rem;
+      cursor: pointer;
+      display: inline-flex;
       align-items: center;
-      margin-bottom: 8px;
-      font-size: 0.85rem;
+      gap: 5px;
+      transition: all 0.15s;
     }
 
-    .stat-val {
-      font-weight: 700;
-      font-family: monospace;
+    .chip:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+    }
+
+    .chip.active {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: var(--accent-cyan);
       color: var(--accent-cyan);
+      font-weight: 600;
     }
 
-    .lobe-indicator {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.78rem;
-      margin-top: 6px;
-      color: var(--text-muted);
-    }
-
-    .lobe-dot {
-      width: 8px;
-      height: 8px;
+    .chip-dot {
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
     }
 
-    /* Search Bar */
-    .search-box {
-      margin-top: 12px;
+    /* Search Box & Autocomplete */
+    .search-wrap {
       position: relative;
     }
 
     .search-input {
       width: 100%;
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0, 0, 0, 0.5);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 8px;
-      padding: 8px 12px;
+      padding: 8px 12px 8px 30px;
       color: var(--text-main);
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       outline: none;
       transition: border-color 0.2s;
     }
 
     .search-input:focus {
       border-color: var(--accent-cyan);
-      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
     }
 
-    /* Modal / Tooltip */
-    #node-modal {
+    .search-icon {
       position: absolute;
+      left: 10px;
       top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .search-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: #0f1422;
+      border: 1px solid var(--border-cyan);
+      border-radius: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 50;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+      display: none;
+    }
+
+    .search-dropdown.active {
+      display: block;
+    }
+
+    .search-item {
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      color: var(--text-main);
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .search-item:hover {
+      background: rgba(0, 240, 255, 0.12);
+      color: var(--accent-cyan);
+    }
+
+    /* Slide-over Note Reader (Right) */
+    .note-drawer {
+      position: absolute;
+      top: 0;
+      right: -520px;
+      width: 500px;
+      max-width: 95vw;
+      height: 100vh;
+      background: rgba(10, 14, 24, 0.94);
+      border-left: 1px solid var(--border-cyan);
+      backdrop-filter: blur(24px);
+      box-shadow: -15px 0 50px rgba(0, 0, 0, 0.7);
+      z-index: 100;
+      transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .note-drawer.open {
+      right: 0;
+    }
+
+    .drawer-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .drawer-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      word-break: break-word;
+    }
+
+    .drawer-path {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-family: var(--font-code);
+    }
+
+    .drawer-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: #cbd5e1;
+      user-select: text;
+    }
+
+    .drawer-content h1, .drawer-content h2, .drawer-content h3 {
+      color: var(--text-main);
+      margin: 16px 0 8px 0;
+    }
+
+    .drawer-content code {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--font-code);
+      font-size: 0.82rem;
+      color: var(--accent-cyan);
+    }
+
+    .drawer-content pre {
+      background: #04060a;
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+
+    .drawer-content pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: #e2e8f0;
+    }
+
+    .drawer-content blockquote {
+      border-left: 3px solid var(--accent-cyan);
+      padding-left: 12px;
+      margin: 12px 0;
+      color: #94a3b8;
+    }
+
+    .wiki-pill {
+      display: inline-block;
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      color: var(--accent-cyan);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      cursor: pointer;
+      margin: 2px 4px 2px 0;
+      transition: all 0.15s;
+    }
+
+    .wiki-pill:hover {
+      background: rgba(0, 240, 255, 0.25);
+      border-color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+
+    /* Bottom Interactive Agent Chat Dock */
+    .chat-dock {
+      bottom: 14px;
       left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translateX(-50%);
+      width: 760px;
+      max-width: calc(100vw - 36px);
+      background: var(--card-bg);
+      border: 1px solid var(--border-cyan);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .chat-dock.collapsed {
+      height: 48px;
+    }
+
+    .chat-dock.expanded {
+      height: 380px;
+    }
+
+    .dock-header {
+      height: 48px;
+      padding: 0 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0,0,0,0.2);
+    }
+
+    .dock-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      user-select: text;
+    }
+
+    .chat-msg {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 90%;
+    }
+
+    .chat-msg.user {
+      align-self: flex-end;
+    }
+
+    .chat-msg.agent {
+      align-self: flex-start;
+    }
+
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .chat-msg.user .msg-bubble {
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid var(--accent-cyan);
+      color: #fff;
+    }
+
+    .chat-msg.agent .msg-bubble {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e2e8f0;
+    }
+
+    .msg-meta {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chat-input-row {
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.35);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    .chat-input:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .dock-chips {
+      display: flex;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(0,0,0,0.4);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      overflow-x: auto;
+    }
+
+    /* Generic Modal Dialogs (Token Budget / Health / Auto-Sleep) */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #0b0f1a;
+      border: 1px solid var(--border-cyan);
+      border-radius: 16px;
+      width: 640px;
+      max-width: 92vw;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 240, 255, 0.2);
+      animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalPop {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* Form Controls */
+    textarea.code-area {
+      width: 100%;
+      height: 140px;
+      background: #04060a;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 10px;
+      color: #e2e8f0;
+      font-family: var(--font-code);
+      font-size: 0.8rem;
+      resize: vertical;
+      outline: none;
+    }
+
+    textarea.code-area:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent-cyan);
+    }
+
+    /* Toast Notification */
+    #toast-notification {
+      position: fixed;
+      bottom: 74px;
+      right: 24px;
       background: var(--card-bg);
       border: 1px solid var(--accent-cyan);
-      box-shadow: 0 20px 60px rgba(0, 240, 255, 0.25);
-      border-radius: 14px;
-      padding: 24px;
-      min-width: 340px;
-      max-width: 90vw;
-      z-index: 100;
+      box-shadow: 0 8px 30px rgba(0, 240, 255, 0.3);
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      z-index: 300;
       display: none;
-      backdrop-filter: blur(20px);
+      backdrop-filter: blur(16px);
+      animation: slideInRight 0.3s;
     }
 
-    #node-modal.active {
-      display: block;
-      animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes popIn {
-      from { opacity: 0; transform: translate(-50%, -46%) scale(0.95); }
-      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    @keyframes slideInRight {
+      from { transform: translateX(50px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
     }
   </style>
 </head>
 <body>
 
-  <!-- 3D Canvas Container -->
+  <!-- WebGL 3D Canvas -->
   <div id="canvas-container">
     <canvas id="cortex-canvas"></canvas>
   </div>
 
   <!-- Header Bar -->
-  <div class="hud-overlay header-bar">
-    <div class="logo-badge interactive">
-      <span style="font-size: 1.4rem;">🧠</span>
+  <div class="hud-layer header-bar">
+    <div class="logo-card interactive">
+      <span style="font-size: 1.3rem;">🧠</span>
       <div>
         <div class="logo-title">DEVBRAIN CORTEX 3D</div>
-        <div style="font-size: 0.72rem; color: var(--text-muted);">Grafo Sináptico Hebbiano & Orquestación en Vivo</div>
+        <div style="font-size: 0.7rem; color: var(--text-muted);">Cockpit Cognitivo • Red Neuronal Hebbiana a 60 FPS</div>
       </div>
-      <div class="status-badge">
+      <div class="status-pill">
         <div class="status-dot"></div>
-        <span id="conn-status">SSE ACTIVO • 60 FPS</span>
+        <span id="conn-status">SSE CONECTADO</span>
       </div>
     </div>
 
-    <div class="controls-panel interactive">
-      <button class="btn" id="btn-dream" title="Consolida sinapsis y limpia FTS5">
-        <span>🌙</span> Modo Sueño
+    <div class="header-actions interactive">
+      <button class="btn btn-auto-sleep" id="btn-auto-sleep-badge" title="Estado de consolidación automática de memoria por inactividad">
+        <span>🌙</span> <span id="auto-sleep-label">Auto-Sueño: Vigilante</span>
       </button>
-      <button class="btn" id="btn-health" title="Audita integridad, enlaces rotos y LTD">
+      <button class="btn" id="btn-token-playground" title="Optimiza código o notas con AST slicing y presupuesto estricto">
+        <span>⚡</span> Token Budget
+      </button>
+      <button class="btn" id="btn-health-modal" title="Audita enlaces rotos y repara con 1-click">
         <span>🩺</span> Salud Cortex
       </button>
-      <button class="btn" id="btn-reset" title="Reinicia la perspectiva orbital">
+      <button class="btn" id="btn-toggle-chat" title="Abre o colapsa el dock del Agente de IA">
+        <span>💬</span> Chat Agente
+      </button>
+      <button class="btn" id="btn-reset-cam" title="Reinicia la perspectiva orbital">
         <span>🔄</span> Reset Vista
       </button>
     </div>
   </div>
 
-  <!-- Stats & Lobes Panel -->
-  <div class="hud-overlay stats-card interactive">
-    <div class="stats-title">Métricas de Red Neuronal</div>
-    <div class="stat-row">
-      <span>Neuronas Totales</span>
-      <span class="stat-val" id="stat-neurons">19,000</span>
-    </div>
-    <div class="stat-row">
-      <span>Notas en Vault</span>
-      <span class="stat-val" id="stat-vault" style="color: var(--accent-emerald);">6,206</span>
-    </div>
-    <div class="stat-row">
-      <span>Sinapsis Activas</span>
-      <span class="stat-val" id="stat-synapses" style="color: var(--accent-purple);">2,500</span>
-    </div>
-    <div class="stat-row">
-      <span>FPS de Render</span>
-      <span class="stat-val" id="stat-fps" style="color: #38bdf8;">60.0</span>
-    </div>
-
-    <div style="border-top: 1px solid rgba(255,255,255,0.08); margin: 10px 0;"></div>
-    <div class="stats-title" style="margin-bottom: 6px;">Lóbulos Cerebrales</div>
-    <div class="lobe-indicator"><div class="lobe-dot" style="background: #00f0ff;"></div> Lóbulo Frontal (ODD & Decisiones)</div>
-    <div class="lobe-indicator"><div class="lobe-dot" style="background: #a855f7;"></div> Lóbulo Temporal (Memoria & Engram)</div>
-    <div class="lobe-indicator"><div class="lobe-dot" style="background: #10b981;"></div> Lóbulo Parietal (Arquitectura & Código)</div>
-    <div class="lobe-indicator"><div class="lobe-dot" style="background: #f59e0b;"></div> Lóbulo Occipital (Logs & Telemetría)</div>
-
-    <div class="search-box">
-      <input type="text" class="search-input" id="search-input" placeholder="🔍 Buscar neurona o nota..." autocomplete="off">
-    </div>
-  </div>
-
-  <!-- Thought & Activity Panel -->
-  <div class="hud-overlay thought-card interactive">
-    <div class="thought-header">
-      <div class="thought-title">
-        <span>💡</span> Rastro de Pensamiento
+  <!-- Left Stats & Filters Panel -->
+  <div class="hud-layer left-panel interactive">
+    <div class="panel-section-title">Métricas de Red Neuronal</div>
+    <div class="metric-grid">
+      <div class="metric-box">
+        <div class="metric-label">Neuronas</div>
+        <div class="metric-value" id="val-neurons" style="color: var(--accent-cyan);">19,000</div>
       </div>
-      <div class="thought-tool" id="active-tool">standby</div>
+      <div class="metric-box">
+        <div class="metric-label">Notas Vault</div>
+        <div class="metric-value" id="val-vault" style="color: var(--accent-emerald);">6,206</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">Sinapsis</div>
+        <div class="metric-value" id="val-synapses" style="color: var(--accent-purple);">2,500</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">FPS Render</div>
+        <div class="metric-value" id="val-fps" style="color: var(--accent-blue);">60.0</div>
+      </div>
     </div>
-    <div class="thought-body" id="thought-text">
-      "Cortex conectado al bus de eventos local. Listo para visualizar en 3D cada pensamiento, activación sináptica y consulta del agente en tiempo real."
+
+    <div class="panel-section-title" style="margin-top: 4px;">Filtros de Lóbulos Cerebrales</div>
+    <div class="chip-container">
+      <div class="chip active" data-filter="all"><div class="chip-dot" style="background: #fff;"></div> Todos (19k)</div>
+      <div class="chip" data-filter="frontal"><div class="chip-dot" style="background: #00f0ff;"></div> Frontal (ODD)</div>
+      <div class="chip" data-filter="temporal"><div class="chip-dot" style="background: #a855f7;"></div> Temporal (Memoria)</div>
+      <div class="chip" data-filter="parietal"><div class="chip-dot" style="background: #10b981;"></div> Parietal (Código)</div>
+      <div class="chip" data-filter="occipital"><div class="chip-dot" style="background: #f59e0b;"></div> Occipital (Logs)</div>
+      <div class="chip" data-filter="core"><div class="chip-dot" style="background: #ec4899;"></div> Núcleo Central</div>
+    </div>
+
+    <div class="panel-section-title" style="margin-top: 4px;">Búsqueda & Navegación 3D</div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="search-input" placeholder="Buscar neurona o nota..." autocomplete="off">
+      <div class="search-dropdown" id="search-dropdown"></div>
     </div>
   </div>
 
-  <!-- Node Inspection Modal -->
-  <div class="interactive" id="node-modal">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-      <h3 id="modal-title" style="font-size: 1.15rem; color: var(--accent-cyan);">[[Nombre Nota]]</h3>
-      <button class="btn" style="padding: 4px 8px;" onclick="closeModal()">✕</button>
+  <!-- Slide-Over Note Reader (Right) -->
+  <div class="note-drawer interactive" id="note-drawer">
+    <div class="drawer-header">
+      <div>
+        <div class="drawer-title" id="drawer-note-title">[[Nombre de Nota]]</div>
+        <div class="drawer-path" id="drawer-note-path">03-CONOCIMIENTO/ejemplo.md</div>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <button class="btn" id="btn-open-obsidian" title="Abrir esta nota directamente en Obsidian">↗ Obsidian</button>
+        <button class="btn" onclick="closeNoteDrawer()">✕</button>
+      </div>
     </div>
-    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
-      Región: <span id="modal-region" style="font-weight: 600; color: var(--text-main);">Lóbulo Frontal</span>
-    </div>
-    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">
-      Peso Sináptico Hebbiano: <span id="modal-weight" style="font-weight: 700; color: var(--accent-emerald);">1.00</span>
-    </div>
-    <div style="margin-top: 16px; display: flex; gap: 8px;">
-      <button class="btn" style="flex: 1;" onclick="focusCurrentNode()">🎯 Centrar Vista</button>
+    <div class="drawer-content" id="drawer-content">
+      Cargando contenido de la nota desde el Vault...
     </div>
   </div>
 
-  <!-- Vanilla WebGL 3D Engine (Zero External Dependencies) -->
+  <!-- Bottom Interactive Agent Chat Dock -->
+  <div class="hud-layer chat-dock collapsed interactive" id="chat-dock">
+    <div class="dock-header" onclick="toggleChatDock()">
+      <div class="dock-title">
+        <span>💬</span> <span>DevBrain Agent — Conversación & Disparo Sináptico en Vivo</span>
+      </div>
+      <div style="font-size: 0.75rem; color: var(--accent-cyan);" id="dock-toggle-label">▲ Expandir Dock</div>
+    </div>
+    <div class="dock-chips">
+      <div class="chip" onclick="quickPrompt('¿Qué notas tenemos sobre arquitectura y Clean Architecture?')">💡 Clean Architecture</div>
+      <div class="chip" onclick="quickPrompt('Clasifica esta tarea bajo protocolo ODD: implementar autenticación JWT en NestJS')">🏷️ Clasificar ODD</div>
+      <div class="chip" onclick="quickPrompt('¿Qué acuerdos o decisiones tomamos sobre la persistencia y SQLite?')">🧠 Memoria Persistente</div>
+      <div class="chip" onclick="quickPrompt('Audita el estado de salud del proyecto y entorno')">🩺 Chequeo Doctor</div>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg agent">
+        <div class="msg-bubble">
+          👋 ¡Hola! Soy el <strong>Agente Cognitivo DevBrain</strong>. Puedes preguntarme en lenguaje natural o usar comandos como <code>/odd</code>, <code>/search</code> o <code>/compress</code>. A medida que hablemos, verás dispararse las neuronas y sinapsis correspondientes en el visualizador 3D.
+        </div>
+        <div class="msg-meta">DevBrain Offline Engine • 0ms</div>
+      </div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chat-input" placeholder="Pregunta algo, clasifica una tarea ODD, o escribe /help..." autocomplete="off">
+      <button class="btn btn-active" id="btn-chat-send">Enviar</button>
+    </div>
+  </div>
+
+  <!-- Modal 1: Token Budget Optimizer Playground -->
+  <div class="modal-overlay" id="modal-token-optimizer">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
+          <span>⚡</span> Token Budget Optimizer Playground
+        </h3>
+        <button class="btn" onclick="closeModal('modal-token-optimizer')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+          Comprime código o notas reduciendo entre un <strong>60% y 91% de tokens</strong> mediante AST slicing determinista y poda de cuerpos internos.
+        </div>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+          <select id="comp-mode" class="chat-input" style="flex: 1;">
+            <option value="code">Código Fuente (AST Slicing Python / TypeScript)</option>
+            <option value="knowledge">Notas de Conocimiento (Synaptic Chunking)</option>
+            <option value="session">Deduplicación Diferencial de Sesión</option>
+          </select>
+          <button class="btn" onclick="loadSampleCode()">Cargar Ejemplo</button>
+        </div>
+        <div class="slider-row">
+          <span style="font-size: 0.78rem; min-width: 140px;">Presupuesto: <strong id="lbl-budget" style="color: var(--accent-cyan);">400 tokens</strong></span>
+          <input type="range" id="range-tokens" min="100" max="1500" step="50" value="400" oninput="document.getElementById('lbl-budget').innerText = this.value + ' tokens'">
+        </div>
+        <textarea id="comp-input" class="code-area" placeholder="Pega aquí el código o texto a optimizar..."></textarea>
+
+        <div id="comp-result-wrap" style="display: none; margin-top: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.82rem; font-weight: 700; color: var(--accent-emerald);" id="comp-savings-badge">Ahorro: -85.2%</span>
+            <span style="font-size: 0.72rem; color: var(--text-muted);" id="comp-tokens-badge">3,700 ➔ 320 tokens</span>
+          </div>
+          <textarea id="comp-output" class="code-area" style="height: 120px;" readonly></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modal-token-optimizer')">Cerrar</button>
+        <button class="btn btn-active" onclick="runTokenCompression()">Comprimir Ahora</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Health Audit & 1-Click Link Repair -->
+  <div class="modal-overlay" id="modal-health">
+    <div class="modal-card" style="width: 720px;">
+      <div class="modal-header">
+        <h3 style="color: var(--accent-emerald); display: flex; align-items: center; gap: 8px;">
+          <span>🩺</span> Salud del Cortex & Auto-Mantenimiento Hebbiano
+        </h3>
+        <button class="btn" onclick="closeModal('modal-health')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+          <div class="metric-box" style="flex: 1; text-align: center;">
+            <div class="metric-label">Health Score</div>
+            <div class="metric-value" id="health-score-val" style="color: var(--accent-cyan);">--/100</div>
+          </div>
+          <div class="metric-box" style="flex: 1; text-align: center;">
+            <div class="metric-label">Enlaces Rotos</div>
+            <div class="metric-value" id="health-broken-val" style="color: var(--accent-rose);">0</div>
+          </div>
+          <div class="metric-box" style="flex: 1; text-align: center;">
+            <div class="metric-label">Duplicados</div>
+            <div class="metric-value" id="health-dups-val" style="color: var(--accent-amber);">0</div>
+          </div>
+          <div class="metric-box" style="flex: 1; text-align: center;">
+            <div class="metric-label">Notas Inactivas</div>
+            <div class="metric-value" id="health-stale-val">0</div>
+          </div>
+        </div>
+
+        <div class="panel-section-title">Enlaces Rotos Detectados (Reparación en 1-Click)</div>
+        <div id="broken-links-container" style="max-height: 220px; overflow-y: auto; margin-top: 8px;">
+          Cargando auditoría...
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modal-health')">Cerrar</button>
+        <button class="btn btn-active" onclick="refreshHealthAudit()">Re-Escanear Vault</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Auto-Sleep Configuration & Inactivity Monitor -->
+  <div class="modal-overlay" id="modal-auto-sleep">
+    <div class="modal-card" style="width: 520px;">
+      <div class="modal-header">
+        <h3 style="color: var(--accent-purple); display: flex; align-items: center; gap: 8px;">
+          <span>🌙</span> Automatización del Modo Sueño
+        </h3>
+        <button class="btn" onclick="closeModal('modal-auto-sleep')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 14px;">
+          El <strong>Modo Sueño Automático</strong> consolida las conexiones sinápticas del día y optimiza las bases de datos de DevBrain de manera silenciosa cuando no estás usando el sistema:
+        </div>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.85rem; font-weight: 600;">Consolidación por Inactividad</span>
+            <input type="checkbox" id="chk-auto-sleep" style="width: 18px; height: 18px; accent-color: var(--accent-purple);" onchange="toggleAutoSleepEnabled(this.checked)">
+          </div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+            Aplica decaimiento LTD suave y optimización FTS5 sin interrumpir tu trabajo.
+          </div>
+        </div>
+
+        <div class="slider-row">
+          <span style="font-size: 0.8rem; min-width: 150px;">Umbral de Inactividad: <strong id="lbl-idle-threshold" style="color: var(--accent-purple);">15 min</strong></span>
+          <input type="range" id="range-idle-threshold" min="5" max="60" step="5" value="15" onchange="updateIdleThreshold(this.value)" oninput="document.getElementById('lbl-idle-threshold').innerText = this.value + ' min'">
+        </div>
+
+        <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 14px; line-height: 1.6;">
+          • Inactividad actual: <strong id="val-current-idle" style="color: var(--text-main);">0m 10s</strong><br>
+          • Último reposo completado: <strong id="val-last-sleep" style="color: var(--accent-emerald);">Hoy a las 20:52</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modal-auto-sleep')">Cerrar</button>
+        <button class="btn btn-auto-sleep" onclick="triggerManualSleepNow()">Dormir & Consolidar Ahora</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-notification"></div>
+
+  <!-- WebGL2 3D Shader Programs & Interactive Logic -->
   <script>
     const canvas = document.getElementById('cortex-canvas');
     const gl = canvas.getContext('webgl2', { antialias: true, alpha: false });
@@ -416,9 +951,11 @@
 
       uniform mat4 u_matrix;
       uniform float u_time;
+      uniform float u_dim_factor;
 
       out vec3 v_color;
       out float v_glow;
+      out float v_alpha;
 
       void main() {
         gl_Position = u_matrix * vec4(a_position, 1.0);
@@ -426,6 +963,7 @@
         gl_PointSize = max(1.8, (a_size * 280.0) / (dist + 120.0));
         v_color = a_color;
         v_glow = a_glow;
+        v_alpha = mix(0.12, 1.0, u_dim_factor);
       }
     `;
 
@@ -433,18 +971,18 @@
       precision highp float;
       in vec3 v_color;
       in float v_glow;
+      in float v_alpha;
       out vec4 outColor;
 
       void main() {
         vec2 coord = gl_PointCoord - vec2(0.5);
         float r = length(coord);
         if (r > 0.5) discard;
-        
-        // Brillo radial suave (glow con núcleo blanco)
+
         float intensity = 1.0 - smoothstep(0.0, 0.5, r);
-        float core = 1.0 - smoothstep(0.0, 0.15, r);
-        vec3 finalColor = mix(v_color, vec3(1.0), core * 0.8) + (v_color * v_glow * 0.6);
-        outColor = vec4(finalColor, intensity);
+        float core = 1.0 - smoothstep(0.0, 0.16, r);
+        vec3 finalColor = mix(v_color, vec3(1.0), core * 0.8) + (v_color * v_glow * 0.9);
+        outColor = vec4(finalColor, intensity * v_alpha);
       }
     `;
 
@@ -477,76 +1015,96 @@
     `;
 
     function createShader(gl, type, source) {
-      const shader = gl.createShader(type);
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error(gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
+      const s = gl.createShader(type);
+      gl.shaderSource(s, source);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(s));
+        gl.deleteShader(s);
         return null;
       }
-      return shader;
+      return s;
     }
 
     function createProgram(gl, vsSource, fsSource) {
       const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
       const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
-      const program = gl.createProgram();
-      gl.attachShader(program, vs);
-      gl.attachShader(program, fs);
-      gl.linkProgram(program);
-      return program;
+      const prog = gl.createProgram();
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      return prog;
     }
 
     const progPoints = createProgram(gl, vsPoints, fsPoints);
     const progLines = createProgram(gl, vsLines, fsLines);
 
-    // Estado del Grafo y Cámara
+    // Estado 3D y Nube de Nodos
     let nodesData = [];
     let linksData = [];
+    let realNotesMap = new Map();
     let pointPositions = [];
     let pointColors = [];
     let pointSizes = [];
     let pointGlows = [];
-
     let linePositions = [];
     let lineColors = [];
     let lineAlphas = [];
-
     let starsPositions = [];
     let starsColors = [];
 
-    // Cámara Orbital
-    let rotX = 0.2;
-    let rotY = -0.5;
-    let zoom = 140.0;
-    let targetZoom = 140.0;
+    // VBOs WebGL estáticos para alto rendimiento (evita recreación en render)
+    let vboPtPos, vboPtCol, vboPtSize, vboPtGlow;
+    let vboLinePos, vboLineCol, vboLineA;
+    let activeFilter = "all";
+    let activeSearchQuery = "";
+
+    // Control de Cámara Orbital
+    let rotX = 0.22;
+    let rotY = -0.55;
+    let targetRotX = rotX;
+    let targetRotY = rotY;
+    let zoom = 145.0;
+    let targetZoom = 145.0;
     let isDragging = false;
-    let lastMouseX = 0;
-    let lastMouseY = 0;
-    let autoRotate = true;
-
-    // Métricas
-    let lastFrameTime = performance.now();
+    let lastMouseX = 0, lastMouseY = 0;
     let frameCount = 0;
-    let activeNeuronGlowTimer = 0;
-    let selectedNode = null;
+    let lastFrameTime = performance.now();
 
-    // 1. Inicializar Estrellas de Fondo (Starfield 3D)
-    function initStarfield(count = 3500) {
+    function showToast(msg) {
+      const t = document.getElementById('toast-notification');
+      t.innerText = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 4000);
+    }
+
+    function hexToRgb(hex) {
+      const clean = hex.replace("#", "");
+      const num = parseInt(clean, 16);
+      return [(num >> 16 & 255) / 255, (num >> 8 & 255) / 255, (num & 255) / 255];
+    }
+
+    // Inicializar Estrellas
+    function initStars(count = 3500) {
+      starsPositions = [];
+      starsColors = [];
       for (let i = 0; i < count; i++) {
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(Math.random() * 2 - 1);
-        const r = 250 + Math.random() * 200;
-        starsPositions.push(r * Math.sin(phi) * Math.cos(theta));
-        starsPositions.push(r * Math.sin(phi) * Math.sin(theta));
-        starsPositions.push(r * Math.cos(phi));
-        starsColors.push(0.6 + Math.random() * 0.4, 0.7 + Math.random() * 0.3, 0.9 + Math.random() * 0.1);
+        const u = Math.random();
+        const v = Math.random();
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
+        const r = 260.0 + Math.random() * 80.0;
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi);
+        starsPositions.push(x, y, z);
+
+        const lum = 0.4 + Math.random() * 0.6;
+        starsColors.push(lum * 0.7, lum * 0.85, lum);
       }
     }
-    initStarfield();
 
-    // 2. Cargar Grafo desde API
+    // Cargar Grafo 3D desde /api/graph
     async function loadGraphData() {
       try {
         const res = await fetch('/api/graph');
@@ -554,57 +1112,87 @@
         nodesData = data.nodes || [];
         linksData = data.links || [];
 
-        document.getElementById('stat-neurons').innerText = nodesData.length.toLocaleString();
-        document.getElementById('stat-vault').innerText = (data.real_notes_count || 6206).toLocaleString();
-        document.getElementById('stat-synapses').innerText = linksData.length.toLocaleString();
+        document.getElementById('val-neurons').innerText = (data.total_neurons || nodesData.length).toLocaleString();
+        document.getElementById('val-vault').innerText = (data.real_notes_count || 6206).toLocaleString();
+        document.getElementById('val-synapses').innerText = (data.total_synapses || linksData.length).toLocaleString();
 
-        buildBuffers();
-      } catch (err) {
-        console.error("Error cargando grafo cerebral:", err);
+        pointPositions = [];
+        pointColors = [];
+        pointSizes = [];
+        pointGlows = [];
+
+        nodesData.forEach((node, idx) => {
+          node.index = idx;
+          if (node.is_real) {
+            realNotesMap.set(node.label.toLowerCase(), node);
+          }
+          pointPositions.push(node.x, node.y, node.z);
+          const rgb = hexToRgb(node.color || "#00f0ff");
+          pointColors.push(rgb[0], rgb[1], rgb[2]);
+          pointSizes.push(node.is_real ? 1.4 : 0.85);
+          pointGlows.push(0.0);
+        });
+
+        linePositions = [];
+        lineColors = [];
+        lineAlphas = [];
+
+        linksData.forEach(link => {
+          const s = nodesData.find(n => n.id === link.source);
+          const t = nodesData.find(n => n.id === link.target);
+          if (s && t) {
+            linePositions.push(s.x, s.y, s.z, t.x, t.y, t.z);
+            const rgb = hexToRgb(s.color || "#a855f7");
+            lineColors.push(rgb[0], rgb[1], rgb[2], rgb[0], rgb[1], rgb[2]);
+            lineAlphas.push(0.18, 0.18);
+          }
+        });
+
+        initStars(3500);
+        uploadVBOs();
+      } catch (e) {
+        console.error("Error cargando grafo:", e);
       }
     }
 
-    function hexToRgb(hex) {
-      const bigint = parseInt(hex.replace('#', ''), 16);
-      return [(bigint >> 16 & 255) / 255, (bigint >> 8 & 255) / 255, (bigint & 255) / 255];
+    function uploadVBOs() {
+      const allPos = pointPositions.concat(starsPositions);
+      const allCol = pointColors.concat(starsColors);
+      const allSizes = pointSizes.concat(new Array(starsPositions.length / 3).fill(0.35));
+      const allGlows = pointGlows.concat(new Array(starsPositions.length / 3).fill(0.0));
+
+      vboPtPos = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vboPtPos);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allPos), gl.STATIC_DRAW);
+
+      vboPtCol = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vboPtCol);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allCol), gl.STATIC_DRAW);
+
+      vboPtSize = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vboPtSize);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allSizes), gl.STATIC_DRAW);
+
+      vboPtGlow = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vboPtGlow);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allGlows), gl.DYNAMIC_DRAW);
+
+      if (linePositions.length > 0) {
+        vboLinePos = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboLinePos);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(linePositions), gl.STATIC_DRAW);
+
+        vboLineCol = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboLineCol);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineColors), gl.STATIC_DRAW);
+
+        vboLineA = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboLineA);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineAlphas), gl.STATIC_DRAW);
+      }
     }
 
-    function buildBuffers() {
-      pointPositions = [];
-      pointColors = [];
-      pointSizes = [];
-      pointGlows = [];
-
-      nodesData.forEach(n => {
-        pointPositions.push(n.x, n.y, n.z);
-        const rgb = hexToRgb(n.color || "#00f0ff");
-        pointColors.push(rgb[0], rgb[1], rgb[2]);
-        pointSizes.push(n.is_real ? 1.4 : 0.8);
-        pointGlows.push(0.0);
-      });
-
-      linePositions = [];
-      lineColors = [];
-      lineAlphas = [];
-
-      const nodeMap = new Map();
-      nodesData.forEach((n, idx) => nodeMap.set(n.id, idx));
-
-      linksData.forEach(l => {
-        const sIdx = nodeMap.get(l.source);
-        const tIdx = nodeMap.get(l.target);
-        if (sIdx !== undefined && tIdx !== undefined) {
-          const s = nodesData[sIdx];
-          const t = nodesData[tIdx];
-          linePositions.push(s.x, s.y, s.z, t.x, t.y, t.z);
-          const rgb = hexToRgb(s.color || "#a855f7");
-          lineColors.push(rgb[0], rgb[1], rgb[2], rgb[0], rgb[1], rgb[2]);
-          lineAlphas.push(0.18, 0.18);
-        }
-      });
-    }
-
-    // 3. Matriz 3D
+    // Matrices 3D
     function createPerspectiveMatrix(fov, aspect, near, far) {
       const f = 1.0 / Math.tan(fov / 2);
       const nf = 1 / (near - far);
@@ -633,7 +1221,6 @@
       const aspect = width / height;
       const proj = createPerspectiveMatrix(Math.PI / 4, aspect, 1.0, 1000.0);
 
-      // Rotaciones
       const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
       const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
 
@@ -647,51 +1234,41 @@
       return multiplyMatrices(rotMat, proj);
     }
 
-    // 4. Render Loop
+    // Render Loop a 60 FPS
     function render(now) {
       resizeCanvas();
 
-      if (autoRotate && !isDragging) {
-        rotY += 0.0025;
-      }
-      zoom += (targetZoom - zoom) * 0.1;
+      // Suavizado de cámara hacia el target
+      rotX += (targetRotX - rotX) * 0.08;
+      rotY += (targetRotY - rotY) * 0.08;
+      zoom += (targetZoom - zoom) * 0.08;
 
       gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.clearColor(0.027, 0.035, 0.055, 1.0);
+      gl.clearColor(0.023, 0.031, 0.055, 1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.BLEND);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE); // Additive blending para sinapsis luminosas
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
       const matrix = getTransformationMatrix(canvas.width, canvas.height);
 
-      // A. Dibujar Líneas / Fibras
-      if (linePositions.length > 0) {
+      // Dibujar Líneas
+      if (vboLinePos) {
         gl.useProgram(progLines);
-        const uMatLines = gl.getUniformLocation(progLines, 'u_matrix');
-        gl.uniformMatrix4fv(uMatLines, false, new Float32Array(matrix));
+        gl.uniformMatrix4fv(gl.getUniformLocation(progLines, 'u_matrix'), false, new Float32Array(matrix));
 
-        // Buffer pos
-        const bufLinePos = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, bufLinePos);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(linePositions), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboLinePos);
         const aPosL = gl.getAttribLocation(progLines, 'a_position');
         gl.enableVertexAttribArray(aPosL);
         gl.vertexAttribPointer(aPosL, 3, gl.FLOAT, false, 0, 0);
 
-        // Buffer color
-        const bufLineCol = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, bufLineCol);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineColors), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboLineCol);
         const aColL = gl.getAttribLocation(progLines, 'a_color');
         gl.enableVertexAttribArray(aColL);
         gl.vertexAttribPointer(aColL, 3, gl.FLOAT, false, 0, 0);
 
-        // Buffer alpha
-        const bufLineA = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, bufLineA);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineAlphas), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboLineA);
         const aAlphaL = gl.getAttribLocation(progLines, 'a_alpha');
         gl.enableVertexAttribArray(aAlphaL);
         gl.vertexAttribPointer(aAlphaL, 1, gl.FLOAT, false, 0, 0);
@@ -699,55 +1276,39 @@
         gl.drawArrays(gl.LINES, 0, linePositions.length / 3);
       }
 
-      // B. Dibujar Puntos Neuronales
-      if (pointPositions.length > 0) {
+      // Dibujar Puntos Neuronales + Estrellas
+      if (vboPtPos) {
         gl.useProgram(progPoints);
-        const uMatPoints = gl.getUniformLocation(progPoints, 'u_matrix');
-        const uTimePoints = gl.getUniformLocation(progPoints, 'u_time');
-        gl.uniformMatrix4fv(uMatPoints, false, new Float32Array(matrix));
-        gl.uniform1f(uTimePoints, now * 0.001);
+        gl.uniformMatrix4fv(gl.getUniformLocation(progPoints, 'u_matrix'), false, new Float32Array(matrix));
+        gl.uniform1f(gl.getUniformLocation(progPoints, 'u_time'), now * 0.001);
+        gl.uniform1f(gl.getUniformLocation(progPoints, 'u_dim_factor'), activeSearchQuery ? 0.2 : 1.0);
 
-        // Combinar con estrellas
-        const allPos = pointPositions.concat(starsPositions);
-        const allCol = pointColors.concat(starsColors);
-        const allSizes = pointSizes.concat(new Array(starsPositions.length / 3).fill(0.4));
-        const allGlows = pointGlows.concat(new Array(starsPositions.length / 3).fill(0.0));
-
-        const bufPtPos = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, bufPtPos);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allPos), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboPtPos);
         const aPosP = gl.getAttribLocation(progPoints, 'a_position');
         gl.enableVertexAttribArray(aPosP);
         gl.vertexAttribPointer(aPosP, 3, gl.FLOAT, false, 0, 0);
 
-        const bufPtCol = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, bufPtCol);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allCol), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboPtCol);
         const aColP = gl.getAttribLocation(progPoints, 'a_color');
         gl.enableVertexAttribArray(aColP);
         gl.vertexAttribPointer(aColP, 3, gl.FLOAT, false, 0, 0);
 
-        const bufPtSize = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, bufPtSize);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allSizes), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboPtSize);
         const aSizeP = gl.getAttribLocation(progPoints, 'a_size');
         gl.enableVertexAttribArray(aSizeP);
         gl.vertexAttribPointer(aSizeP, 1, gl.FLOAT, false, 0, 0);
 
-        const bufPtGlow = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, bufPtGlow);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allGlows), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboPtGlow);
         const aGlowP = gl.getAttribLocation(progPoints, 'a_glow');
         gl.enableVertexAttribArray(aGlowP);
         gl.vertexAttribPointer(aGlowP, 1, gl.FLOAT, false, 0, 0);
 
-        gl.drawArrays(gl.POINTS, 0, allPos.length / 3);
+        gl.drawArrays(gl.POINTS, 0, (pointPositions.length + starsPositions.length) / 3);
       }
 
-      // FPS Counter
       frameCount++;
       if (now - lastFrameTime >= 1000) {
-        document.getElementById('stat-fps').innerText = frameCount.toFixed(1);
+        document.getElementById('val-fps').innerText = frameCount.toFixed(1);
         frameCount = 0;
         lastFrameTime = now;
       }
@@ -756,17 +1317,15 @@
     }
 
     function resizeCanvas() {
-      const displayWidth = window.innerWidth;
-      const displayHeight = window.innerHeight;
-      if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
+      if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
       }
     }
 
-    // 5. Interacción del Ratón (Orbit Controls)
+    // Mouse & Touch Orbit Controls
     window.addEventListener('mousedown', e => {
-      if (e.target.closest('.interactive')) return;
+      if (e.target.closest('.interactive') || e.target.closest('.modal-card')) return;
       isDragging = true;
       lastMouseX = e.clientX;
       lastMouseY = e.clientY;
@@ -776,9 +1335,9 @@
       if (!isDragging) return;
       const dx = e.clientX - lastMouseX;
       const dy = e.clientY - lastMouseY;
-      rotY += dx * 0.008;
-      rotX += dy * 0.008;
-      rotX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, rotX));
+      targetRotY += dx * 0.007;
+      targetRotX += dy * 0.007;
+      targetRotX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, targetRotX));
       lastMouseX = e.clientX;
       lastMouseY = e.clientY;
     });
@@ -787,119 +1346,521 @@
 
     window.addEventListener('wheel', e => {
       targetZoom += e.deltaY * 0.08;
-      targetZoom = Math.max(35.0, Math.min(300.0, targetZoom));
+      targetZoom = Math.max(30.0, Math.min(320.0, targetZoom));
     });
 
-    // 6. SSE Event Stream (Pensamiento en Vivo)
-    function setupSSE() {
-      const evtSource = new EventSource('/api/events');
+    // Clic en Neurona (Raycasting 3D simplificado por cercanía de pantalla)
+    window.addEventListener('click', e => {
+      if (e.target.closest('.interactive') || e.target.closest('.modal-card')) return;
+      // Buscar neurona real más cercana a la posición del clic
+      const matrix = getTransformationMatrix(canvas.width, canvas.height);
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
+      let closestNode = null;
+      let minDist = 22.0; // radio de clic en píxeles
 
-      evtSource.onmessage = function(event) {
-        try {
-          const payload = JSON.parse(event.data);
-          handleLiveEvent(payload);
-        } catch (e) {}
-      };
+      for (let i = 0; i < nodesData.length; i++) {
+        const n = nodesData[i];
+        if (!n.is_real) continue;
 
-      evtSource.onerror = function() {
-        document.getElementById('conn-status').innerText = 'RECONECTANDO...';
-        document.getElementById('conn-status').style.color = '#f59e0b';
-      };
+        // Proyección de (x, y, z) a pantalla
+        const v4 = [n.x, n.y, n.z, 1.0];
+        const clip = [
+          matrix[0]*v4[0] + matrix[4]*v4[1] + matrix[8]*v4[2] + matrix[12]*v4[3],
+          matrix[1]*v4[0] + matrix[5]*v4[1] + matrix[9]*v4[2] + matrix[13]*v4[3],
+          matrix[2]*v4[0] + matrix[6]*v4[1] + matrix[10]*v4[2] + matrix[14]*v4[3],
+          matrix[3]*v4[0] + matrix[7]*v4[1] + matrix[11]*v4[2] + matrix[15]*v4[3]
+        ];
 
-      evtSource.onopen = function() {
-        document.getElementById('conn-status').innerText = 'SSE ACTIVO • 60 FPS';
-        document.getElementById('conn-status').style.color = 'var(--accent-emerald)';
-      };
-    }
+        if (clip[3] <= 0) continue;
+        const ndcX = clip[0] / clip[3];
+        const ndcY = clip[1] / clip[3];
+        const screenX = (ndcX * 0.5 + 0.5) * canvas.width;
+        const screenY = (-ndcY * 0.5 + 0.5) * canvas.height;
 
-    function handleLiveEvent(evt) {
-      if (evt.type === 'agent_thought' || evt.data?.thought) {
-        const text = evt.data.thought || evt.data.message || JSON.stringify(evt.data);
-        document.getElementById('thought-text').innerText = `"${text}"`;
-        triggerSynapticWave(evt.data.node || "core");
-      } else if (evt.type === 'tool_call' || evt.tool) {
-        const tool = evt.tool || evt.data?.tool || 'mcp';
-        document.getElementById('active-tool').innerText = tool;
-        triggerSynapticWave(tool);
-      } else if (evt.type === 'sleep_mode') {
-        document.getElementById('thought-text').innerText = "🌙 Modo Sueño: Consolidación profunda completada. El cerebro reposa a 60 FPS.";
-      }
-    }
-
-    function triggerSynapticWave(seed) {
-      // Activar destello de glow en neuronas
-      for (let i = 0; i < 40; i++) {
-        const idx = Math.floor(Math.random() * nodesData.length);
-        if (pointGlows[idx] !== undefined) {
-          pointGlows[idx] = 2.5;
-          setTimeout(() => { pointGlows[idx] = 0.0; }, 800 + (i * 20));
+        const dist = Math.hypot(screenX - mouseX, screenY - mouseY);
+        if (dist < minDist) {
+          minDist = dist;
+          closestNode = n;
         }
       }
+
+      if (closestNode) {
+        focusAndOpenNote(closestNode);
+      }
+    });
+
+    function focusNode(node) {
+      targetZoom = 65.0;
+      targetRotY = -Math.atan2(node.x, node.z);
+      targetRotX = 0.12;
+
+      // Destello sináptico
+      pulseNodes([node.index]);
     }
 
-    // 7. Acciones de Botones y Búsqueda
-    document.getElementById('btn-reset').onclick = () => {
-      rotX = 0.2;
-      rotY = -0.5;
-      targetZoom = 140.0;
+    function pulseNodes(indices) {
+      if (!vboPtGlow) return;
+      indices.forEach(idx => {
+        if (idx !== undefined && pointGlows[idx] !== undefined) {
+          pointGlows[idx] = 3.5;
+        }
+      });
+      gl.bindBuffer(gl.ARRAY_BUFFER, vboPtGlow);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(pointGlows));
+
+      setTimeout(() => {
+        indices.forEach(idx => {
+          if (idx !== undefined && pointGlows[idx] !== undefined) {
+            pointGlows[idx] = 0.0;
+          }
+        });
+        gl.bindBuffer(gl.ARRAY_BUFFER, vboPtGlow);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(pointGlows));
+      }, 1400);
+    }
+
+    // Lector de Notas Markdown (Slide-Over Right)
+    async function focusAndOpenNote(node) {
+      focusNode(node);
+      const drawer = document.getElementById('note-drawer');
+      drawer.classList.add('open');
+      document.getElementById('drawer-note-title').innerText = `[[${node.label}]]`;
+      document.getElementById('drawer-note-path').innerText = `Lóbulo: ${node.category.toUpperCase()} • Cargando...`;
+      document.getElementById('drawer-content').innerHTML = `<em>Leyendo nota desde el Vault de Obsidian...</em>`;
+
+      try {
+        const res = await fetch(`/api/note?id=${encodeURIComponent(node.label)}`);
+        if (!res.ok) throw new Error("Nota no encontrada");
+        const data = await res.json();
+
+        document.getElementById('drawer-note-title').innerText = `[[${data.title}]]`;
+        document.getElementById('drawer-note-path').innerText = `${data.rel_path} (${(data.size_chars/1000).toFixed(1)}k chars)`;
+        document.getElementById('btn-open-obsidian').onclick = () => window.open(data.obsidian_uri);
+
+        // Renderizado Markdown nativo ligero
+        let html = parseMarkdown(data.content);
+
+        // Bloque de Wikilinks
+        let linksHtml = "";
+        if (data.links && data.links.length > 0) {
+          linksHtml = `<div style="margin-top: 18px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 0.72rem; color: var(--accent-cyan); font-weight: 700; margin-bottom: 6px;">🔗 ENLACES WIKILINKS (${data.links.length}):</div>`;
+          data.links.forEach(l => {
+            linksHtml += `<span class="wiki-pill" onclick="jumpToNote('${l}')">[[${l}]]</span>`;
+          });
+          linksHtml += `</div>`;
+        }
+
+        // Bloque de Sinapsis Hebbianas
+        let synHtml = "";
+        if (data.synapses && data.synapses.length > 0) {
+          synHtml = `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06);">
+            <div style="font-size: 0.72rem; color: var(--accent-purple); font-weight: 700; margin-bottom: 6px;">🧬 SINAPSIS HEBBIANAS ACTIVAS:</div>`;
+          data.synapses.forEach(s => {
+            synHtml += `<span class="wiki-pill" style="border-color: rgba(168,85,247,0.4); color: #d8b4fe;" onclick="jumpToNote('${s.target || s.key}')">⚡ ${s.target || s.key} (w=${(s.weight||1).toFixed(1)})</span>`;
+          });
+          synHtml += `</div>`;
+        }
+
+        document.getElementById('drawer-content').innerHTML = html + linksHtml + synHtml;
+      } catch (err) {
+        document.getElementById('drawer-content').innerHTML = `<p style="color: var(--accent-rose);">No se pudo cargar el archivo markdown: ${err.message}</p>`;
+      }
+    }
+
+    function closeNoteDrawer() {
+      document.getElementById('note-drawer').classList.remove('open');
+    }
+
+    function jumpToNote(title) {
+      const node = realNotesMap.get(title.toLowerCase());
+      if (node) {
+        focusAndOpenNote(node);
+      } else {
+        showToast(`Buscando nota [[${title}]] en el Vault...`);
+        fetch(`/api/note?id=${encodeURIComponent(title)}`)
+          .then(r => r.json())
+          .then(data => {
+            document.getElementById('drawer-note-title').innerText = `[[${data.title}]]`;
+            document.getElementById('drawer-note-path').innerText = data.rel_path;
+            document.getElementById('drawer-content').innerHTML = parseMarkdown(data.content);
+          })
+          .catch(() => showToast(`Nota [[${title}]] no encontrada en el Vault.`));
+      }
+    }
+
+    function parseMarkdown(md) {
+      if (!md) return "";
+      let html = md
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
+        .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
+        .replace(/`([^`]+)`/gim, '<code>$1</code>')
+        .replace(/\*\*([^\*]+)\*\*/gim, '<strong>$1</strong>')
+        .replace(/\*([^\*]+)\*/gim, '<em>$1</em>')
+        .replace(/\[\[(.*?)\]\]/gim, (m, p1) => {
+          const clean = p1.split("|")[0];
+          return `<span class="wiki-pill" onclick="jumpToNote('${clean}')">[[${clean}]]</span>`;
+        })
+        .replace(/\n\n/gim, '<br><br>');
+      return html;
+    }
+
+    // Interacción Chat Agéntico
+    function toggleChatDock() {
+      const dock = document.getElementById('chat-dock');
+      const isCollapsed = dock.classList.contains('collapsed');
+      if (isCollapsed) {
+        dock.classList.remove('collapsed');
+        dock.classList.add('expanded');
+        document.getElementById('dock-toggle-label').innerText = '▼ Colapsar';
+      } else {
+        dock.classList.remove('expanded');
+        dock.classList.add('collapsed');
+        document.getElementById('dock-toggle-label').innerText = '▲ Expandir';
+      }
+    }
+
+    document.getElementById('btn-toggle-chat').onclick = toggleChatDock;
+
+    function quickPrompt(text) {
+      document.getElementById('chat-input').value = text;
+      const dock = document.getElementById('chat-dock');
+      if (dock.classList.contains('collapsed')) toggleChatDock();
+      sendChatMessage();
+    }
+
+    document.getElementById('btn-chat-send').onclick = sendChatMessage;
+    document.getElementById('chat-input').onkeydown = e => {
+      if (e.key === 'Enter') sendChatMessage();
     };
 
-    document.getElementById('btn-dream').onclick = async () => {
-      const btn = document.getElementById('btn-dream');
-      btn.innerText = '🌙 Soñando...';
+    async function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = "";
+      const container = document.getElementById('chat-messages');
+
+      // Burbuja Usuario
+      const userDiv = document.createElement('div');
+      userDiv.className = 'chat-msg user';
+      userDiv.innerHTML = `<div class="msg-bubble">${text}</div><div class="msg-meta">Tú</div>`;
+      container.appendChild(userDiv);
+      container.scrollTop = container.scrollHeight;
+
+      // Burbuja Pensando
+      const agentDiv = document.createElement('div');
+      agentDiv.className = 'chat-msg agent';
+      agentDiv.innerHTML = `<div class="msg-bubble" style="color: var(--accent-cyan);">🧠 Pensando y activando sinapsis...</div>`;
+      container.appendChild(agentDiv);
+      container.scrollTop = container.scrollHeight;
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text })
+        });
+        const data = await res.json();
+
+        // Renderizado de respuesta
+        agentDiv.innerHTML = `
+          <div class="msg-bubble">${parseMarkdown(data.response || data.content)}</div>
+          <div class="msg-meta">
+            <span>⚡ ${data.latency_ms || 12}ms</span> • 
+            <span>Tokens: ${data.tokens_in || 0}/${data.tokens_out || 0}</span> • 
+            <span style="color: var(--accent-cyan);">${data.plc_route || 'LOCAL_FAST'}</span>
+          </div>
+        `;
+
+        // Activar pulso sináptico 3D en las notas activadas
+        if (data.synapses_fired && data.synapses_fired.length > 0) {
+          const firedIndices = [];
+          data.synapses_fired.forEach(name => {
+            const n = realNotesMap.get(name.toLowerCase());
+            if (n) firedIndices.push(n.index);
+          });
+          if (firedIndices.length > 0) {
+            pulseNodes(firedIndices);
+          }
+        }
+      } catch (err) {
+        agentDiv.innerHTML = `<div class="msg-bubble" style="color: var(--accent-rose);">Error: ${err.message}</div>`;
+      }
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Filtros de Lóbulos
+    document.querySelectorAll('.chip[data-filter]').forEach(chip => {
+      chip.onclick = () => {
+        document.querySelectorAll('.chip[data-filter]').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        activeFilter = chip.dataset.filter;
+        applyFilter();
+      };
+    });
+
+    function applyFilter() {
+      if (!vboPtSize) return;
+      nodesData.forEach((n, idx) => {
+        const match = (activeFilter === 'all' || n.category === activeFilter);
+        pointSizes[idx] = match ? (n.is_real ? 1.4 : 0.85) : 0.08;
+      });
+      const allSizes = pointSizes.concat(new Array(starsPositions.length / 3).fill(0.35));
+      gl.bindBuffer(gl.ARRAY_BUFFER, vboPtSize);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(allSizes));
+    }
+
+    // Búsqueda y Autocomplete
+    const searchInput = document.getElementById('search-input');
+    const searchDropdown = document.getElementById('search-dropdown');
+
+    searchInput.oninput = e => {
+      const q = e.target.value.toLowerCase().trim();
+      activeSearchQuery = q;
+      if (!q) {
+        searchDropdown.classList.remove('active');
+        applyFilter();
+        return;
+      }
+
+      const matches = [];
+      realNotesMap.forEach((node, key) => {
+        if (key.includes(q)) matches.push(node);
+      });
+
+      if (matches.length > 0) {
+        searchDropdown.innerHTML = matches.slice(0, 10).map(n => `
+          <div class="search-item" onclick="selectSearchNode('${n.label}')">
+            <span>[[${n.label}]]</span>
+            <span style="font-size: 0.68rem; color: var(--accent-cyan);">${n.category}</span>
+          </div>
+        `).join('');
+        searchDropdown.classList.add('active');
+      } else {
+        searchDropdown.classList.remove('active');
+      }
+
+      // Resaltar en 3D
+      nodesData.forEach((n, idx) => {
+        const isMatch = n.label.toLowerCase().includes(q);
+        pointSizes[idx] = isMatch ? 2.5 : 0.15;
+      });
+      const allSizes = pointSizes.concat(new Array(starsPositions.length / 3).fill(0.2));
+      gl.bindBuffer(gl.ARRAY_BUFFER, vboPtSize);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(allSizes));
+    };
+
+    function selectSearchNode(title) {
+      searchDropdown.classList.remove('active');
+      searchInput.value = title;
+      const node = realNotesMap.get(title.toLowerCase());
+      if (node) {
+        focusAndOpenNote(node);
+      }
+    }
+
+    // Modal Handlers
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // Modal: Token Budget Optimizer
+    document.getElementById('btn-token-playground').onclick = () => openModal('modal-token-optimizer');
+
+    function loadSampleCode() {
+      document.getElementById('comp-input').value = `def process_transaction(user_id: int, amount: float, currency: str = "USD") -> dict:
+    """Procesa una transacción bancaria y notifica al cliente."""
+    # Validación exhaustiva de parámetros
+    if amount <= 0:
+        raise ValueError("El monto debe ser positivo")
+    if currency not in ["USD", "EUR", "CLP"]:
+        raise ValueError("Moneda no soportada")
+    
+    # Conexión al procesador de pagos
+    gateway = PaymentGateway.connect()
+    tx_id = gateway.charge(user_id=user_id, amount=amount)
+    
+    # Registro en base de datos
+    db = get_database_connection()
+    db.execute("INSERT INTO transactions VALUES (?, ?, ?)", (tx_id, user_id, amount))
+    return {"status": "success", "tx_id": tx_id}
+`;
+    }
+
+    async function runTokenCompression() {
+      const text = document.getElementById('comp-input').value;
+      const mode = document.getElementById('comp-mode').value;
+      const tokens = document.getElementById('range-tokens').value;
+
+      try {
+        const res = await fetch('/api/compress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, mode, tokens: parseInt(tokens) })
+        });
+        const data = await res.json();
+
+        document.getElementById('comp-result-wrap').style.display = 'block';
+        document.getElementById('comp-savings-badge').innerText = `Ahorro: -${data.savings_percent}% (${data.savings_tokens} tokens ahorrados)`;
+        document.getElementById('comp-tokens-badge').innerText = `${data.original_tokens} ➔ ${data.optimized_tokens} tokens`;
+        document.getElementById('comp-output').value = data.optimized_code || data.optimized_text || data.deduplicated_text;
+      } catch (e) {
+        alert("Error en compresión: " + e.message);
+      }
+    }
+
+    // Modal: Salud Cortex & Reparación 1-Click
+    document.getElementById('btn-health-modal').onclick = () => {
+      openModal('modal-health');
+      refreshHealthAudit();
+    };
+
+    async function refreshHealthAudit() {
+      const container = document.getElementById('broken-links-container');
+      container.innerHTML = "<em>Escaneando integridad de enlaces y duplicados en el Vault...</em>";
+
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+
+        document.getElementById('health-score-val').innerText = `${data.health_score}/100`;
+        document.getElementById('health-score-val').style.color = data.health_score >= 80 ? 'var(--accent-emerald)' : 'var(--accent-rose)';
+        document.getElementById('health-broken-val').innerText = data.broken_links_count;
+        document.getElementById('health-dups-val').innerText = data.duplicates_count;
+        document.getElementById('health-stale-val').innerText = data.stale_notes_count;
+
+        if (!data.broken_links || data.broken_links.length === 0) {
+          container.innerHTML = `<p style="color: var(--accent-emerald); font-size: 0.85rem;">✓ ¡Excelente! No se encontraron enlaces rotos en el Vault.</p>`;
+          return;
+        }
+
+        container.innerHTML = data.broken_links.map(b => `
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+            <div style="font-size: 0.78rem;">
+              En <code>[[${b.source_note}]]</code>: enlace roto a <strong style="color: var(--accent-rose);">[[${b.broken_target}]]</strong>
+              ${b.suggested_fix ? `<div style="color: var(--accent-emerald); margin-top: 3px;">➔ Sugerencia: <strong>[[${b.suggested_fix}]]</strong></div>` : ''}
+            </div>
+            ${b.suggested_fix ? `<button class="btn" style="padding: 4px 8px; font-size: 0.72rem;" onclick="fixLink1Click('${b.source_note}', '${b.broken_target}', '${b.suggested_fix}')">🛠️ Reparar</button>` : ''}
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = `<p style="color: var(--accent-rose);">Error: ${err.message}</p>`;
+      }
+    }
+
+    async function fixLink1Click(source, broken, fix) {
+      try {
+        const res = await fetch('/api/fix_link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source_note: source, broken_target: broken, suggested_fix: fix })
+        });
+        const data = await res.json();
+        showToast(data.message);
+        refreshHealthAudit();
+      } catch (e) {
+        alert("Error reparando: " + e.message);
+      }
+    }
+
+    // Modal: Auto-Sleep Configuration
+    document.getElementById('btn-auto-sleep-badge').onclick = () => {
+      openModal('modal-auto-sleep');
+      pollAutoSleepStatus();
+    };
+
+    async function pollAutoSleepStatus() {
+      try {
+        const res = await fetch('/api/sleep/status');
+        const data = await res.json();
+        document.getElementById('chk-auto-sleep').checked = data.auto_sleep_enabled;
+        document.getElementById('range-idle-threshold').value = data.idle_minutes_threshold;
+        document.getElementById('lbl-idle-threshold').innerText = `${data.idle_minutes_threshold} min`;
+        document.getElementById('val-current-idle').innerText = `${Math.floor(data.current_idle_seconds / 60)}m ${Math.floor(data.current_idle_seconds % 60)}s`;
+        document.getElementById('auto-sleep-label').innerText = data.auto_sleep_enabled ? `Auto-Sueño: Vigilante (${data.idle_minutes_threshold}m)` : `Auto-Sueño: Pausado`;
+        if (data.last_sleep_timestamp) {
+          document.getElementById('val-last-sleep').innerText = new Date(data.last_sleep_timestamp).toLocaleTimeString();
+        }
+      } catch (e) {}
+    }
+
+    async function toggleAutoSleepEnabled(checked) {
+      await fetch('/api/sleep/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: checked })
+      });
+      pollAutoSleepStatus();
+    }
+
+    async function updateIdleThreshold(val) {
+      await fetch('/api/sleep/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idle_minutes: parseInt(val) })
+      });
+      pollAutoSleepStatus();
+    }
+
+    async function triggerManualSleepNow() {
+      closeModal('modal-auto-sleep');
+      showToast("🌙 Entrando en Modo Sueño y consolidación...");
       try {
         const res = await fetch('/api/sleep', { method: 'POST' });
         const data = await res.json();
-        alert(`🌙 Ciclo de Sueño Completado:\n- Sinapsis procesadas: ${data.decayed_synapses}\n- Base SQLite optimizada.`);
-      } finally {
-        btn.innerHTML = '<span>🌙</span> Modo Sueño';
+        showToast(`🌙 Sueño completado: ${data.decayed_synapses} sinapsis consolidadas.`);
+      } catch (e) {
+        showToast("Error en sueño: " + e.message);
       }
+    }
+
+    // Reset Cámara
+    document.getElementById('btn-reset-cam').onclick = () => {
+      targetRotX = 0.22;
+      targetRotY = -0.55;
+      targetZoom = 145.0;
+      activeSearchQuery = "";
+      document.getElementById('search-input').value = "";
+      applyFilter();
     };
 
-    document.getElementById('btn-health').onclick = async () => {
-      const res = await fetch('/api/health');
-      const data = await res.json();
-      alert(`🩺 Salud del Cortex: ${data.health_score}/100 (${data.status})\n- Enlaces rotos: ${data.broken_links_count}\n- Duplicados: ${data.duplicates_count}\n- Notas sin activar: ${data.stale_notes_count}`);
-    };
-
-    document.getElementById('search-input').onkeydown = e => {
-      if (e.key === 'Enter') {
-        const query = e.target.value.toLowerCase().trim();
-        const found = nodesData.find(n => n.label.toLowerCase().includes(query));
-        if (found) {
-          showModal(found);
-          focusNode(found);
-        } else {
-          alert(`No se encontró neurona con el término '${query}'.`);
-        }
-      }
-    };
-
-    function showModal(node) {
-      selectedNode = node;
-      document.getElementById('modal-title').innerText = `[[${node.label}]]`;
-      document.getElementById('modal-region').innerText = node.category.toUpperCase();
-      document.getElementById('modal-weight').innerText = (node.weight || 1.0).toFixed(2);
-      document.getElementById('node-modal').classList.add('active');
+    // SSE Event Source Listener
+    function setupSSE() {
+      const evtSource = new EventSource('/api/events');
+      evtSource.onmessage = e => {
+        try {
+          const payload = JSON.parse(e.data);
+          if (payload.type === 'auto_sleep_completed') {
+            showToast(`🌙 ${payload.data.message || 'Auto-Sueño completado en reposo'}`);
+            pollAutoSleepStatus();
+          } else if (payload.type === 'agent_chat') {
+            // Animación sináptica si viene de otro cliente/hook
+            if (payload.data.synapses_fired) {
+              const indices = [];
+              payload.data.synapses_fired.forEach(name => {
+                const n = realNotesMap.get(name.toLowerCase());
+                if (n) indices.push(n.index);
+              });
+              pulseNodes(indices);
+            }
+          }
+        } catch (err) {}
+      };
     }
 
-    function closeModal() {
-      document.getElementById('node-modal').classList.remove('active');
-    }
-
-    function focusNode(node) {
-      targetZoom = 70.0;
-      rotY = -Math.atan2(node.x, node.z);
-      rotX = 0.1;
-    }
-
-    function focusCurrentNode() {
-      if (selectedNode) focusNode(selectedNode);
-    }
+    // Polling periódico de estado auto-sleep (cada 30s)
+    setInterval(pollAutoSleepStatus, 30000);
 
     // Arranque
     loadGraphData();
     setupSSE();
+    pollAutoSleepStatus();
     requestAnimationFrame(render);
   </script>
 </body>
