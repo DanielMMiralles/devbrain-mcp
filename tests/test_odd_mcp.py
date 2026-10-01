@@ -15,7 +15,8 @@ from devbrain_mcp import (
     handle_reconcile_odd_resume,
     handle_orchestrator_session_bridge,
     handle_prepare_sdd_preflight,
-    handle_search_knowledge
+    handle_search_knowledge,
+    handle_orchestrate_gentle_task
 )
 
 class TestDevBrainODD(unittest.TestCase):
@@ -165,6 +166,26 @@ class TestDevBrainODD(unittest.TestCase):
         # Verificar que buscar odd ahora tiene sinapsis o notas
         res = handle_search_knowledge({"query": "odd"})
         self.assertIn("Organic Driven Development", res)
+
+    def test_orchestrate_gentle_task_fast_path(self):
+        res = handle_orchestrate_gentle_task({
+            "task_description": "Explica como se manejan los eventos SSE en cortex_server",
+            "project_name": "DevBrain"
+        })
+        self.assertIn("DevBrain Fast Path", res)
+        self.assertIn("READ_ONLY / SMALL_DIRECT", res)
+        self.assertIn("Cero burocracia", res)
+
+    def test_orchestrate_gentle_task_substantial(self):
+        res = handle_orchestrate_gentle_task({
+            "task_description": "Construir módulo de autenticación multifactor con WebAuthn y Passkeys",
+            "project_name": "Narval-SGN",
+            "feature_name": "webauthn-mfa"
+        })
+        self.assertIn("DevBrain: Tarea Orquestada con Gentle-AI en 1 Paso", res)
+        self.assertIn("odd/tasks/webauthn-mfa.md", res)
+        self.assertIn("Engram", res)
+        self.assertIn("Directiva para el Agente", res)
 
 if __name__ == "__main__":
     unittest.main()

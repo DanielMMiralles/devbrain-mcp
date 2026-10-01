@@ -514,6 +514,20 @@ TOOLS_MANIFEST = [
             },
             "required": ["action"]
         }
+    },
+    {
+        "name": "orchestrate_gentle_task",
+        "description": "Capa de abstracción superior sobre Gentle-AI: clasifica la tarea, prepara la feature ODD/SDD y sincroniza con Engram en 1 solo paso automático sin burocracia procedimental.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "task_description": {"type": "string", "description": "Descripción clara del objetivo o tarea a realizar"},
+                "project_name": {"type": "string", "description": "Nombre del proyecto (ej: 'Narval-SGN', 'Chambita', o 'General')"},
+                "feature_name": {"type": "string", "description": "Nombre corto o slug de la feature (opcional)"},
+                "mode": {"type": "string", "enum": ["auto", "direct", "odd", "sdd"], "description": "Modo de ejecución deseado (default: 'auto')", "default": "auto"}
+            },
+            "required": ["task_description"]
+        }
     }
 ]
 
@@ -1190,6 +1204,84 @@ def handle_orchestrator_session_bridge(args):
     return f"Acción '{action}' no reconocida. Acciones válidas: 'explain', 'format_notification', 'verify_ack'."
 
 
+def handle_orchestrate_gentle_task(args):
+    """
+    Capa de abstracción superior de DevBrain sobre la suite Gentle-AI.
+    Evalúa, prepara y despacha la tarea a Gentle-AI en 1 solo paso automático,
+    eliminando el ping-pong procedimental del LLM.
+    """
+    request_desc = args.get("task_description") or args.get("request_description") or args.get("feature_name", "")
+    project = args.get("project_name", "General").strip()
+    mode = args.get("mode", "auto").lower()
+    feature = args.get("feature_name", "").strip()
+
+    if not request_desc:
+        return "Error: Se requiere 'task_description' para orquestar la tarea."
+
+    # 1. Recuperar memorias arquitectónicas relevantes del proyecto
+    memories_summary = ""
+    if INDEXER:
+        try:
+            mem_res = INDEXER.search_memories(f"{project} {request_desc}", project_filter=project, limit=2, max_chars=800)
+            if "No se encontraron" not in mem_res:
+                memories_summary = mem_res
+        except Exception:
+            pass
+
+    # 2. Evaluación rápida de complejidad (<5ms)
+    desc_lower = request_desc.lower()
+    is_read_only = any(w in desc_lower for w in ["explica", "busca", "como funciona", "donde esta", "que hace", "documentacion", "consulta", "muestra"])
+    is_explicit_sdd = (mode == "sdd") or ("sdd" in desc_lower and "spec" in desc_lower)
+
+    # Fast Path: lectura o acción directa sin artefactos
+    if is_read_only or mode == "direct":
+        res = (
+            "### ⚡ DevBrain Fast Path (Acción Directa en Gentle-AI)\n"
+            "- **Clasificación**: `READ_ONLY / SMALL_DIRECT`\n"
+            "- **Directiva**: Cero burocracia. Responde o implementa directamente con Gentle-AI sin generar artefactos previos.\n"
+            "- **Capa de Revisión**: Gentle-AI RDD activo por defecto con análisis de riesgo fail-safe.\n"
+        )
+        if memories_summary:
+            res += f"\n**🧠 Directivas Relevantes de Memoria**:\n{memories_summary}\n"
+        return res
+
+    # Modo SDD explícito
+    if is_explicit_sdd:
+        feat_name = feature or request_desc[:40]
+        preflight = handle_prepare_sdd_preflight({
+            "feature_name": feat_name,
+            "project_name": project,
+            "task_scope": request_desc
+        })
+        return (
+            f"### 📋 DevBrain Abstracción SDD (Gentle-AI Contract)\n"
+            f"- **Modo**: Spec-Driven Development explícito\n"
+            f"- **Preflight Generado en 1 Paso**:\n\n{preflight}\n\n"
+            f"👉 **Directiva para el Agente**: Bloque preflight listo. Procede directamente con la implementación."
+        )
+
+    # Modo ODD Unificado (1 solo paso automático)
+    feat_name = feature or request_desc.split("\n")[0][:45]
+    odd_result = handle_prepare_odd_task({
+        "feature_name": feat_name,
+        "project_name": project,
+        "objective": request_desc,
+        "write_to_disk": True
+    })
+
+    res = (
+        f"### 🚀 DevBrain: Tarea Orquestada con Gentle-AI en 1 Paso\n"
+        f"- **Proyecto**: [[{project}]]\n"
+        f"- **Capa Base**: Gentle-AI (ODD + RDD Review Fail-Safe activo por defecto)\n"
+        f"- **Preparación Automática**: Tareas generadas y espejadas en Engram.\n\n"
+        f"{odd_result}\n\n"
+        f"👉 **Directiva para el Agente**: Todo está preparado. Procede de inmediato a codificar TASK-01 sin pasos procedimentales intermedios."
+    )
+    if memories_summary:
+        res += f"\n\n**🧠 Directivas Relevantes de Memoria**:\n{memories_summary}"
+    return res
+
+
 def handle_prepare_sdd_preflight(args):
     feature = args.get("feature_name", "").strip()
     project = args.get("project_name", "General").strip()
@@ -1464,6 +1556,7 @@ def process_request(request):
             elif name == "query_code_graph": text = handle_query_code_graph(args)
             elif name == "sync_project_graph": text = handle_sync_project_graph(args)
             elif name == "route_model_dispatch": text = handle_route_model_dispatch(args)
+            elif name == "orchestrate_gentle_task": text = handle_orchestrate_gentle_task(args)
             else:
                 return {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": f"Herramienta no encontrada: {name}"}}
 

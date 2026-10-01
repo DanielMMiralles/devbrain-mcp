@@ -1,42 +1,43 @@
 ---
 name: devbrain-core
 description: >-
-  Acceso y navegación por el ecosistema DevBrain: consulta de la base de conocimiento
-  (+1,600 notas técnicas), recuperación de contexto de proyectos insignia,
-  empaquetado de contexto y orquestación con Organic Driven Development (ODD) y Gentle-Shell.
+  Capa de abstracción superior sobre Gentle-AI y base de conocimiento (+6,300 notas):
+  recuperación instantánea de contexto, optimización AST de tokens, memoria arquitectónica
+  Hebbiana y orquestación ágil en 1 solo paso con Gentle-PI y Engram.
 ---
 
-# DevBrain Core Skill
+# DevBrain Core Skill — Capa Cognitiva Superior sobre Gentle-AI
 
-Esta habilidad conecta a los agentes con el segundo cerebro de desarrollo (DevBrain).
+Esta habilidad posiciona a **DevBrain como una capa de abstracción cognitiva superior sobre la suite Gentle-AI**.
+DevBrain no reinventa la rueda: delega la ejecución dinámica y las revisiones a Gentle-AI en el fondo, mientras aporta memoria profunda, compresión y conocimiento instantáneo.
 
-## Cuándo usar esta habilidad
-- Al iniciar el trabajo en cualquiera de los proyectos insignia: Chambita-Ecosystem, AliaLog-System, Narval-SGN, Alia-IMA-LangGraph, Mayan-EDMS, Odysseus, AlaOrden-Web.
-- Para buscar patrones GoF, principios de diseño cloud, DDD táctico o lecciones aprendidas en `03-CONOCIMIENTO`.
-- Para clasificar y ejecutar tareas bajo el protocolo **ODD (Organic Driven Development)**.
-- Para reanudar sesiones interrumpidas reconciliando el documento local con la memoria de Engram (`reconcile_odd_resume`).
-- Para generar especificaciones formales OpenSpec/SDD únicamente cuando se solicite explícitamente (`use SDD`).
+## 🎯 Principio Rector: Acción Directa y Cero Burocracia
+- **Gentle-AI como Motor de Ejecución**: Si el usuario pide un cambio claro, un bugfix o una explicación puntual, **actúa directamente** con las herramientas nativas de edición y ejecución. No invoques pasos burocráticos ni intermediarios innecesarios.
+- **Sin Reingeniería**: No reinventes lo que Gentle-AI ya hace nativamente (revisión RDD, pipelines SDD, runner de tests, preguntas en dock). DevBrain provee la inteligencia y el contexto que alimentan a Gentle-AI.
 
-## Flujo Operativo Estándar (ODD First)
-1. **Recuperar Contexto**: Invocar `get_project_context(project_name)` para cargar el README y arquitectura del proyecto.
-2. **Consultar Decisiones Previas**: Usar `recall_memory(query)` para no contradecir decisiones arquitectónicas ya acordadas.
-3. **Clasificar el Requerimiento**:
-   - Usar `classify_odd_task(request_description)` para determinar si es `READ_ONLY`, `SMALL_DIRECT` o `SUBSTANTIAL_ODD`.
-   - Si es consulta o documentación: responder directamente sin crear artefactos de tareas (cero ceremonia).
-   - Si es cambio pequeño (<2 pasos): implementar directamente con checks funcionales.
-   - Si es trabajo sustancial (≥2 pasos): generar `prepare_odd_task(feature_name, objective, tasks)` antes de la primera edición de código.
-   - En resolución de incertidumbre (Paso 3 ODD): utilizar el sistema interactivo de preguntas en el dock de Gentle Shell (hasta 4 preguntas navegables por teclado).
-4. **Modo TDD Observado**: Si TDD está activo, exigir el ciclo estricto RED → GREEN → REFACTOR en ejecución real (no narrado).
-5. **Reanudación / Recuperación**: Ante interrupciones o reinicios de contexto, invocar `reconcile_odd_resume(feature_name)` para sincronizar `odd/tasks/<feature>.md` con Engram.
-6. **Flujo SDD Opcional**: Usar `propose_spec` / `prepare_sdd_preflight` solo si el usuario pide explícitamente "use SDD".
-7. **Empaquetar Contexto**: Al depurar código complejo, usar `package_project_context(project_name)` para obtener una vista condensada sin sobrecargar tokens.
-8. **Capa de Revisión (Gentle-AI v3.7.0)**:
-   - Review (RDD) viene PRENDIDO de fábrica por defecto con análisis de riesgo fail-safe (los fallos de evaluación se consideran de alto riesgo). Solo el usuario puede desactivarlo (`gentle-ai review mode disable`).
-   - Soporte para **selección de modelos por revisor (Per-Reviewer Model Selection)**: modelos específicos por revisor en Claude Code, OpenCode y Codex (presets GPT-6) con fallback tolerante a fallos.
-   - Integración con **Gentle-Shell independiente** (`gentle-shell`), con flag `--link` para compartir entorno y soporte de revisiones in-Pi.
-9. **DevBrain como PLC & Neuroplasticidad Dinámica (v3.0)**:
-   - DevBrain actúa como un **PLC ultrarrápido** (<5ms) que clasifica peticiones en LOCAL_FAST (búsqueda de conocimiento, memoria) y delega tareas pesadas o de orquestación a Gentle-PI/Shell.
-   - Las consultas de conocimiento se potencian mediante **neuroplasticidad dinámica**: las co-activaciones fortalecen sinapsis entre conceptos (regla de Hebb) y aceleran la recuperación de notas relacionadas mediante un Synaptic Bonus determinista.
-10. **CLI Nativo y Telemetría Cognitiva en Vivo (`devbrain`)**:
-   - Interfaz de terminal desacoplada (`devbrain live`, `devbrain shell`, `devbrain stats`, `devbrain doctor`).
-   - Monitorea métricas en tiempo real (tokens in/out, costos en USD, latencia p50/p95, traza cognitiva del PLC y mapa de sinapsis activas) compatible con Antigravity, Cursor y Claude Code.
+## 🧠 Cuándo invocar a DevBrain (Bajo Demanda)
+Invoca las herramientas de DevBrain únicamente cuando necesites una capacidad cognitiva especializada:
+
+1. **Contexto Arquitectónico Inmediato (<20ms)**:
+   - `get_project_context(project_name)`: Carga el 360° del proyecto (README, arquitectura, grafo AST y dependencias) sin buscar manualmente.
+   - `search_knowledge(query)`: Consulta las 6,307 notas del Vault Obsidian, patrones GoF, DDD táctico y gotchas de producción potenciados por neuroplasticidad de Hebb.
+
+2. **Ahorro Extremo de Tokens (-80% a -90%)**:
+   - `optimize_token_budget(target_text, max_tokens)`: Aplica AST Code Slicing (poda cuerpos internos manteniendo firmas e interfaces) antes de cargar archivos voluminosos al prompt.
+
+3. **Memoria y Decisiones Persistentes**:
+   - `recall_memory(query)`: Consulta acuerdos previos para no contradecir decisiones de arquitectura.
+   - `remember_decision(title, details, project)`: Registra directrices o reglas que deben sobrevivir a reinicios de contexto (espejadas en SQLite, Engram y Vault).
+
+4. **Orquestación en 1 Solo Paso (`orchestrate_gentle_task`)**:
+   - Para tareas mayores, multi-fase o con necesidad de espejo en Engram:
+     Invoca `orchestrate_gentle_task(task_description, project_name)`.
+     DevBrain clasifica, prepara el plan ODD/SDD y sincroniza con Engram **en 1 sola llamada local (<10ms)**, devolviéndote la directiva lista para codificar de inmediato sin ceremonias ni ping-pongs de 5 turnos.
+
+5. **Salud del Grafo y Auto-Mantenimiento**:
+   - `audit_cortex_health()`: Audita enlaces rotos con auto-reparación en 1-clic y poda sináptica.
+
+## 🛡️ Capa de Revisión y Resiliencia (Gentle-AI v3.7.0)
+- Review (RDD) viene encendido de fábrica por defecto con análisis de riesgo fail-safe.
+- Selección de modelos por revisor (Per-Reviewer Model Selection) para balancear costo y profundidad.
+- Totalmente compatible con `gentle-shell --link` y workspaces aislados.

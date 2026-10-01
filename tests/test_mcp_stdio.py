@@ -59,8 +59,9 @@ def run_test():
     print(f"  [OK] tools/list returned {len(tools)} tools:")
     for t in tools:
         print(f"       - {t['name']}: {t['description'][:60]}...")
-    assert len(tools) == 22, f"Expected 22 tools, got {len(tools)}"
+    assert len(tools) == 23, f"Expected 23 tools, got {len(tools)}"
     tool_names = [t["name"] for t in tools]
+    assert "orchestrate_gentle_task" in tool_names, "orchestrate_gentle_task missing from tools list"
     assert "optimize_token_budget" in tool_names, "optimize_token_budget missing from tools list"
     assert "audit_cortex_health" in tool_names, "audit_cortex_health missing from tools list"
     assert "audit_ponytail_complexity" not in tool_names, "audit_ponytail_complexity should have been retired"
