@@ -243,6 +243,11 @@ BUILTIN_KNOWLEDGE = {
         "title": "Portada Viva — Cuadro de Mando Ejecutivo (DevBrain HUD)",
         "summary": "Punto de entrada L1 de alta densidad cognitiva en la raíz del Vault. Organiza la información en Dimensiones > Áreas > Proyectos > Actividades y conecta transversalmente la malla de Conocimientos y Herramientas (Playwright, NestJS, etc.). Permite al Editor en Jefe y a los agentes ubicarse en <800 tokens.",
         "gotcha": "No usar la Portada para micro-gestionar subtareas atómicas de código; las tareas tácticas pertenecen a ODD en Gentle-AI."
+    },
+    "bifocal": {
+        "title": "Razonamiento Bi-Focal: Sincronía vs. Diacronía",
+        "summary": "Protocolo cognitivo asimétrico: evalúa simultáneamente el corte transversal actual (AST, tipos y linters inmediatos) y la trayectoria temporal (ADRs pasados y memoria de errores en 04-APRENDIZAJES). Opera con regla de proporcionalidad estricta para evitar consumo de tokens en tareas triviales.",
+        "gotcha": "Hacer arqueología histórica en tareas de solo lectura o micro-arreglos desperdicia tokens; la lente diacrónica solo se activa en tareas sustanciales ODD."
     }
 }
 
