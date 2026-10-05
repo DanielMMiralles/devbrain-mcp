@@ -228,6 +228,16 @@ BUILTIN_KNOWLEDGE = {
         "title": "DevBrain PLC Router (Controlador Lógico Programable)",
         "summary": "Capa de enrutamiento ultraligera (<5ms) que clasifica herramientas MCP en tres vías: LOCAL_FAST (ejecución in-process inmediata para lecturas y memoria), DELEGATABLE (delegación a Gentle-PI/Shell cuando está activo para ejecución pesada), y REQUIRES_ORCHESTRATOR (puente inter-sesión con semántica ACK).",
         "gotcha": "Delegar operaciones ultrarrápidas de lectura a un orquestador externo agrega latencia de transporte innecesaria; las lecturas siempre van por el fast path local."
+    },
+    "playwright": {
+        "title": "Playwright E2E Testing Framework (Estándar Canónico)",
+        "summary": "Framework oficial y estándar del ecosistema para pruebas End-to-End (E2E), integración de interfaz, flujos críticos de usuario y verificación visual. Opera con comunicación bidireccional vía sockets CDP/WebKit nativos con auto-waiting semántico, aislamiento instantáneo por BrowserContext y fixtures modulares en TypeScript.",
+        "gotcha": "Usar page.waitForTimeout() o selectores XPath/clases CSS mutables genera flakiness inmediato; usar siempre localizadores semánticos (getByRole, getByLabel) y aserciones web-first con storageState para autenticación."
+    },
+    "e2e": {
+        "title": "Arquitectura de Pruebas End-to-End (E2E) & Mitigación de Flakiness",
+        "summary": "Estrategia de verificación de resultados (Outcome-Driven) para flujos completos de usuario. Prioriza selectores semánticos ARIA, aislamiento estricto de base de datos con fixtures herméticas, reutilización de sesiones JWT/cookies vía storageState, erradicación de networkidle y desactivación de animaciones para pruebas 100% deterministas.",
+        "gotcha": "Hacer login por formulario en cada prueba individual degrada exponencialmente los tiempos de CI y aumenta la tasa de fallos por latencia de red externa."
     }
 }
 
