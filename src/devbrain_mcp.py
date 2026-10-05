@@ -238,6 +238,11 @@ BUILTIN_KNOWLEDGE = {
         "title": "Arquitectura de Pruebas End-to-End (E2E) & Mitigación de Flakiness",
         "summary": "Estrategia de verificación de resultados (Outcome-Driven) para flujos completos de usuario. Prioriza selectores semánticos ARIA, aislamiento estricto de base de datos con fixtures herméticas, reutilización de sesiones JWT/cookies vía storageState, erradicación de networkidle y desactivación de animaciones para pruebas 100% deterministas.",
         "gotcha": "Hacer login por formulario en cada prueba individual degrada exponencialmente los tiempos de CI y aumenta la tasa de fallos por latencia de red externa."
+    },
+    "portada": {
+        "title": "Portada Viva — Cuadro de Mando Ejecutivo (DevBrain HUD)",
+        "summary": "Punto de entrada L1 de alta densidad cognitiva en la raíz del Vault. Organiza la información en Dimensiones > Áreas > Proyectos > Actividades y conecta transversalmente la malla de Conocimientos y Herramientas (Playwright, NestJS, etc.). Permite al Editor en Jefe y a los agentes ubicarse en <800 tokens.",
+        "gotcha": "No usar la Portada para micro-gestionar subtareas atómicas de código; las tareas tácticas pertenecen a ODD en Gentle-AI."
     }
 }
 
@@ -548,6 +553,11 @@ TOOLS_MANIFEST = [
 def handle_get_project_context(args):
     q = args.get("project_name", "").lower()
     
+    # 0. Si se solicita la Portada ejecutiva o HUD maestro
+    portada_path = VAULT_DIR / "Portada.md"
+    if (not q or q in ["portada", "hud", "dashboard", "overview", "general", "global"]) and portada_path.exists():
+        return portada_path.read_text(encoding="utf-8", errors="ignore")
+
     # 1. Buscar en PROYECTOS_DIR si existe
     if PROYECTOS_DIR.exists():
         matches = [p for p in PROYECTOS_DIR.iterdir() if p.is_dir() and q in p.name.lower() and p.name not in ["specs", "_templates", "context-bundles"]]
@@ -642,6 +652,10 @@ def handle_search_knowledge(args):
 
 def handle_list_projects(args):
     projs = []
+    portada_path = VAULT_DIR / "Portada.md"
+    if portada_path.exists():
+        projs.append("📰 **Portada Viva (HUD Ejecutivo)**: Consulta `get_project_context(project_name='portada')` para ver el Horizonte Activo y la ontología.")
+
     if PROYECTOS_DIR.exists():
         for p in PROYECTOS_DIR.iterdir():
             if p.is_dir() and p.name not in ["specs", "_templates", "context-bundles"]:
