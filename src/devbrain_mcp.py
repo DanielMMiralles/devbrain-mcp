@@ -543,6 +543,24 @@ TOOLS_MANIFEST = [
             },
             "required": ["task_description"]
         }
+    },
+    {
+        "name": "capture_weekly_snapshot",
+        "description": "Automatiza la captura de estado semanal del Editor en Jefe (Foto de los Viernes): agrega telemetría RDD, salud del Cortex y proyectos, actualizando atómicamente Portada.md y archivando el snapshot.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "verdict": {
+                    "type": "string",
+                    "description": "Veredicto o síntesis ejecutiva opcional del Editor en Jefe"
+                },
+                "force": {
+                    "type": "boolean",
+                    "description": "Forzar captura (default: true)",
+                    "default": True
+                }
+            }
+        }
     }
 ]
 
@@ -1228,6 +1246,26 @@ def handle_orchestrator_session_bridge(args):
     return f"Acción '{action}' no reconocida. Acciones válidas: 'explain', 'format_notification', 'verify_ack'."
 
 
+def handle_capture_weekly_snapshot(args):
+    verdict = args.get("verdict", "")
+    force = args.get("force", True)
+    try:
+        from weekly_snapshot import WeeklySnapshotEngine
+        engine = WeeklySnapshotEngine(VAULT_DIR)
+        res = engine.capture_snapshot(custom_verdict=verdict, force=force)
+        return (
+            f"📸 Snapshot semanal capturado con éxito:\n\n"
+            f"- **ID**: {res['snapshot_id']}\n"
+            f"- **Fecha**: {res['date']} (Semana {res['week']})\n"
+            f"- **Notas Vault**: {res['metrics']['total_notes']} ({res['metrics']['notes_updated_7d']} actualizadas en 7d)\n"
+            f"- **Tareas ODD**: {res['metrics']['odd_completed']} verificadas / {res['metrics']['odd_in_progress']} en curso\n"
+            f"- **Archivo Histórico**: `{res['archive_path']}`\n"
+            f"- **Portada Actualizada**: {res['portada_updated']}\n\n"
+            f"{res['markdown_snippet']}"
+        )
+    except Exception as e:
+        return f"Error capturando snapshot semanal: {e}"
+
 def handle_orchestrate_gentle_task(args):
     """
     Capa de abstracción superior de DevBrain sobre la suite Gentle-AI.
@@ -1581,6 +1619,7 @@ def process_request(request):
             elif name == "sync_project_graph": text = handle_sync_project_graph(args)
             elif name == "route_model_dispatch": text = handle_route_model_dispatch(args)
             elif name == "orchestrate_gentle_task": text = handle_orchestrate_gentle_task(args)
+            elif name == "capture_weekly_snapshot": text = handle_capture_weekly_snapshot(args)
             else:
                 return {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": f"Herramienta no encontrada: {name}"}}
 

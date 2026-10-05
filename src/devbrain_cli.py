@@ -103,6 +103,11 @@ def main():
     ask_parser = subparsers.add_parser("ask", help="Consulta en lenguaje natural al Agente Cognitivo DevBrain")
     ask_parser.add_argument("prompt", nargs="+", help="Pregunta, requerimiento o instrucción")
 
+    # devbrain snapshot / foto
+    snap_parser = subparsers.add_parser("snapshot", aliases=["foto"], help="Captura el snapshot semanal (Foto de los Viernes) y actualiza Portada.md")
+    snap_parser.add_argument("--verdict", "-v", default="", help="Veredicto o síntesis opcional del Editor en Jefe")
+    snap_parser.add_argument("--json", action="store_true", help="Salida en formato JSON crudo")
+
     def custom_print_help():
         from cli_help import render_help_overview
         theme = config_mgr.get_theme()
@@ -295,6 +300,19 @@ def main():
         is_papa = config_mgr.toggle_papa_mode()
         state = "ENCENDIDO (ahorro de batería / sin animaciones)" if is_papa else "APAGADO (animaciones completas)"
         console.print(f"[yellow]Modo Papa: {state}[/yellow]")
+
+    elif args.command in ["snapshot", "foto"]:
+        theme = config_mgr.get_theme()
+        from weekly_snapshot import WeeklySnapshotEngine
+        from devbrain_mcp import VAULT_DIR
+        with console.status(f"[{theme.accent}]Capturando snapshot semanal y actualizando Portada.md...[/{theme.accent}]"):
+            engine = WeeklySnapshotEngine(VAULT_DIR)
+            res = engine.capture_snapshot(custom_verdict=args.verdict)
+        if args.json:
+            print(json.dumps(res, indent=2, ensure_ascii=False))
+        else:
+            console.print(Panel(Markdown(res["markdown_snippet"]), title=f"📸 [bold]Snapshot Semanal {res['snapshot_id']}[/bold]", box=box.ROUNDED, border_style=theme.accent))
+            console.print(f"[{theme.dim}]✓ Archivado en: {res['archive_path']}[/{theme.dim}]")
 
     elif args.command == "help":
         from cli_help import render_help_overview, render_topic_help
