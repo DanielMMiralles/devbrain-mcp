@@ -42,7 +42,7 @@ def run_test():
     assert init_response.get("id") == 1, "Initialize response ID mismatch"
     assert "result" in init_response, "Initialize response missing result"
     server_info = init_response["result"].get("serverInfo", {})
-    assert server_info.get("version") == "3.0.0", f"Expected version 3.0.0, got {server_info.get('version')}"
+    assert server_info.get("version") == "3.1.0", f"Expected version 3.1.0, got {server_info.get('version')}"
     print(f"  [OK] Initialized: {server_info.get('name')} v{server_info.get('version')}")
 
     # 2. Test tools/list
@@ -59,9 +59,10 @@ def run_test():
     print(f"  [OK] tools/list returned {len(tools)} tools:")
     for t in tools:
         print(f"       - {t['name']}: {t['description'][:60]}...")
-    assert len(tools) == 23, f"Expected 23 tools, got {len(tools)}"
+    assert len(tools) == 24, f"Expected 24 tools, got {len(tools)}"
     tool_names = [t["name"] for t in tools]
     assert "orchestrate_gentle_task" in tool_names, "orchestrate_gentle_task missing from tools list"
+    assert "capture_weekly_snapshot" in tool_names, "capture_weekly_snapshot missing from tools list"
     assert "optimize_token_budget" in tool_names, "optimize_token_budget missing from tools list"
     assert "audit_cortex_health" in tool_names, "audit_cortex_health missing from tools list"
     assert "audit_ponytail_complexity" not in tool_names, "audit_ponytail_complexity should have been retired"

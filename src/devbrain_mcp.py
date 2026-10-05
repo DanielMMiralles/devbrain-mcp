@@ -11,11 +11,10 @@ if sys.platform == "win32":
         pass
 
 """
-DevBrain Unified MCP Server (v3.0.0 - PLC Neuroplástico):
-Controlador Lógico Programable (PLC) con neuroplasticidad dinámica.
-Clasifica y enruta peticiones MCP al procesador más eficiente (local o Gentle-PI).
-Integra un grafo sináptico adaptativo inspirado en LTP/LTD y la regla de Hebb
-para reconectar dinámicamente nodos de conocimiento según patrones de uso.
+DevBrain Unified MCP Server (v3.1.0 — Cognitive Bi-Focal: Sincronía, Diacronía & Portada HUD):
+Controlador Lógico Programable (PLC) con neuroplasticidad dinámica y razonamiento bi-focal.
+Equilibra el corte transversal sincrónico (tipado, contratos y tests Playwright) con la
+profundidad diacrónica (ADRs históricos, memoria de errores y snapshots semanales).
 100% prescindible de un Obsidian Vault: opera en modo conectado o Standalone autónomo.
 Compatible al 100% con la especificación MCP oficial (2024-11-05).
 """
@@ -1586,7 +1585,7 @@ def process_request(request):
                 "capabilities": {"tools": {}},
                 "serverInfo": {
                     "name": "devbrain-mcp",
-                    "version": "3.0.0",
+                    "version": "3.1.0",
                     "mode": "vault-connected" if HAS_VAULT else "autonomous-standalone"
                 }
             }

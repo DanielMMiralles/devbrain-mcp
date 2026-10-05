@@ -1,247 +1,147 @@
-# 🧠 DevBrain MCP Server
+# 🧠 DevBrain MCP Server (v3.1.0)
 
 [![MCP Specification](https://img.shields.io/badge/MCP-2024--11--05-blue.svg)](https://modelcontextprotocol.io/)
+[![Version](https://img.shields.io/badge/version-3.1.0-brightgreen.svg)](https://github.com/DanielMMiralles/devbrain-mcp)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-green.svg)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
 
-**DevBrain** es un servidor unificado de [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) que conecta modelos de inteligencia artificial (Claude, GPT, Gemini, Antigravity, Cursor) con un cerebro de conocimiento en **Obsidian** (~1,675 notas técnicas), un conjunto de herramientas **OpenSpec (Spec-Driven Development)** y un sistema de memoria persistente **Gentle-AI / Engram**.
+**DevBrain** es un servidor unificado de [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) que actúa como un **Sistema Operativo Cognitivo y Capa de Abstracción Superior sobre Gentle-AI**. Conecta modelos de inteligencia artificial con un cerebro de conocimiento en **Obsidian** (+6,350 notas técnicas), memoria Hebbiana neuroplástica, cuadro de mando ejecutivo vivo (**Portada**) y un motor de **Razonamiento Bi-Focal (Inteligencia Sincrónica y Diacrónica)**.
 
 ---
 
-## ✨ Características Principales
+## 🌟 Novedades de la Versión 3.1.0 (Cognitive Bi-Focal Release)
 
-- **Arquitectura PLC Neuroplástica (DevBrain v3.0)**:
-  - **PLC Router (`src/plc_router.py`)**: Controlador de ultra-baja latencia (<5ms) que resuelve lecturas in-process (fast path) y delega tareas pesadas de orquestación y subagentes a Gentle-PI/Shell.
-  - **Grafo Sináptico Dinámico (`src/neuroplasticity.py`)**: Motor de plasticidad biológica (Hebb, LTP, LTD, poda sináptica). Conecta conceptos adaptativamente según co-activación en sesiones reales y potencia el reranking con un Synaptic Bonus.
-- **21 Herramientas MCP Nativas (DevBrain v3.0 - PLC & ODD)**:
-  - `classify_odd_task`: Clasificación determinista según protocolo ODD con activación contextual neuroplástica.
-  - `prepare_odd_task`: Generación del documento `odd/tasks/<feature>.md` y su espejo Engram `odd/<feature>/tasks`.
-  - `reconcile_odd_resume`: Reconciliación de estado local vs memoria Engram al reanudar sesiones.
-  - `orchestrator_session_bridge`: Soporte para el protocolo de mensajería inter-sesión de Gentle-Shell con semántica ACK.
-  - `prepare_sdd_preflight`: Contrato SDD liviano (Gentle-AI v3.0).
-  - `get_project_context`, `list_projects`, `search_knowledge`: Navegación ontológica y catálogo de conocimiento con indexador FTS5.
-  - `propose_spec`, `validate_spec`, `get_spec_questions`, `generate_scaffold`: Suite completa SDD/BDD (OpenSpec).
-  - `remember_decision`, `recall_memory`: Memoria persistente y lecciones aprendidas (Gentle-AI / Engram v2).
-  - `package_project_context`, `audit_project_health`: Empaquetado ultracompacto y auditoría de salud.
-  - `debate_project_feasibility`: Modo Debate Sin Filtros (Red Team) para estresar viabilidad y costos ocultos.
-  - `audit_ponytail_complexity`: Auditoría de simplicidad y poda de sobre-ingeniería según la escalera YAGNI.
-  - `query_code_graph`, `sync_project_graph`: Motor AST Graphify para extraer relaciones de símbolos y dependencias.
-  - `route_model_dispatch`: Gateway inteligente multi-modelo (FAST vs FRONTIER vs CODER) con soporte OmniRoute.
-- **Resolución Resiliente de Vault**: Soporta indistintamente `VAULT_PATH` o `VAULT_DIR`, lectura automática de `.env` y fallback instantáneo a `./starter-vault` (100% plug-and-play).
-- **Cero Dependencias de Terceros**: Construido al 100% sobre la biblioteca estándar de Python 3.12.
-- **Contenerizado con Docker**: Despliegue con un solo comando o ejecución nativa con Python.
-- **Multiplataforma**: Compatible con Windows, macOS y Linux.
+### 1. ⚖️ Razonamiento Bi-Focal: Sincronía vs. Diacronía (Token-Efficient)
+Los LLMs comerciales suelen sufrir de **amnesia diacrónica**: evalúan únicamente el código que cabe en su prompt actual e ignoran el porqué histórico de las decisiones previas, reintroduciendo bugs ya resueltos. DevBrain v3.1.0 dota a los agentes de visión bi-focal:
+
+- **Eje Sincrónico (El "Ahora" / Coherencia Estructural)**:
+  - Analiza el sistema en un instante de tiempo presente.
+  - Valida coherencia con AST, compilador de tipos estrictos, linters y aserciones de [[Playwright]].
+- **Eje Diacrónico (El "Por qué" / Evolución Temporal)**:
+  - Analiza la causalidad histórica: decisiones pasadas (ADRs en `04-APRENDIZAJES/decisiones/`), memoria de errores (`04-APRENDIZAJES/errores/`), git history y snapshots semanales.
+  - Otorga **inmunidad a la regresión**: el agente no "simplifica" código defensivo creyendo erróneamente que es código muerto.
+- **Regla de Proporcionalidad Anti-Gasto de Tokens**:
+  - *Tareas Triviales (<2 pasos)*: 100% modo sincrónico directo. Cero gasto de tokens en arqueología histórica.
+  - *Tareas Sustanciales (ODD ≥2 pasos)*: Inyección automática acotada de las 2-3 decisiones clave relevantes (<200 tokens) antes de modificar código sensible.
+
+### 2. 📰 Portada Viva (`Portada.md` — L1 Cache Cognitivo)
+Ubicada en la raíz del Vault, estructura la ontología en:
+- **Horizonte Activo**: Los 2 o 3 proyectos en foco de la semana.
+- **Dimensiones & Áreas**: 
+  - *Dimensión I (Sistemas Core & Producción)*: B2B, Logística, Marketplaces.
+  - *Dimensión II (IA, Agentes & Automatización)*: Sistemas Multi-Agente, Metasistema.
+  - *Dimensión III (DevOps, Infraestructura & Educación)*: K8s, Cloud, I+D.
+- **Malla Transversal**: Herramientas y estándares canónicos que alimentan a todos los proyectos en paralelo.
+- Responde a consultas ejecutivas en **<800 tokens** mediante `get_project_context(project_name="portada")`.
+
+### 3. 📸 Automatización de Snapshots Semanales (`capture_weekly_snapshot`)
+- Motor nativo [`WeeklySnapshotEngine`](src/weekly_snapshot.py) que automatiza la "Foto de los Viernes".
+- Agrega telemetría de tareas ODD y recibos RDD, salud del Cortex y actividad de proyectos.
+- Actualiza atómicamente la Portada y archiva un snapshot inmutable en `04-APRENDIZAJES/snapshots/snapshot-YYYY-WW.md`.
+- Disponible tanto en CLI (`devbrain snapshot`) como en herramienta MCP (`capture_weekly_snapshot`).
+
+### 4. 🎭 E2E Testing Framework Canónico con Playwright
+- Estandarización de [[Playwright]] como framework E2E oficial del ecosistema.
+- Jerarquía semántica estricta (`getByRole` > `getByLabel` > `getByText` > `getByTestId`).
+- Prohibición de hard sleeps (`page.waitForTimeout`); uso obligatorio de auto-waiting nativo.
+- Aislamiento de sesiones con `storageState` y fixtures tipadas multi-rol (`adminPage`, `userPage`).
+
+---
+
+## 🛠️ Las 24 Herramientas MCP Nativas
+
+| Categoría | Herramienta | Descripción |
+| :--- | :--- | :--- |
+| **Orquestación & Abstracción** | `orchestrate_gentle_task` | Capa superior sobre Gentle-AI: clasifica, prepara ODD/SDD y espeja en Engram en 1 solo paso. |
+| **Snapshots & Portada** | `capture_weekly_snapshot` | Automatiza el snapshot semanal (Foto de los Viernes) y actualiza `Portada.md`. |
+| **Navegación & Contexto** | `get_project_context` | Recupera el 360° de un proyecto o la Portada ejecutiva en <20ms. |
+| | `list_projects` | Lista todos los proyectos insignia descubiertos y el estado de la Portada. |
+| | `search_knowledge` | Búsqueda FTS5 en +6,350 notas del Vault con reranker sináptico de Hebb. |
+| **Memoria Persistente** | `recall_memory` | Consulta decisiones históricas (ADRs) y reglas persistentes por proyecto. |
+| | `remember_decision` | Registra una nueva decisión arquitectónica duradera en Vault, Engram y SQLite. |
+| **Calidad & Telemetría** | `audit_cortex_health` | Audita salud del cerebro: enlaces rotos, duplicados y notas viejas (LTD). |
+| | `audit_project_health` | Audita dependencias, estado de contenedores y deuda técnica de un proyecto. |
+| | `optimize_token_budget` | Compresión de contexto mediante AST code slicing (-80% a -90% tokens). |
+| **Protocolo ODD & SDD** | `classify_odd_task` | Clasificación determinista (READ_ONLY, SMALL_DIRECT, SUBSTANTIAL_ODD). |
+| | `prepare_odd_task` | Genera el documento de feature ODD y su espejo en Engram. |
+| | `reconcile_odd_resume` | Reconcilia estado local vs memoria Engram al reanudar sesiones. |
+| | `orchestrator_session_bridge` | Mensajería inter-sesión con semántica ACK para Gentle-Shell. |
+| | `prepare_sdd_preflight` | Bloque de autoridad y contexto SDD liviano. |
+| | `propose_spec` | Crea propuestas formales OpenSpec. |
+| | `validate_spec` | Valida cumplimiento de especificaciones spec.md. |
+| | `get_spec_questions` | Cuestionario adaptativo por tipo de sistema (API, CLI, Frontend). |
+| | `generate_scaffold` | Generación de esqueletos de código limpios en NestJS o FastAPI. |
+| **Grafo AST & Gateway** | `query_code_graph` | Consulta el grafo sintáctico para clases, módulos y métodos. |
+| | `sync_project_graph` | Indexa el código fuente y genera el grafo AST del proyecto. |
+| | `package_project_context` | Empaqueta el código real en un bundle Markdown ultracompacto. |
+| | `debate_project_feasibility` | Protocolo Red Team para desafiar viabilidad y costos ocultos. |
+| | `route_model_dispatch` | Gateway inteligente que selecciona el modelo óptimo (FAST vs FRONTIER vs CODER). |
 
 ---
 
 ## 🚀 Inicio Rápido (Quick Start)
 
-### Opción 1: Con Docker (Recomendado)
-
-1. Clona este repositorio:
-   ```bash
-   git clone https://github.com/DanielMMiralles/devbrain-mcp.git
-   cd devbrain-mcp
-   ```
-
-2. Configura tu archivo `.env`:
-   ```bash
-   cp .env.example .env
-   # Edita .env con las rutas a tu Obsidian Vault y proyectos locales
-   ```
-
-3. Construye y corre la imagen:
-   ```bash
-   docker compose build
-   ```
-
-4. Agrega el servidor a tu cliente MCP favorito (ver [Configuración de Clientes](#-configuracion-de-clientes-mcp)).
-
----
-
-### Opción 2: Ejecución Local con Python (Sin Docker)
-
-Requisitos: **Python 3.12+** y **Git**.
-
-```bash
-# Variables de entorno opcionales (toman valores por defecto si no se indican)
-export VAULT_DIR="/ruta/a/tu/Obsidian Vault"
-export PROJECTS_DIR="/ruta/a/tus/proyectos"
-
-python src/devbrain_mcp.py
-```
-
----
-
-### Opción 3: Daemon de Aprendizaje en Segundo Plano (Opcional)
-
-Si deseas que el observador monitoree automáticamente tus repositorios Git locales y registre commits y decisiones en tu Vault de Obsidian:
+### Opción 1: CLI Nativo en Terminal
 
 ```powershell
-# Instalar como tarea programada en segundo plano (Windows)
-powershell -ExecutionPolicy Bypass -File src/scripts/install_daemon_service.ps1 -Action install
-
-# Para desinstalar cuando lo desees:
-powershell -ExecutionPolicy Bypass -File src/scripts/install_daemon_service.ps1 -Action uninstall
-```
-
----
-
-## 🔌 Configuración de Clientes MCP
-
-### Google Antigravity / Gemini CLI (`mcp_config.json`)
-```json
-{
-  "mcpServers": {
-    "devbrain": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-v", "C:\\Users\\tu_usuario\\Documents\\Obsidian Vault:/vault",
-        "-v", "C:\\Users\\tu_usuario\\Desktop:/projects:ro",
-        "devbrain/mcp-server:latest"
-      ]
-    }
-  }
-}
-```
-
-### Claude Desktop (`claude_desktop_config.json`)
-```json
-{
-  "mcpServers": {
-    "devbrain": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-v", "/Users/tu_usuario/Obsidian Vault:/vault",
-        "-v", "/Users/tu_usuario/Developer:/projects:ro",
-        "devbrain/mcp-server:latest"
-      ]
-    }
-  }
-}
-```
-
----
-
-## 🧪 Pruebas Automatizadas
-
-Para validar que el protocolo stdio JSON-RPC responde al 100% de la especificación MCP:
-
-```bash
-python tests/test_mcp_stdio.py
-```
-
----
-
-## 📜 Protocolos Operativos del Agente (`docs/protocols/`)
-
-DevBrain no solo provee herramientas pasivas, sino protocolos de conducta e ingeniería para agentes de IA:
-
-1. **[Protocolo de Debate Sin Filtros](docs/protocols/protocolo_debate_redteam.md)**:
-   - Activa el rol de *Principal Systems Architect / Red Team Auditor*.
-   - Suspende el sesgo de complacencia (*sycophancy*) y somete cualquier propuesta al test de las 5 preguntas de fuego (SPOF, costos ocultos, mantenimiento a las 3 AM).
-2. **[Reglas Ponytail (Lazy Senior Dev)](docs/protocols/ponytail_rules.md)**:
-   - Escalera de 6 peldaños YAGNI para forzar la simplificación radical: ¿Tiene que existir? -> ¿Existe ya? -> ¿Standard Lib? -> ¿Nativo? -> ¿Una sola línea?
-3. **[Protocolo de Ingesta Tecnológica (DIP)](docs/protocols/protocolo_ingesta_tecnologica.md)**:
-   - Pipeline de 4 fases para evaluar repos de GitHub, librerías o paradigmas modernos, destilarlos en fichas atómicas para el Vault y activarlos en proyectos reales sin acumular deuda técnica.
-
----
-
-## 🖥️ DevBrain Native CLI & Cognitive HUD (Estilo Gentle-Shell)
-
-DevBrain incluye ahora un **CLI nativo interactivo** y un **HUD de Telemetría Cognitiva en Tiempo Real** para inspeccionar exactamente cómo piensa el agente, cómo orquesta las tareas y qué recursos consume:
-
-```bash
-# Iniciar el HUD de telemetría cognitiva en vivo (60fps)
+# Ver estado del cerebro y HUD cognitivo
 devbrain live
 
-# Iniciar la terminal interactiva con autocompletado y dock questions
-devbrain shell
+# Capturar la foto semanal de los viernes (Snapshot)
+devbrain snapshot -v "Cierre de semana: suite Playwright y RBAC validados."
 
-# Ver resumen de métricas acumuladas (tokens, costos USD, p50/p95, herramientas)
-devbrain stats
-
-# Diagnóstico de salud del ecosistema (Python, FTS5, Engram, Gentle-PI, Vault)
+# Diagnóstico unificado
 devbrain doctor
-
-# Consultas directas al cerebro con reranking sináptico
-devbrain search "organic driven development"
-
-# Cambiar paleta visual o alternar Modo Papa (ahorro de batería / minimalista)
-devbrain theme cyberpunk
-devbrain papa
-
-# Manual completo interactivo y guías especializadas por tópico
-devbrain help
-devbrain help live      # Ayuda profunda sobre el HUD y paneles
-devbrain help odd       # Guía de clasificación ODD y fail-safe
-devbrain help mcp       # Catálogo de las 21 herramientas y rutas PLC
-devbrain help hosts     # Guía de conexión para Antigravity, Cursor y Claude
-devbrain help neuro     # Fórmulas de Hebb, LTP/LTD y bonus sináptico
 ```
 
-### 📊 Indicadores en Vivo ("¿Cómo Piensa?")
-- **Consumo de Tokens & Costos**: Desglose `Tokens In` / `Out` / `Total`, Throughput (`tok/s`), Costo acumulado en USD por modelo (Gemini 3.8 Flash, Claude 3.5/Sonnet, GPT-5, etc.).
-- **Latencias de Respuesta**: Medición en tiempo real de latencia mediana ($p50$) y de cola ($p95$).
-- **Corteza Sináptica Hebbiana**: Visualización de sinapsis activas disparadas por co-activación contextual en la sesión.
-- **Rastro de Razonamiento del PLC**: Exposición de la traza de pensamiento y decisión del PLC Router (`LOCAL_FAST`, `DELEGATE`, `ORCHESTRATE`).
-- **Carril de Orquestación Ecosistémico**: Integración visual de pipeline con **Gentle-PI** y **Engram v2.0**.
-- **Personalización Visual**: Temas `Gentleman-Dark`, `Cyberpunk`, `Obsidian-Dark`, `Monokai` y `Modo Papa` austero.
+### Opción 2: Configuración en Google Antigravity / Gemini CLI (`mcp_config.json`)
 
-### 🔌 Conexión con Hosts e IDEs (Antigravity, Cursor, Claude Code)
-El CLI de DevBrain opera de forma **completamente desacoplada** a través de un bus de eventos atómico (`~/.devbrain/live_events.jsonl` y `session_stats.json`):
-- **Antigravity (AGY)**: Detecta automáticamente el entorno AGY vía handshake de inicialización MCP o variables de entorno. Puedes tener tu agente trabajando en AGY mientras mantienes una terminal abierta al lado con `devbrain live` viendo cada tool call en tiempo real.
-- **Cursor IDE**: Detecta sesiones de Cursor mediante variables de traza y el cliente MCP de Cursor. El HUD refleja inmediatamente las consultas que Cursor delega a DevBrain.
-- **Claude Code**: Conexión nativa vía configuración en `claude_desktop_config.json` o subproceso stdio.
+```json
+{
+  "mcpServers": {
+    "devbrain": {
+      "command": "C:\\Users\\tu_usuario\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "args": [
+        "C:\\Users\\tu_usuario\\OneDrive\\Documentos\\Obsidian Vault\\06-SISTEMA\\mcp\\devbrain_mcp.py"
+      ],
+      "env": {
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}
+```
+
+### Opción 3: Claude Desktop (`claude_desktop_config.json`)
+
+```json
+{
+  "mcpServers": {
+    "devbrain": {
+      "command": "python",
+      "args": [
+        "/ruta/a/tu/Obsidian Vault/06-SISTEMA/mcp/devbrain_mcp.py"
+      ]
+    }
+  }
+}
+```
 
 ---
 
-## 📂 Estructura del Repositorio
+## 🧪 Verificación de Contratos y Tests
 
-```
-devbrain-mcp/
-├── devbrain.cmd                # Launcher Windows CMD para terminal global
-├── devbrain.ps1                # Launcher Windows PowerShell
-├── Dockerfile                  # Construccion minimalista Python 3.12 (<60MB)
-├── docker-compose.yml          # Orquestacion con volumenes montados
-├── mcp_client_config.json      # Plantillas de configuracion para IDEs
-├── docs/
-│   └── protocols/              # Protocolos operativos (Debate, Ponytail, Ingesta)
-├── skills/                     # Catalogo de Agent Skills (Core, ODD, Debate, Ponytail)
-├── config/
-│   ├── projects.json           # Definicion de proyectos monitoreados
-│   └── projects.yaml           # Formato YAML alternativo
-├── src/
-│   ├── devbrain_cli.py         # Entrypoint del CLI unificado ('devbrain')
-│   ├── cli_help.py             # Sistema de ayuda y manual interactivo con temas
-│   ├── cli_hud.py              # Dashboard TUI en vivo con Rich (Cognitive HUD)
-│   ├── cli_shell.py            # Terminal interactiva REPL con prompt-toolkit
-│   ├── cli_theme.py            # Motor de temas visuales y Modo Papa
-│   ├── telemetry.py            # Event Bus, cálculo de tokens/costos y métricas p50/p95
-│   ├── devbrain_mcp.py         # Servidor MCP stdio (21 herramientas integradas)
-│   ├── plc_router.py           # PLC Router (fast-path local vs Gentle-PI)
-│   ├── neuroplasticity.py      # Motor de plasticidad sináptica (LTP/LTD Hebb)
-│   ├── devbrain_index.py       # Motor de búsqueda FTS5 y reranking híbrido
-│   ├── devspec/                # Suite OpenSpec (BDD, scaffold, preguntas)
-│   └── scripts/                # Motores de debate, graphify, model hub, packager, daemon
-├── starter-vault/              # Plantilla inicial de Obsidian Vault lista para usar
-└── tests/
-    ├── test_cli_telemetry.py   # Tests de telemetría, temas y renderizado HUD
-    ├── test_neuroplasticity.py # Tests de plasticidad sináptica y PLC Router
-    ├── test_odd_mcp.py         # Tests de herramientas ODD y contratos de sesión
-    └── test_mcp_stdio.py       # Suite de pruebas automatizadas JSON-RPC stdio
+La suite automatizada valida el 100% de la especificación MCP sobre stdio JSON-RPC:
+
+```bash
+py -3.12 tests/test_mcp_stdio.py
+py -3.12 -m pytest tests/test_odd_mcp.py
 ```
 
 ---
 
 ## 📄 Licencia
 
-MIT License — Totalmente de código abierto para compartir y colaborar con la comunidad.
-
+Distribuido bajo la licencia MIT. Creado con arquitectura de alto rendimiento para desarrollo con IA de nueva generación.
