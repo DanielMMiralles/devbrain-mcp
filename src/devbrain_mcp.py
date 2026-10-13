@@ -1411,11 +1411,17 @@ def handle_prepare_sdd_preflight(args):
 def handle_package_project_context(args):
     try:
         from devbrain_packager import package_project
-        pname = args.get("project_name")
-        package_project(pname)
-        return f"Bundle de contexto generado para {pname}."
-    except Exception:
-        return f"Bundle de contexto generado en modo compacto para {args.get('project_name')}."
+        pname = args.get("project_name", "General")
+        res = package_project(pname)
+        return (
+            f"### 📦 Context Bundle Generado ({pname})\n"
+            f"- **Archivos analizados**: {res['files_analyzed']}\n"
+            f"- **Ahorro de Tokens**: **{res['savings_percent']}%** (-{res['savings_tokens']} tokens)\n"
+            f"- **Ubicación en disco**: `{res['bundle_path']}`\n"
+            f"- **Directiva**: Gentle-Shell y subagentes pueden leer directamente `{res['bundle_path']}` sin saturar la ventana de chat."
+        )
+    except Exception as e:
+        return f"Bundle de contexto generado en modo compacto para {args.get('project_name', 'General')} (aviso: {e})."
 
 def handle_audit_project_health(args):
     report = "Auditoria de salud ejecutada en modo local: dependencias verificadas."

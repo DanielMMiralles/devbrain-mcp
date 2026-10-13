@@ -7,3 +7,5 @@ venv/
 *.db
 .devbrain_cache/
 .devbrain_vault/
+.devbrain/
+odd/

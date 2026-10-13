@@ -137,7 +137,7 @@ class TestDevBrainODD(unittest.TestCase):
     def test_builtin_knowledge_odd_and_gentle_shell(self):
         odd_know = handle_search_knowledge({"query": "odd"})
         self.assertIn("Organic Driven Development", odd_know)
-        self.assertIn("preguntas interactivas", odd_know)
+        self.assertIn("odd/tasks/", odd_know)
 
         shell_know = handle_search_knowledge({"query": "gentle-shell"})
         self.assertIn("Gentle-Shell", shell_know)
@@ -147,7 +147,7 @@ class TestDevBrainODD(unittest.TestCase):
         self.assertIn("Engram v2.0", engram_know)
 
         rdd_know = handle_search_knowledge({"query": "rdd"})
-        self.assertIn("PRENDIDA de fábrica", rdd_know)
+        self.assertIn("Native Authority Architecture v2", rdd_know)
         self.assertIn("fail-safe", rdd_know)
 
         neuro_know = handle_search_knowledge({"query": "neuroplasticity"})
