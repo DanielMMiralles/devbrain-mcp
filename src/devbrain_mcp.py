@@ -199,24 +199,34 @@ BUILTIN_KNOWLEDGE = {
         "gotcha": "Almacenar contadores de rate limit en memoria de proceso local no funciona cuando la aplicación escala horizontalmente en múltiples pods de Kubernetes."
     },
     "odd": {
-        "title": "Organic Driven Development (ODD - Gentle-AI v3.5.0)",
-        "summary": "Metodología de desarrollo adaptativa que escala proporcionalmente a la necesidad: sin artefactos para tareas triviales/consultas, y con un documento único de feature (odd/tasks/<feature>.md) espejado en Engram (odd/<feature>/tasks) para tareas sustanciales (≥2 pasos). En v3.5.0 se integra con el sistema nativo de preguntas interactivas en el dock de Gentle Shell para resolver incertidumbre (Paso 3) sin tapar la conversación.",
+        "title": "Organic Driven Development (ODD - Gentle-AI v4.2.0)",
+        "summary": "Metodología adaptativa que escala proporcionalmente: sin artefactos para tareas triviales/consultas, y con un documento único de feature (odd/tasks/<feature>.md) espejado en Engram v3.4.0 (odd/<feature>/tasks) para tareas sustanciales (≥2 pasos). En v4.2.0 opera con 'task-linked project memory': mem_current_project enlaza automáticamente el cwd del proyecto eliminando solicitudes de permiso redundantes.",
         "gotcha": "Tratar la heurística orientativa de ~400 líneas por tarea como un límite estricto o forzar splits artificiales que dañen la cohesión del código."
     },
     "gentle-shell": {
-        "title": "Gentle-Shell (Workspace Pi v3.4.0 & CLI Propio)",
-        "summary": "Workspace integral de desarrollo sobre Pi con comando propio ('gentle-shell') y modo de configuración aislado. Incluye sistema nativo de preguntas interactivas en el dock (hasta 4 preguntas, selección simple/múltiple y texto libre), perfiles de modelos en sidebar anclables por repo, vista de cambios acotada a la sesión, menús de subagentes en background y modos de rendimiento gráfico (modo papa).",
+        "title": "Gentle-Shell (Workspace Pi v4.2.0 & CLI Propio)",
+        "summary": "Workspace integral de desarrollo sobre Pi con comando propio ('gentle-shell'), directorio aislado (~/.gentle-shell/agent) y motor RPC JSONL estricto. Incorpora 3 modos de permiso nativos (/gentle:mode normal | auto | yolo), revisión de código en worktrees inmutables read-only, notificaciones sonoras nativas configurables y perfiles de modelos anclables por repositorio.",
         "gotcha": "Tener instalado el paquete de terceros 'rpiv-ask-user-question' genera colisión de nombres de herramienta en Pi; debe desinstalarse."
     },
-    "engram-v2": {
-        "title": "Engram v2.0 (Persistent Memory & Session Lifecycle)",
-        "summary": "Capa de memoria persistente para agentes con soporte git tracking (.engram/), consola TUI, detección y normalización de proyectos y gestión robusta de procesos en Windows. Almacena decisiones, directrices y espejos ODD que sobreviven a compactaciones de contexto e interrupciones.",
+    "permission-modes": {
+        "title": "Modos de Permiso de Gentle-AI (/gentle:mode normal | auto | yolo)",
+        "summary": "Sistema de gobernanza para sesiones interactivas: 'Normal' (máxima cautela con confirmación explícita), 'Auto' (un revisor clasificador evalúa la intención del usuario y la semántica de la herramienta sin trabar acciones auxiliares, con ventana de contexto de 24KB y poda inteligente de mensajes intermedios), y 'YOLO' (permiso continuo para flujos aprobados manteniendo barreras estrictas ante acciones destructivas o irreversibles).",
+        "gotcha": "El modo YOLO no exime de confirmación para acciones destructivas (borrado de repos, git push forzado, pagos o borrado masivo de base de datos); estas barreras son fail-closed."
+    },
+    "engram": {
+        "title": "Engram v3.4.0 (Persistent Memory & Task-Linked Lifecycle)",
+        "summary": "Servidor de memoria persistente en Go de alta concurrencia con backend SQLite embebido (modernc.org/sqlite v1.46+). Soporta 'task-linked memory' (enlace contextual automático de mem_current_project con cwd), identidades por instancia (instance-id) para prevenir colisiones en Windows, y tracking git en .engram/.",
         "gotcha": "Sobrescribir ciegamente memorias divergentes en reanudación sin reconciliar antes las evidencias observadas en el código real."
     },
+    "gentle-dot": {
+        "title": "Gentle Dot (Asistente Ambiental de Escritorio & Computer Use)",
+        "summary": "Asistente de escritorio de presencia continua construido sobre Tauri 2 (Rust) y supervisor Node.js. Vive en la barra de tareas o ventana flotante (Alt+Espacio / Option+Espacio), opera con visión de pantalla y clicks de bajo nivel ('computer use') con resplandor rosa y atajo de pánico (Alt+Shift+Esc), integra Engram para memoria de escritorio y descubre automáticamente servidores MCP (Claude Desktop, Cursor, VS Code, DevBrain). Protegido por child-guard, approval-guard y web-pin.",
+        "gotcha": "No ejecutar comandos no supervisados en modo YOLO dentro de Gentle Dot sin verificar previamente qué ventanas o accesos tiene abiertos en el sistema operativo."
+    },
     "rdd": {
-        "title": "Receipt-Driven Development / Review Guardrail (Gentle-AI v3.5.0)",
-        "summary": "Capa de revisión independiente para candidatos de entrega. En Gentle-AI v3.5.0 viene PRENDIDA de fábrica por defecto (desactivable con 'gentle-ai review mode disable'). Incorpora análisis de riesgo fail-safe: si la evaluación de riesgo falla o produce error, se clasifica obligatoriamente como cambio riesgoso/medio-alto, nunca como bajo riesgo.",
-        "gotcha": "Asumir que un fallo en el analizador de riesgo permite omitir la revisión; en v3.5.0 los fallos son fail-closed."
+        "title": "Native Authority Architecture v2 (Review Guardrail - Gentle-AI v4.2.0)",
+        "summary": "Capa de revisión independiente RDD con protocolo nativo review-integration/v2. Reemplaza el transporte de diffs planos en Base64 por árboles Git inmutables (base_tree / candidate_tree) y un changed_path_manifest ordenado. Los agentes revisores operan en worktrees aislados con permisos chmod read-only sin acceso a shell de Git, garantizando inspección hermética con ciclo de corrección orientado a evidencia (capture-evidence).",
+        "gotcha": "Intentar usar diffs en Base64 con v4.2.0; el protocolo v2 rechaza payloads sin árboles inmutables verificados."
     },
     "neuroplasticity": {
         "title": "Neuroplasticidad Dinámica & Sinapsis Hebbianas (DevBrain v3.0)",
