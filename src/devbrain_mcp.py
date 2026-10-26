@@ -257,6 +257,31 @@ BUILTIN_KNOWLEDGE = {
         "title": "Razonamiento Bi-Focal: Sincronía vs. Diacronía",
         "summary": "Protocolo cognitivo asimétrico: evalúa simultáneamente el corte transversal actual (AST, tipos y linters inmediatos) y la trayectoria temporal (ADRs pasados y memoria de errores en 04-APRENDIZAJES). Opera con regla de proporcionalidad estricta para evitar consumo de tokens en tareas triviales.",
         "gotcha": "Hacer arqueología histórica en tareas de solo lectura o micro-arreglos desperdicia tokens; la lente diacrónica solo se activa en tareas sustanciales ODD."
+    },
+    "deep-modules": {
+        "title": "Deep Modules & Codebase Design (Matt Pocock / Ousterhout)",
+        "summary": "Principio de diseño de módulos profundos: ocultar mucha complejidad de implementación detrás de una interfaz pequeña en un seam limpio. Evalúa módulos mediante Leverage (capacidad por unidad de interfaz), Locality (concentración del cambio) y The Deletion Test (si borrar el módulo concentra la complejidad en los llamadores, el módulo vale la pena; si desaparece, era un pass-through superficial).",
+        "gotcha": "Crear interfaces casi tan complejas como su implementación (Shallow Modules) o introducir seams con un solo adapter hipotético degrada la navegabilidad y multiplica los mocks en tests."
+    },
+    "karpathy": {
+        "title": "Karpathy Coding Guidelines (4 Leyes Quirúrgicas)",
+        "summary": "Directivas conductuales para erradicar errores de LLMs al programar: 1) Think Before Coding (exponer supuestos y trade-offs antes de codificar), 2) Simplicity First (mínimo código que resuelve el problema, cero abstracciones especulativas), 3) Surgical Changes (tocar solo las líneas necesarias sin reformatear código adyacente), 4) Goal-Driven Execution (criterios verificables en bucle).",
+        "gotcha": "Añadir configurabilidad no solicitada o refactorizar código adyacente que no estaba roto introduce regresiones silenciosas y contamina los diffs."
+    },
+    "systematic-debugging": {
+        "title": "Systematic Debugging & Verification (obra/superpowers)",
+        "summary": "Ley de Hierro del Debugging: 'NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST'. Exige 4 fases obligatorias: 1) Investigación de causa raíz e instrumentación en fronteras de componentes, 2) Análisis de patrones, 3) Hipótesis única verificable, 4) Test de regresión Red-Green y verificación fresca antes de reclamar éxito.",
+        "gotcha": "Aplicar parches rápidos ('symptom fixes') o afirmar que algo funciona ('should pass now') sin ejecutar el comando de verificación real en el mismo turno está estrictamente prohibido."
+    },
+    "ui-ux-pro-max": {
+        "title": "UI/UX Pro Max & Taste-Skill v2 Design Intelligence Engine",
+        "summary": "Motor híbrido de diseño de producto integrado en AGY: combina la base de datos local de `ui-ux-pro-max` (79 estilos, 192 paletas, 74 pares tipográficos y 22 stacks en CSV consultables vía `search.py --design-system`) con `design-taste-frontend` v2 (`draw.mjs`, regla 'One Live Thing' y auditoría real en navegador `inspect.mjs` con gate `still-page` >= 8 elementos cinéticos).",
+        "gotcha": "Asumir un stack sin inspeccionar `package.json` o entregar interfaces estáticas sin un componente interactivo vivo ni micro-física (Motion v12 / GSAP / `<ViewTransition>`) falla la auditoría de calidad."
+    },
+    "graphify": {
+        "title": "Graphify Multimodal Knowledge Graph & DevBrain AST Bridge",
+        "summary": "Mapeador determinista de arquitectura que convierte código (tree-sitter AST), documentos e imágenes en un grafo navegable con detección de comunidades Leiden, God Nodes y aristas etiquetadas (`EXTRACTED` vs `INFERRED`). Integrado nativamente con `devbrain_graphify.py` v2.0 (`.devbrain/code_graph.db` + `graphify-out/graph.json`).",
+        "gotcha": "Hacer grep o leer docenas de archivos manualmente cuando ya existe `.devbrain/code_graph.db` o `graphify-out/graph.json` desperdicia hasta el 80-94% del presupuesto de tokens."
     }
 }
 

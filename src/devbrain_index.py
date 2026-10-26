@@ -14,7 +14,9 @@ class DevBrainIndex:
     def __init__(self, vault_dir: Path, db_path: Path = None):
         self.vault_dir = Path(vault_dir).resolve()
         self._last_sync = 0.0
-        self.sync_interval = 60.0 # Re-escaneo máximo cada 60s salvo force=True
+        self.sync_interval = 300.0 # Re-escaneo máximo cada 5 min salvo force=True
+        self._conn = None
+        self._cache = {}
         if db_path is None:
             db_dir = self.vault_dir / "06-SISTEMA" / "cache"
             try:
@@ -35,11 +37,37 @@ class DevBrainIndex:
             pass
 
         self._init_db()
-        self.sync_index(force=True)
+        # Fast cold start: evita re-escanear 6400+ archivos si la DB ya está poblada
+        is_empty = True
+        try:
+            with self._get_conn() as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT count(*) as cnt FROM files_meta")
+                row = cur.fetchone()
+                if row and row["cnt"] > 0:
+                    is_empty = False
+        except Exception:
+            pass
+
+        if is_empty:
+            self.sync_index(force=True)
+        else:
+            self._last_sync = time.time()
 
     def _get_conn(self):
-        conn = sqlite3.connect(str(self.db_path), timeout=10.0)
+        if self._conn is not None:
+            return self._conn
+        conn = sqlite3.connect(str(self.db_path), timeout=10.0, check_same_thread=False)
         conn.row_factory = sqlite3.Row
+        try:
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA synchronous = NORMAL")
+            conn.execute("PRAGMA cache_size = -64000") # 64MB Cache en RAM
+            conn.execute("PRAGMA temp_store = MEMORY")
+            conn.execute("PRAGMA mmap_size = 268435456") # 256MB MMAP
+        except Exception:
+            pass
+        self._conn = conn
         return conn
 
     def _init_db(self):
@@ -243,6 +271,12 @@ class DevBrainIndex:
 
     def search_memories(self, query: str, project_filter: str = "", limit: int = 6, max_chars: int = 3500, session_nodes: list = None):
         """Búsqueda con reranking compuesto determinista estilo Engram v2 enriquecido con bonus sináptico."""
+        cache_key = f"m_{query.strip().lower()}_{project_filter}_{limit}_{max_chars}_{tuple(session_nodes or [])}"
+        if hasattr(self, '_cache') and cache_key in self._cache:
+            res, t_cached = self._cache[cache_key]
+            if time.time() - t_cached < 120.0:
+                return res
+
         self.sync_index()
         fts_query = self._sanitize_fts_query(query)
         if not fts_query:
@@ -320,10 +354,19 @@ class DevBrainIndex:
         header = f"🧠 Memorias recuperadas para '{query}'"
         if project_filter:
             header += f" [Filtro: {project_filter}]"
-        return f"### {header}:\n" + "\n\n".join(output_lines)
+        final_output = f"### {header}:\n" + "\n\n".join(output_lines)
+        if hasattr(self, '_cache'):
+            self._cache[cache_key] = (final_output, time.time())
+        return final_output
 
     def search_knowledge(self, query: str, limit: int = 5, max_chars: int = 3500, session_nodes: list = None):
         """Búsqueda instantánea FTS5 sobre notas técnicas enriquecida con conexiones sinápticas."""
+        cache_key = f"k_{query.strip().lower()}_{limit}_{max_chars}_{tuple(session_nodes or [])}"
+        if hasattr(self, '_cache') and cache_key in self._cache:
+            res, t_cached = self._cache[cache_key]
+            if time.time() - t_cached < 120.0:
+                return res
+
         self.sync_index()
         fts_query = self._sanitize_fts_query(query)
         if not fts_query:
@@ -380,7 +423,10 @@ class DevBrainIndex:
             output_blocks.append(block)
             total_len += len(block)
 
-        return "\n\n".join(output_blocks)
+        final_res = "\n\n".join(output_blocks)
+        if hasattr(self, '_cache'):
+            self._cache[cache_key] = (final_res, time.time())
+        return final_res
 
     def search_vault(self, query: str, max_results: int = 8, max_chars: int = 5000):
         """Búsqueda transversal en todo el Vault acotada por presupuesto de contexto."""
