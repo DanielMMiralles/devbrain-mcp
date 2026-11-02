@@ -1,132 +1,180 @@
 """
-Tests unitarios y de integración para el marco D-ODD (Dynamic Outcome-Driven Development)
-en DevBrain MCP.
+Tests unitarios y de integración para el marco D-ODD v2 (Dynamic Outcome-Driven Development)
+con separación de responsabilidades: gate determinista + juicio semántico + ledger + calibración.
 """
 
 import unittest
 import sys
+import os
+import json
+import tempfile
 from pathlib import Path
 
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 sys.path.insert(0, str(SRC_DIR))
 
+# Aislar el entorno de pruebas para no alterar la BD de producción
+_TMP_DIR = tempfile.TemporaryDirectory()
+os.environ["DEVBRAIN_HOME"] = _TMP_DIR.name
+
+import decision_ledger as led
 from creative_odd import (
     CynefinDomain,
-    CreativeMode,
-    classify_cynefin,
-    select_provocations,
-    triangulate_cognitive_odd,
-    format_creative_odd_markdown,
-    run_creative_odd_pipeline
+    gate_score,
+    assess,
+    provocations_for,
+    build_context_packet,
+    calibrate,
+    load_calibration,
+    DEFAULT_CALIBRATION
 )
+from d_odd_corpus import CORPUS
 from devbrain_mcp import (
+    handle_assess_decision,
+    handle_commit_decision,
+    handle_close_decision,
+    handle_decision_ledger_stats,
     handle_stimulate_creative_odd,
     handle_orchestrate_gentle_task
 )
 from plc_router import PLCRouter
 
-class TestCreativeODD(unittest.TestCase):
 
-    def test_cynefin_classification(self):
-        # 1. Clear / Canónico
-        res_clear = classify_cynefin("Corrige un typo en el README", files_touched_estimate=1)
+class TestCreativeODDv2(unittest.TestCase):
+
+    def test_gate_corpus_accuracy(self):
+        """Verifica que el gate capture decisiones de diseño y no dispare en triviales."""
+        misses = 0
+        fps = 0
+        cal = load_calibration()
+        for phrase, is_decision in CORPUS:
+            res = gate_score(phrase, cal)
+            if is_decision and not res["fired"]:
+                misses += 1
+            elif not is_decision and res["fired"]:
+                fps += 1
+        self.assertEqual(misses, 0, f"El gate omitió {misses} decisiones reales.")
+        self.assertEqual(fps, 0, f"El gate tuvo {fps} falsos positivos en tareas triviales.")
+
+    def test_assess_dimension_mapping(self):
+        """Verifica que las dimensiones del LLM mapeen a los dominios Cynefin correctos."""
+        # 1. Clear: costo y blast radius bajos, alternativa única
+        res_clear = assess({
+            "reversibility_cost": 0, "blast_radius": 0, "uncertainty": 0,
+            "vault_novelty": 0, "viable_alternatives": 0
+        })
         self.assertEqual(res_clear["domain"], CynefinDomain.CLEAR.value)
-        self.assertFalse(res_clear["divergence_required"])
-        self.assertEqual(res_clear["action_protocol"], "fast_track")
+        self.assertEqual(res_clear["verdict"], "fast_track")
 
-        # 2. Complicated / Analítico
-        res_comp = classify_cynefin("Optimizar query FTS5 en la base de datos", files_touched_estimate=2)
+        # 2. Complicated: análisis técnico acotado
+        res_comp = assess({
+            "reversibility_cost": 1, "blast_radius": 1, "uncertainty": 1,
+            "vault_novelty": 1, "viable_alternatives": 1
+        })
         self.assertEqual(res_comp["domain"], CynefinDomain.COMPLICATED.value)
-        self.assertFalse(res_comp["divergence_required"])
-        self.assertEqual(res_comp["action_protocol"], "analytical_graph")
+        self.assertEqual(res_comp["verdict"], "analytical")
 
-        # 3. Complex / Emergente (Activa D-ODD)
-        res_cx = classify_cynefin("Diseñar la arquitectura de concurrencia y desacoplar el estado", files_touched_estimate=4)
+        # 3. Complex: alta incertidumbre y alternativas viables (activa D-ODD)
+        res_cx = assess({
+            "reversibility_cost": 2, "blast_radius": 2, "uncertainty": 2,
+            "vault_novelty": 2, "viable_alternatives": 2
+        })
         self.assertEqual(res_cx["domain"], CynefinDomain.COMPLEX.value)
-        self.assertTrue(res_cx["divergence_required"])
-        self.assertEqual(res_cx["action_protocol"], "divergent_triangulation")
+        self.assertEqual(res_cx["verdict"], "d_odd")
 
-        # 4. Chaotic / Contención
-        res_ch = classify_cynefin("Crash en producción con corrupción de base de datos", files_touched_estimate=1)
+        # 4. Chaotic: flag de incidente activo
+        res_ch = assess({
+            "reversibility_cost": 1, "blast_radius": 1, "uncertainty": 1,
+            "vault_novelty": 1, "viable_alternatives": 1
+        }, incident=True)
         self.assertEqual(res_ch["domain"], CynefinDomain.CHAOTIC.value)
-        self.assertEqual(res_ch["action_protocol"], "stabilize_first")
+        self.assertEqual(res_ch["verdict"], "stabilize_first")
 
-    def test_provocation_seeds(self):
-        provs = select_provocations("Diseño de caché distribuido", count=2)
-        self.assertEqual(len(provs), 2)
-        self.assertTrue(any(k in provs[0] for k in ["id", "title", "question", "focus"]))
+    def test_provocations_selection(self):
+        """Verifica que las provocaciones se seleccionen según la dimensión dominante."""
+        provs_rev = provocations_for("reversibility_cost")
+        self.assertTrue(any(p["id"] == "REVERSIBILITY" for p in provs_rev))
 
-    def test_triangulate_cognitive_odd_modes(self):
-        modes = ["divergent", "red_team", "first_principles", "lateral"]
-        for m in modes:
-            tri = triangulate_cognitive_odd(
-                objective="Estructurar nuevo motor de eventos",
-                project_name="Narval-SGN",
-                creative_mode=m,
-                vault_context="En el pasado se usó una tabla SQLite para jobs."
-            )
-            self.assertIn("thesis", tri)
-            self.assertIn("antithesis", tri)
-            self.assertIn("synthesis", tri)
-            self.assertIn("outcomes", tri)
-            self.assertIn("tasks", tri)
-            self.assertTrue(len(tri["tasks"]) >= 3)
+        provs_nov = provocations_for("vault_novelty")
+        self.assertTrue(any(p["id"] == "INVERSION" for p in provs_nov))
 
-    def test_format_creative_odd_markdown(self):
-        tri = triangulate_cognitive_odd(
-            objective="Crear micro-broker de mensajería",
-            project_name="Chambita",
-            creative_mode="divergent"
-        )
-        md = format_creative_odd_markdown(tri)
-        self.assertIn("# 🧠 DevBrain D-ODD", md)
-        self.assertIn("Desacoplamiento de Resultados", md)
-        self.assertIn("Tesis (Canon del Vault", md)
-        self.assertIn("Antítesis (Pensamiento Disruptivo", md)
-        self.assertIn("Síntesis D-ODD", md)
-        self.assertIn("Tareas ODD de Acción Inmediata", md)
+    def test_full_decision_lifecycle_mcp(self):
+        """Prueba E2E: assess -> commit -> close -> stats."""
+        conv_id = "test-conv-e2e-01"
 
-    def test_handle_stimulate_creative_odd_mcp(self):
-        res = handle_stimulate_creative_odd({
-            "objective": "Evaluar cómo evitar el comportamiento estático del cerebro en decisiones de arquitectura",
+        # Simular evento previo del gate
+        led.record_gate_event(conv_id, "hash123", 0.65, 0.35, True)
+
+        # 1. Assess (Complejo)
+        assess_res = handle_assess_decision({
+            "objective": "Migrar colas de jobs de Redis a Postgres",
             "project_name": "DevBrain",
-            "creative_mode": "first_principles",
+            "reversibility_cost": 2,
+            "blast_radius": 2,
+            "uncertainty": 2,
+            "vault_novelty": 2,
+            "viable_alternatives": 2,
+            "conversation_id": conv_id
+        })
+        self.assertIn("D-ODD activado", assess_res)
+        self.assertIn("Protocolo D-ODD (divergencia con contextos aislados)", assess_res)
+
+        # Extraer decision_id
+        open_decs = led.open_decisions(conv_id)
+        self.assertTrue(len(open_decs) >= 1)
+        dec_id = open_decs[0]["id"]
+
+        # 2. Commit
+        commit_res = handle_commit_decision({
+            "decision_id": dec_id,
+            "chosen": "antithesis",
+            "synthesis": "Se adopta tabla append-only en Postgres con LISTEN/NOTIFY para evitar dependencias.",
+            "tasks": ["Crear migración de jobs", "Implementar worker"],
+            "acceptance_criteria": ["Latencia p95 < 5ms"],
             "write_to_disk": False
         })
-        self.assertIn("DevBrain D-ODD: Triangulación Dialéctica", res)
-        self.assertIn("[CYNEFIN: COMPLEJO / EMERGENTE]", res)
-        self.assertIn("Antítesis de Primeros Principios", res)
+        self.assertIn(f"Decisión `{dec_id}` comprometida", commit_res)
 
-    def test_orchestrate_gentle_task_creative_integration(self):
-        # Tarea compleja en auto debe invocar D-ODD
-        res = handle_orchestrate_gentle_task({
-            "task_description": "Diseñar e implementar una nueva arquitectura de toma de decisiones para LLMs",
+        # 3. Adjuntar evidencia simulando ejecución de tests
+        led.attach_evidence(conv_id, {"type": "test_run", "command": "pytest", "passed": True})
+
+        # 4. Close
+        close_res = handle_close_decision({
+            "decision_id": dec_id,
+            "outcome": "success",
+            "notes": "Funciona impecable con cero sobrecarga operativa."
+        })
+        self.assertIn(f"Decisión `{dec_id}` cerrada", close_res)
+        self.assertIn("success", close_res)
+
+        # 5. Stats
+        stats_res = handle_decision_ledger_stats({})
+        self.assertIn("D-ODD · Bucle de aprendizaje", stats_res)
+        self.assertIn("100% de 1 comprometidas", stats_res)
+
+    def test_orchestrate_gentle_task_with_d_odd(self):
+        """Verifica que orchestrate_gentle_task enlace decisiones o sugiera assess sin forzar artefactos."""
+        # Tarea que dispara gate sugiere assess
+        res_gate = handle_orchestrate_gentle_task({
+            "task_description": "Diseñar arquitectura para micro-broker de eventos",
             "project_name": "DevBrain",
             "mode": "auto"
         })
-        self.assertIn("DevBrain: Orquestación D-ODD Dinámica", res)
-        self.assertIn("Triangulación dialéctica completada", res)
-        self.assertIn("odd/tasks/", res)
+        self.assertIn("Posible decisión de diseño", res_gate)
 
-        # Modo explícito 'creative'
-        res_creative = handle_orchestrate_gentle_task({
-            "task_description": "Implementar módulo de caché en memoria",
+        # Tarea simple no mete aviso de decisión
+        res_simple = handle_orchestrate_gentle_task({
+            "task_description": "Corrige un typo en el mensaje de error",
             "project_name": "DevBrain",
-            "mode": "creative"
+            "mode": "auto"
         })
-        self.assertIn("DevBrain: Orquestación D-ODD Dinámica", res_creative)
+        self.assertNotIn("Posible decisión de diseño", res_simple)
 
-        # Modo 'direct' mantiene Fast Path
-        res_direct = handle_orchestrate_gentle_task({
-            "task_description": "Explica la clase PLCRouter",
-            "project_name": "DevBrain",
-            "mode": "direct"
-        })
-        self.assertIn("DevBrain Fast Path", res_direct)
-
-    def test_plc_router_has_creative_tool(self):
+    def test_plc_router_all_tools_local(self):
+        """Verifica que las 4 nuevas tools y las previas de D-ODD estén en LOCAL_FAST."""
         router = PLCRouter()
-        self.assertEqual(router.classify("stimulate_creative_odd"), PLCRouter.ROUTE_LOCAL)
+        for t in ["assess_decision", "commit_decision", "close_decision", "decision_ledger_stats", "stimulate_creative_odd"]:
+            self.assertEqual(router.classify(t), PLCRouter.ROUTE_LOCAL)
 
 
 if __name__ == "__main__":

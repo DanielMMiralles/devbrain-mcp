@@ -1,391 +1,327 @@
 """
-creative_odd.py: Marco de Trabajo D-ODD (Dynamic Outcome-Driven Development)
-Evita la rigidez cognitiva y el sesgo de anclaje contextual ("Vault Overfitting")
-mediante clasificación Cynefin, estimulación lateral de De Bono y triangulación dialéctica.
+creative_odd.py: Núcleo D-ODD v2 (Dynamic Outcome-Driven Development).
+
+Separación de responsabilidades:
+  - El GATE (barato, determinista, calibrable) solo decide si vale la pena preguntarle al LLM.
+  - El JUICIO lo hace el LLM entregando 5 dimensiones; aquí solo se mapean a Cynefin.
+  - La DIVERGENCIA real ocurre en subagentes con contextos aislados (ver PROTOCOL_TEXT);
+    este módulo NO fabrica tesis/antítesis/síntesis enlatadas, entrega un paquete de contexto.
+  - La CALIBRACIÓN ajusta el umbral del gate con las etiquetas que deja assess_decision.
+
+Solo stdlib: lo importan los hooks, que deben arrancar rápido.
 """
 
 from __future__ import annotations
 
-import re
 import hashlib
+import json
+import re
+import unicodedata
 from enum import Enum
-from typing import Dict, List, Any, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from decision_ledger import devbrain_home, labeled_gate_events
+
 
 class CynefinDomain(str, Enum):
-    CLEAR = "clear"               # Simple, mejores prácticas canónicas, vía rápida
-    COMPLICATED = "complicated"   # Análisis técnico experto (FTS5 + Graphify)
-    COMPLEX = "complex"           # Emergente: Prohibido converger en 1 sola respuesta, requiere D-ODD
-    CHAOTIC = "chaotic"           # Incidentes / Inestabilidad: Contención inmediata primero
-
-class CreativeMode(str, Enum):
-    DIVERGENT = "divergent"               # Explora activamente arquitecturas fuera del Vault
-    RED_TEAM = "red_team"                 # Cuestiona y ataca las premisas del Vault
-    FIRST_PRINCIPLES = "first_principles" # Descompone el problema en restricciones físicas/básicas
-    LATERAL = "lateral"                   # Aplica provocaciones ortogonales de Edward de Bono
-    CONSERVATIVE = "conservative"         # Alineación estricta con el historial del Vault
+    CLEAR = "clear"
+    COMPLICATED = "complicated"
+    COMPLEX = "complex"
+    CHAOTIC = "chaotic"
 
 
-# Banco de Provocaciones de Pensamiento Lateral (De Bono aplicado a Software)
-LATERAL_PROVOCATIONS = [
-    {
-        "id": "ZERO_DEPENDENCY",
-        "title": "Restricción de Cero Dependencias",
-        "question": "¿Cómo resolverías esto utilizando exclusivamente la librería estándar y primitivas nativas del runtime, sin agregar paquetes externos?",
-        "focus": "Simplicidad radical, menor superficie de ataque y cero fricción de supply chain."
+VERDICT_BY_DOMAIN = {
+    CynefinDomain.CLEAR.value: "fast_track",
+    CynefinDomain.COMPLICATED.value: "analytical",
+    CynefinDomain.COMPLEX.value: "d_odd",
+    CynefinDomain.CHAOTIC.value: "stabilize_first",
+}
+
+DIMENSIONS = ("reversibility_cost", "blast_radius", "uncertainty", "vault_novelty", "viable_alternatives")
+
+# ---------------------------------------------------------------------------
+# Calibración (persistida en ~/.devbrain/d_odd_calibration.json)
+# ---------------------------------------------------------------------------
+
+DEFAULT_CALIBRATION: Dict[str, Any] = {
+    "version": 1,
+    "gate_threshold": 0.35,
+    "complex_total": 8,
+    "complicated_total": 4,
+    # Pesos del gate por grupo de señales (los patrones viven en código, los pesos aquí)
+    "weights": {
+        "decision_verbs": 0.30,
+        "comparatives": 0.25,
+        "structural_nouns": 0.12,
+        "stack_terms": 0.10,
+        "weak_verbs": 0.12,
+        "trivial_dampeners": -0.40,
+        "read_only_dampeners": -0.35,
     },
-    {
-        "id": "DEEP_MODULE",
-        "title": "Inversión de Módulo Profundo (Ousterhout / Matt Pocock)",
-        "question": "¿Cómo diseñarías la interfaz para que sea extraordinariamente simple (1 función o contrato limpio) mientras toda la complejidad queda encapsulada sin fugas?",
-        "focus": "Ocultación de información, alta cohesión y bajo acoplamiento cognitivo."
-    },
-    {
-        "id": "LATENCY_LOCALITY",
-        "title": "Restricción de Latencia Crítica & Localidad",
-        "question": "Si la operación tuviese un SLA estricto de p95 < 2ms, ¿cómo cambiaría la arquitectura de datos para eliminar saltos de I/O o locks de red?",
-        "focus": "In-memory caching, estructuras de datos compactas y procesamiento local."
-    },
-    {
-        "id": "INVERSION_COUNTERFACTUAL",
-        "title": "Inversión Contrafáctica (Boyd OODA / Red Team)",
-        "question": "¿Qué sucedería si la premisa que da por sentada el Vault fuese completamente falsa o estuviese desactualizada para el ecosistema actual (2026)?",
-        "focus": "Desafío a la inercia histórica y prevención de deuda técnica acumulada."
-    },
-    {
-        "id": "RADICAL_PRUNING",
-        "title": "Poda Radical (Filtro Ponytail / YAGNI Extremo)",
-        "question": "¿Cuál es la versión mínima que aporta el 90% del valor eliminando el 80% del código y las abstracciones hipotéticas para el futuro?",
-        "focus": "Entrega de valor inmediato, menos líneas que mantener y mayor velocidad de iteración."
-    },
-    {
-        "id": "APPEND_ONLY_IMMUTABLE",
-        "title": "Inmutabilidad & Bitácora Append-Only",
-        "question": "¿Cómo se estructuraría el estado si las mutaciones destructivas estuviesen prohibidas y todo fuera una secuencia auditable de eventos o snapshots?",
-        "focus": "Depurabilidad determinista, concurrencia sin carreras y trazabilidad total."
-    }
-]
+    "caps": {"structural_nouns": 0.30, "stack_terms": 0.25},
+    "min_labeled_for_calibration": 8,
+    "step": 0.05,
+    "threshold_bounds": [0.20, 0.80],
+}
 
 
-def classify_cynefin(
-    objective: str,
-    files_touched_estimate: int = 1,
-    context_text: str = ""
-) -> Dict[str, Any]:
-    """Clasifica el requerimiento dentro del marco Cynefin adaptado a software.
-    
-    Determina si la tarea puede resolverse por vía canónica directa (Clear/Complicated)
-    o si exige la activación obligatoria del motor de divergencia D-ODD (Complex).
-    """
-    text = f"{objective} {context_text}".lower()
-
-    # Patrones para dominio Caótico (Incidentes graves, rotura de build, corrupción)
-    chaotic_signals = [
-        "caído", "crash", "corrupción", "data loss", "bloqueante",
-        "production down", "rollback urgente", "fuga de memoria crítica", "segfault"
-    ]
-    if any(sig in text for sig in chaotic_signals):
-        return {
-            "domain": CynefinDomain.CHAOTIC.value,
-            "badge": "🔥 [CYNEFIN: CAÓTICO]",
-            "action_protocol": "stabilize_first",
-            "divergence_required": False,
-            "rationale": "Situación crítica o de contención. La prioridad absoluta es estabilizar, revertir o contener antes de innovar."
-        }
-
-    # Patrones para dominio Complejo (Arquitectura, incertidumbre, exploración, diseño)
-    complex_patterns = [
-        r"\b(arquitect\w*|architect\w*)\b",
-        r"\b(diseñ\w*|design\w*)\b",
-        r"\b(innova\w*)\b",
-        r"\b(estructur\w*|structur\w*)\b",
-        r"\b(estratég\w*|strateg\w*)\b",
-        r"\b(alternativ\w*)\b",
-        r"\b(evalua\w*|benchmark\w*)\b",
-        r"\b(escalab\w*|scalab\w*)\b",
-        r"\b(concurren\w*)\b",
-        r"\b(desacopl\w*|decoupl\w*)\b",
-        r"\b(migraci[oó]n|migrat\w*)\b",
-        r"\b(nuevo\s+m[oó]dulo|new\s+module)\b",
-        r"\b(divergen\w*|creativ\w*)\b",
-        r"\b(toma\s+de\s+decisiones|decision\s+making)\b",
-        r"\b(refactor\w*|rediseñ\w*)\b",
-        r"\b(orquest\w*|orchestrat\w*)\b",
-        r"\b(framework|d-odd)\b"
-    ]
-    has_complex_signals = any(re.search(pat, objective.lower()) for pat in complex_patterns)
-
-    if has_complex_signals or files_touched_estimate >= 4:
-        return {
-            "domain": CynefinDomain.COMPLEX.value,
-            "badge": "🌀 [CYNEFIN: COMPLEJO / EMERGENTE]",
-            "action_protocol": "divergent_triangulation",
-            "divergence_required": True,
-            "rationale": "Problema de dominio complejo o multifactorial. Se prohíbe converger prematuramente en una sola receta del Vault; se requiere triangulación D-ODD."
-        }
-
-    # Patrones para dominio Complicado (Requiere análisis experto pero sigue patrones conocidos)
-    complicated_signals = [
-        "optimizar query", "indexación", "endpoint", "validación", "integrar api",
-        "parsing", "esquema", "tipado", "test suite", "fts5"
-    ]
-    if any(sig in text for sig in complicated_signals) or files_touched_estimate > 1:
-        return {
-            "domain": CynefinDomain.COMPLICATED.value,
-            "badge": "🧩 [CYNEFIN: COMPLICADO / EXPERTO]",
-            "action_protocol": "analytical_graph",
-            "divergence_required": False,
-            "rationale": "Problema analítico bien acotado. Guiado por Graphify, búsqueda FTS5 y mejores prácticas ya establecidas."
-        }
-
-    # Dominio Claro (Vía rápida / Tareas directas)
-    return {
-        "domain": CynefinDomain.CLEAR.value,
-        "badge": "⚡ [CYNEFIN: CLARO / CANÓNICO]",
-        "action_protocol": "fast_track",
-        "divergence_required": False,
-        "rationale": "Requerimiento directo con relación causa-efecto obvia. Ejecución rápida y directa sin sobrecarga cognitiva."
-    }
+def calibration_path() -> Path:
+    return devbrain_home() / "d_odd_calibration.json"
 
 
-def select_provocations(objective: str, count: int = 2) -> List[Dict[str, str]]:
-    """Selecciona provocaciones ortogonales deterministas basadas en el hash del requerimiento."""
-    if not objective.strip():
-        return LATERAL_PROVOCATIONS[:count]
+def load_calibration() -> Dict[str, Any]:
+    cal = json.loads(json.dumps(DEFAULT_CALIBRATION))
+    p = calibration_path()
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            for k, v in data.items():
+                if isinstance(v, dict) and isinstance(cal.get(k), dict):
+                    cal[k].update(v)
+                else:
+                    cal[k] = v
+        except Exception:
+            pass
+    return cal
 
-    # Usar hash para selección determinista pero variada
-    seed_val = int(hashlib.md5(objective.encode("utf-8")).hexdigest(), 16)
-    provs = list(LATERAL_PROVOCATIONS)
-    # Shuffle determinista ligero
-    selected = []
-    available = provs.copy()
-    for i in range(min(count, len(available))):
-        idx = (seed_val + i * 3) % len(available)
-        selected.append(available.pop(idx))
-    return selected
+
+def save_calibration(cal: Dict[str, Any]) -> None:
+    calibration_path().write_text(json.dumps(cal, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def triangulate_cognitive_odd(
-    objective: str,
-    project_name: str = "General",
-    creative_mode: str = "divergent",
-    vault_context: str = "",
-    files_touched_estimate: int = 2
-) -> Dict[str, Any]:
-    """Ejecuta el protocolo de Triangulación Dialéctica D-ODD.
-    
-    1. Desacopla el Outcome (Job-to-be-Done).
-    2. Modela la Tesis (Canónica del Vault).
-    3. Construye la Antítesis (Divergente / Red Team fuera del cerebro).
-    4. Inyecta Provocaciones de Pensamiento Lateral (De Bono).
-    5. Sintetiza la solución ganadora con tareas ODD orientadas a resultados.
-    """
-    clean_obj = objective.strip() or "Optimización de arquitectura de software"
-    cynefin = classify_cynefin(clean_obj, files_touched_estimate, vault_context)
-    provocations = select_provocations(clean_obj, count=2)
+# ---------------------------------------------------------------------------
+# Gate barato (hook PreInvocation y fallback para clientes sin hooks)
+# ---------------------------------------------------------------------------
 
-    # 1. Extracción de Outcomes (Job-to-be-Done)
-    outcomes = {
-        "job_to_be_done": clean_obj,
-        "success_criteria": [
-            "El comportamiento responde a la necesidad real sin añadir dependencias prescindibles.",
-            "La solución es verificable mediante pruebas automatizadas con evidencia observada.",
-            "La interfaz resultante es profunda y no filtra complejidad interna hacia el cliente.",
-            "Consistencia temporal: no rompe los contratos existentes del sistema."
-        ],
-        "invariants": [
-            "Compatibilidad total con el entorno y la suite Gentle-AI (v4.5+).",
-            "Latencia de ejecución predecible sin bloqueos innecesarios en caliente."
-        ]
-    }
+def _norm(text: str) -> str:
+    t = unicodedata.normalize("NFKD", text.lower()).encode("ascii", "ignore").decode("ascii")
+    return " " + re.sub(r"\s+", " ", t) + " "
 
-    # 2. Tesis: La Solución Canónica (Inercia del Vault)
-    thesis_title = f"Enfoque Canónico Incremental (Basado en Memoria del Vault)"
-    if vault_context:
-        thesis_desc = (
-            f"Aprovechar los patrones y snippets existentes en el Vault para [[{project_name}]]. "
-            f"Seguir la convención histórica del repositorio minimizando cambios estructurales."
-        )
-        thesis_pros = ["Alta familiaridad para el equipo.", "Bajo riesgo inmediato de regresión.", "Cero tiempo invertido en rediseñar esquemas."]
-        thesis_risks = ["Acumulación de deuda técnica por parches sobre parches.", "Riesgo de anclaje a decisiones tomadas cuando el contexto era distinto."]
+
+SIGNALS: Dict[str, List[str]] = {
+    "decision_verbs": [
+        r"\bdisen\w*", r"\barquitect\w*", r"\bmigr\w*", r"\belegir\b", r"\bescoger\b", r"\bdecid\w*",
+        r"\bconviene\b", r"\bdeberiamos\b", r"\breemplaz\w*", r"\badopt\w*", r"\bestrateg\w*",
+        r"\breestructur\w*", r"\bredisen\w*", r"\bdesacopl\w*", r"\bdecoupl\w*", r"\bdesign\w*", r"\barchitect\w*", r"\bchoose\b",
+        r"\bshould we\b", r"\breplace\b", r"\bplanteamiento\b", r"\benfoque\b",
+    ],
+    "comparatives": [
+        r"\bvs\.?\b", r"\bversus\b", r"\bo bien\b", r"\ben lugar de\b", r"\bmejor (manera|forma|opcion)\b",
+        r"\balternativ\w*", r"\bpros y contras\b", r"\btrade-?offs?\b", r"\bcompar\w*", r"\bque es mejor\b",
+    ],
+    "structural_nouns": [
+        r"\bmodul\w*", r"\bservici\w*", r"\bbase de datos\b", r"\bcolas?\b", r"\bcache\b", r"\besquema\w*",
+        r"\bpipeline\w*", r"\binfraestructura\b", r"\bautenticacion\b", r"\bestado global\b",
+        r"\bsincroniza\w*", r"\bconcurren\w*", r"\bescalab\w*", r"\bframework\b", r"\bmotor\b",
+        r"\bmicroservici\w*", r"\bmonolito\b", r"\bevent\w* bus\b", r"\bprotocolo\b",
+    ],
+    "stack_terms": [
+        r"\bkafka\b", r"\bpostgres\w*", r"\bredis\b", r"\bsqlite\b", r"\bmongo\w*", r"\bgraphql\b",
+        r"\bkubernetes\b", r"\bk8s\b", r"\bsupabase\b", r"\bnestjs\b", r"\bfastapi\b", r"\bnext\.?js\b",
+        r"\brabbitmq\b", r"\bwebsockets?\b", r"\bgrpc\b", r"\brest\b", r"\borm\b", r"\bsse\b",
+    ],
+    "weak_verbs": [r"\brefactor\w*", r"\bevalu\w*", r"\boptimiz\w*", r"\bintegr\w*", r"\bimplement\w*"],
+    "trivial_dampeners": [
+        r"\btypo\b", r"\berrata\b", r"\brenombr\w*", r"\bnombre de (una|la) variable\b", r"\bcolor\w*",
+        r"\bpadding\b", r"\bmargin\b", r"\bboton\b", r"\bicono\b", r"\bformatea\w*", r"\blint\w*",
+        r"\bcomentario\w*", r"\bimports?\b", r"\btexto del\b", r"\bsi (el|los) tests? pasa\w*\b",
+    ],
+    "read_only_dampeners": [
+        r"\bexplica\w*", r"\bque es\b", r"\bdonde esta\b", r"\bcomo funciona\b", r"\bmuestra\w*",
+        r"\bresume\w*", r"\blista\w*\b",
+    ],
+}
+
+_COMPILED = {k: [re.compile(p) for p in v] for k, v in SIGNALS.items()}
+
+
+def gate_score(text: str, cal: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Score 0..1 de 'probablemente es una decisión de diseño'. Barato: solo regex sobre el texto."""
+    cal = cal or load_calibration()
+    t = _norm(text or "")
+    weights = cal["weights"]
+    caps = cal.get("caps", {})
+    hits: Dict[str, int] = {}
+    score = 0.0
+    for group, pats in _COMPILED.items():
+        n = sum(1 for p in pats if p.search(t))
+        if not n:
+            continue
+        hits[group] = n
+        w = float(weights.get(group, 0.0))
+        if group in caps:
+            contrib = min(w * n, float(caps[group]))
+        elif w < 0:
+            contrib = w  # un amortiguador basta
+        else:
+            contrib = w if n == 1 else w * 1.3  # rendimiento decreciente
+        score += contrib
+    score = max(0.0, min(1.0, score))
+    threshold = float(cal["gate_threshold"])
+    return {"score": round(score, 3), "threshold": threshold, "fired": score >= threshold, "hits": hits}
+
+
+def input_hash(text: str) -> str:
+    return hashlib.sha1((text or "").strip().encode("utf-8")).hexdigest()[:16]
+
+
+# ---------------------------------------------------------------------------
+# Juicio: dimensiones del LLM -> dominio Cynefin
+# ---------------------------------------------------------------------------
+
+def assess(dimensions: Dict[str, Any], incident: bool = False, cal: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Mapea las 5 dimensiones (0..3) entregadas por el LLM a un dominio Cynefin y un veredicto."""
+    cal = cal or load_calibration()
+    dims = {d: max(0, min(3, int(dimensions.get(d, 0) or 0))) for d in DIMENSIONS}
+    total = sum(dims.values())
+
+    if incident:
+        domain = CynefinDomain.CHAOTIC.value
+        reason = "Incidente activo: estabilizar o revertir antes de explorar."
+    elif total >= int(cal["complex_total"]) or (dims["uncertainty"] >= 2 and dims["viable_alternatives"] >= 2):
+        domain = CynefinDomain.COMPLEX.value
+        reason = "Alta incertidumbre con varias alternativas viables (o costo agregado alto): no converger en una sola receta."
+    elif total >= int(cal["complicated_total"]):
+        domain = CynefinDomain.COMPLICATED.value
+        reason = "Problema analítico: hay una respuesta correcta, se encuentra con análisis (Graphify, FTS5, tests)."
     else:
-        thesis_desc = (
-            "Implementación estándar convencional según el canon habitual del proyecto, "
-            "extendiendo las clases y módulos ya presentes."
-        )
-        thesis_pros = ["Predecible y directo.", "Mínima perturbación de la estructura de carpetas."]
-        thesis_risks = ["Potencial rigidez cognitiva.", "Desaprovecha oportunidades de simplificación radical."]
+        domain = CynefinDomain.CLEAR.value
+        reason = "Causa-efecto obvia y reversible: ejecutar directo."
 
-    # 3. Antítesis: La Solución Disruptiva (Fuera del Cerebro / Primeros Principios)
-    mode_lower = creative_mode.lower()
-    if mode_lower == CreativeMode.RED_TEAM.value:
-        antithesis_title = "Antítesis Red-Team: Desafío de Supuestos Fundamentales"
-        antithesis_desc = (
-            "Cuestionar si el componente realmente debe existir o si el requerimiento es un síntoma de una abstracción rota. "
-            "Reemplazar capas intermedias por una solución directa de primeros principios."
-        )
-        diff_focus = "Eliminación de intermediarios y desacoplamiento estricto."
-    elif mode_lower == CreativeMode.FIRST_PRINCIPLES.value:
-        antithesis_title = "Antítesis de Primeros Principios: Reconstrucción desde Restricciones Físicas"
-        antithesis_desc = (
-            "Ignorar el historial previo. Analizar únicamente los datos de entrada, el estado deseado y la transformación matemática más directa."
-        )
-        diff_focus = "Diseño axiomático y estructuras de datos puras."
-    elif mode_lower == CreativeMode.LATERAL.value:
-        antithesis_title = f"Antítesis de Pensamiento Lateral (Provocación: {provocations[0]['title']})"
-        antithesis_desc = (
-            f"Forzar el diseño bajo la restricción: {provocations[0]['question']} "
-            "Romper la secuencia lógica previsible para descubrir un atajo arquitectónico elegante."
-        )
-        diff_focus = provocations[0]["focus"]
-    else: # DIVERGENT (default)
-        antithesis_title = "Antítesis Divergente: Arquitectura Moderna Desacoplada (2026)"
-        antithesis_desc = (
-            "Diseñar un módulo profundo y autocontenido con tipos rigurosos y cero acoplamiento temporal. "
-            "Aislar la nueva capacidad detrás de una frontera limpia, haciéndola completamente testeable sin simular el entorno."
-        )
-        diff_focus = "Alta modularidad, diseño emergente y contratos explícitos."
-
-    # 4. Síntesis Dialéctica: Decisión Equilibrada por Outcomes
-    synthesis_title = "Síntesis D-ODD: Arquitectura Verificable Orientada a Resultados"
-    synthesis_rationale = (
-        "Se adopta la robustez y simplicidad de la Antítesis en la interfaz pública y el núcleo de datos, "
-        "pero respetando las fronteras y convenciones de entrega de la Tesis para garantizar interoperabilidad inmediata sin fricción."
-    )
-
-    # 5. Plan de Tareas ODD de Acción Inmediata (Gentle-AI compatible)
-    tasks = [
-        f"Definir el contrato de entrada/salida e invariantes del outcome para: {clean_obj[:50]}",
-        f"Implementar el núcleo funcional desacoplado aplicando la síntesis D-ODD",
-        "Ejecutar pruebas observadas con evidencia de ejecución y validación de casos frontera",
-        "Integrar con la superficie pública del proyecto manteniendo compatibilidad regresiva"
-    ]
-
-    return {
-        "objective": clean_obj,
-        "project": project_name,
-        "cynefin": cynefin,
-        "creative_mode": creative_mode,
-        "outcomes": outcomes,
-        "provocations": provocations,
-        "thesis": {
-            "title": thesis_title,
-            "description": thesis_desc,
-            "pros": thesis_pros,
-            "risks": thesis_risks
-        },
-        "antithesis": {
-            "title": antithesis_title,
-            "description": antithesis_desc,
-            "focus": diff_focus
-        },
-        "synthesis": {
-            "title": synthesis_title,
-            "rationale": synthesis_rationale
-        },
-        "tasks": tasks
-    }
+    top = max(dims, key=lambda k: dims[k])
+    return {"dimensions": dims, "total": total, "domain": domain,
+            "verdict": VERDICT_BY_DOMAIN[domain], "dominant_dimension": top, "reason": reason}
 
 
-def format_creative_odd_markdown(data: Dict[str, Any]) -> str:
-    """Formatea la triangulación dialéctica en un reporte Markdown ejecutivo de alta densidad."""
-    cy = data["cynefin"]
-    obj = data["objective"]
-    proj = data["project"]
-    mode = data["creative_mode"].upper()
-    th = data["thesis"]
-    anti = data["antithesis"]
-    syn = data["synthesis"]
-    provs = data["provocations"]
-    tasks = data["tasks"]
-    outcomes = data["outcomes"]
+# ---------------------------------------------------------------------------
+# Provocaciones: se eligen según la dimensión dominante, no al azar
+# ---------------------------------------------------------------------------
 
+PROVOCATIONS: Dict[str, Dict[str, str]] = {
+    "ZERO_DEPENDENCY": {
+        "title": "Cero dependencias",
+        "question": "¿Cómo se resuelve solo con la stdlib y primitivas nativas del runtime?",
+    },
+    "DEEP_MODULE": {
+        "title": "Módulo profundo",
+        "question": "¿Cuál es la interfaz más pequeña posible que esconda toda la complejidad?",
+    },
+    "REVERSIBILITY": {
+        "title": "Puerta de dos vías",
+        "question": "¿Qué versión de esta decisión se puede revertir en menos de una hora si sale mal?",
+    },
+    "INVERSION": {
+        "title": "Inversión contrafáctica",
+        "question": "Si la premisa que da por hecha el Vault fuese falsa hoy, ¿qué harías distinto?",
+    },
+    "RADICAL_PRUNING": {
+        "title": "Poda radical",
+        "question": "¿Qué 20% del alcance entrega el 90% del valor? ¿Qué pasa si no se construye nada?",
+    },
+    "FAILURE_FIRST": {
+        "title": "Pre-mortem",
+        "question": "Es dentro de 6 meses y esta decisión fracasó. ¿Cuál fue la causa más probable?",
+    },
+}
+
+PROVOCATIONS_BY_DIMENSION = {
+    "reversibility_cost": ["REVERSIBILITY", "FAILURE_FIRST"],
+    "blast_radius": ["DEEP_MODULE", "REVERSIBILITY"],
+    "uncertainty": ["FAILURE_FIRST", "RADICAL_PRUNING"],
+    "vault_novelty": ["INVERSION", "ZERO_DEPENDENCY"],
+    "viable_alternatives": ["RADICAL_PRUNING", "DEEP_MODULE"],
+}
+
+
+def provocations_for(dominant_dimension: str) -> List[Dict[str, str]]:
+    keys = PROVOCATIONS_BY_DIMENSION.get(dominant_dimension, ["INVERSION", "RADICAL_PRUNING"])
+    return [{"id": k, **PROVOCATIONS[k]} for k in keys]
+
+
+# ---------------------------------------------------------------------------
+# Paquete de contexto + protocolo (lo consumen el LLM y sus subagentes)
+# ---------------------------------------------------------------------------
+
+PROTOCOL_TEXT = """\
+## Protocolo D-ODD (divergencia con contextos aislados)
+1. **Contrato de outcomes** (tú, antes de nada): job-to-be-done, 2-4 criterios de aceptación verificables, invariantes.
+2. **Tesis** — subagente CON acceso al Vault/MCP: la mejor solución alineada al historial del proyecto, citando las notas en las que se apoya.
+3. **Antítesis** — subagente SIN notas del Vault (pásale SOLO el contrato de outcomes y las provocaciones): solución desde primeros principios. No le compartas la tesis.
+   Lanza tesis y antítesis en paralelo. Si tu cliente no tiene subagentes, redacta la antítesis ANTES de leer la evidencia del Vault.
+4. **Síntesis** — evalúa ambas contra el contrato (no contra preferencias): elige `thesis`, `antithesis` o `hybrid` y justifica con criterios concretos.
+5. Llama `commit_decision` con la elección y la síntesis. Implementa. Al verificar con evidencia real, llama `close_decision`.
+Regla: si la antítesis no aporta nada mejor, elegir la tesis es un resultado válido; no fuerces la novedad.
+"""
+
+
+def build_context_packet(objective: str, project: str, assessment: Dict[str, Any],
+                         vault_evidence: str = "", decision_id: str = "") -> str:
+    provs = provocations_for(assessment["dominant_dimension"])
+    dims = assessment["dimensions"]
     lines = [
-        f"# 🧠 DevBrain D-ODD: Triangulación Dialéctica & Divergencia Cognitiva",
-        f"- **Proyecto**: [[{proj}]]",
-        f"- **Objetivo**: {obj}",
-        f"- **Modo Creativo**: `{mode}` | **Diagnóstico Cynefin**: {cy['badge']}",
-        f"- **Directiva**: {cy['rationale']}",
+        f"### 🌀 D-ODD activado — decisión `{decision_id}`" if decision_id else "### 🌀 D-ODD activado",
+        f"- **Proyecto**: [[{project}]]",
+        f"- **Objetivo**: {objective}",
+        f"- **Dominio**: `{assessment['domain']}` (total {assessment['total']}/15, dominante: `{assessment['dominant_dimension']}`)",
+        f"- **Razón**: {assessment['reason']}",
+        "- **Dimensiones**: " + ", ".join(f"{k}={v}" for k, v in dims.items()),
         "",
-        "---",
-        "",
-        "## 🎯 1. Desacoplamiento de Resultados (Job-to-be-Done)",
-        f"**Propósito Fundamental**: {outcomes['job_to_be_done']}",
-        "",
-        "**Criterios de Aceptación Innegociables**:",
+        PROTOCOL_TEXT,
+        "### 🎲 Provocaciones para la antítesis (elegidas por la dimensión dominante)",
     ]
-    for sc in outcomes["success_criteria"]:
-        lines.append(f"- [ ] {sc}")
+    for p in provs:
+        lines.append(f"- **{p['title']}**: {p['question']}")
     lines.append("")
-    lines.append("**Invariantes de Sistema**:")
-    for inv in outcomes["invariants"]:
-        lines.append(f"- 🛡️ {inv}")
-    lines.append("")
-
-    lines.extend([
-        "## ⚖️ 2. Triangulación Dialéctica: Tesis vs. Antítesis",
-        "",
-        f"### 🏛️ Tesis (Canon del Vault / Memoria Histórica)",
-        f"*{th['title']}*",
-        f"{th['description']}",
-        "",
-        "**Puntos Fuertes**:",
-    ])
-    for p in th["pros"]:
-        lines.append(f"- ✅ {p}")
-    lines.append("")
-    lines.append("**Riesgos de Rigidez / Estancamiento**:")
-    for r in th["risks"]:
-        lines.append(f"- ⚠️ {r}")
-    lines.append("")
-
-    lines.extend([
-        f"### ⚡ Antítesis (Pensamiento Disruptivo / Fuera del Cerebro)",
-        f"*{anti['title']}*",
-        f"{anti['description']}",
-        f"",
-        f"**Foco de Ruptura**: {anti['focus']}",
-        "",
-        "### 🎲 3. Provocaciones de Pensamiento Lateral (Edward de Bono)",
-    ])
-    for idx, pv in enumerate(provs, 1):
-        lines.append(f"**P{idx}: {pv['title']}**")
-        lines.append(f"> {pv['question']}")
-        lines.append(f"> *Enfoque*: {pv['focus']}\n")
-
-    lines.extend([
-        "## 🏆 4. Síntesis D-ODD (Decisión Final Basada en Outcomes)",
-        f"*{syn['title']}*",
-        f"{syn['rationale']}",
-        "",
-        "---",
-        "",
-        "## 📋 5. Tareas ODD de Acción Inmediata (Gentle-AI & Engram Ready)",
-        "<!-- Heurística ODD: Orientación adaptativa por valor, sin sobrecarga burocrática -->"
-    ])
-    for idx, t in enumerate(tasks, 1):
-        lines.append(f"- [ ] [TASK-{idx:02d}] {t}")
-
-    lines.extend([
-        "",
-        "👉 **Directiva para el Agente**: El marco D-ODD ha desbloqueado la rigidez del Vault. Procede con TASK-01 ejecutando los tests y validando con evidencia real observada."
-    ])
-
+    lines.append("### 🏛️ Evidencia del Vault (SOLO para el subagente de tesis)")
+    lines.append(vault_evidence.strip() if vault_evidence.strip() else "_Sin notas relevantes: la tesis se basa en el código actual del proyecto._")
     return "\n".join(lines)
 
 
-def run_creative_odd_pipeline(
-    objective: str,
-    project_name: str = "General",
-    creative_mode: str = "divergent",
-    vault_context: str = "",
-    files_touched_estimate: int = 2
-) -> str:
-    """Función de entrada para invocar el pipeline D-ODD completo."""
-    triangulation = triangulate_cognitive_odd(
-        objective=objective,
-        project_name=project_name,
-        creative_mode=creative_mode,
-        vault_context=vault_context,
-        files_touched_estimate=files_touched_estimate
-    )
-    return format_creative_odd_markdown(triangulation)
+# ---------------------------------------------------------------------------
+# Calibración automática del umbral del gate
+# ---------------------------------------------------------------------------
+
+def calibrate(events: Optional[List[Dict[str, Any]]] = None, persist: bool = True) -> Dict[str, Any]:
+    """Ajusta gate_threshold con eventos etiquetados (score, verdict).
+
+    - Positivo = el LLM concluyó d_odd. Si un positivo quedó bajo el umbral (omisión), se baja el umbral.
+    - Si no hay omisiones y la tasa de falsos positivos entre los disparos > 40%, se sube un paso
+      sin dejar ningún positivo por debajo.
+    """
+    cal = load_calibration()
+    events = events if events is not None else labeled_gate_events()
+    min_n = int(cal["min_labeled_for_calibration"])
+    lo, hi = cal["threshold_bounds"]
+    step = float(cal["step"])
+    old = float(cal["gate_threshold"])
+    report = {"labeled": len(events), "old_threshold": old, "new_threshold": old, "changed": False, "reason": ""}
+    if len(events) < min_n:
+        report["reason"] = f"Datos insuficientes ({len(events)}/{min_n})."
+        return report
+
+    positives = [float(e["score"]) for e in events if e["verdict"] == "d_odd"]
+    fired = [e for e in events if float(e["score"]) >= old]
+    fp = [e for e in fired if e["verdict"] != "d_odd"]
+    missed = [s for s in positives if s < old]
+
+    new = old
+    if missed:
+        new = max(lo, min(missed) - 0.01, old - step)
+        report["reason"] = f"{len(missed)} decisión(es) omitida(s) por el gate: se baja el umbral."
+    elif fired and len(fp) / len(fired) > 0.40:
+        candidate = min(hi, old + step)
+        if positives and min(positives) < candidate:
+            candidate = max(old, min(positives))
+        new = candidate
+        report["reason"] = f"Falsos positivos {len(fp)}/{len(fired)}: se sube el umbral."
+    else:
+        report["reason"] = "Umbral estable."
+
+    new = round(new, 3)
+    if new != old:
+        cal["gate_threshold"] = new
+        report.update(new_threshold=new, changed=True)
+        if persist:
+            save_calibration(cal)
+    return report

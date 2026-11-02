@@ -1,0 +1,38 @@
+"""Corpus etiquetado para el gate D-ODD: (frase, es_decision_de_diseño)."""
+
+CORPUS = [
+    # --- Decisiones reales (deben disparar) ---
+    ("Migrar Kafka a Postgres para colas de jobs", True),
+    ("Diseñar la arquitectura de sincronización offline de la app", True),
+    ("¿Conviene usar Redis o una tabla en Postgres para la caché de sesiones?", True),
+    ("Necesito decidir cómo estructurar la autenticación entre el monolito y los nuevos servicios", True),
+    ("Rediseñar el motor de indexación para que sea reactivo", True),
+    ("Evaluar alternativas para el event bus: websockets vs SSE", True),
+    ("Quiero reemplazar GraphQL por REST en el backend", True),
+    ("Cuál es la mejor manera de manejar el estado global en el frontend", True),
+    ("Planteamiento para escalar el pipeline de ingesta a 10x", True),
+    ("Adoptar Supabase en lugar de nuestro backend NestJS?", True),
+    ("Should we choose gRPC or REST for the internal services?", True),
+    ("Diseñar el esquema de base de datos para multi-tenant", True),
+    ("Pros y contras de pasar a microservicios", True),
+    ("Estrategia de caché para el endpoint de búsqueda con mucho tráfico", True),
+    ("Refactor masivo del módulo de pagos para desacoplarlo del ORM", True),
+    # --- No decisiones (no deben disparar) ---
+    ("Refactor del nombre de una variable", False),
+    ("Evaluar si el test de login pasa", False),
+    ("Diseño del botón de cancelar", False),
+    ("Corrige un typo en el README", False),
+    ("Explica cómo funciona el PLCRouter", False),
+    ("Cambia el color del header a azul", False),
+    ("Agrega padding al card de perfil", False),
+    ("¿Dónde está definida la función slugify?", False),
+    ("Formatea el archivo con black", False),
+    ("Arregla el lint en utils.py", False),
+    ("Actualiza el comentario de la función principal", False),
+    ("Ordena los imports del módulo", False),
+    ("Muestra los últimos commits", False),
+    ("Corre los tests", False),
+    ("Agrega un console.log para depurar", False),
+    ("Resume este documento", False),
+    ("Cambia el texto del botón de guardar", False),
+]

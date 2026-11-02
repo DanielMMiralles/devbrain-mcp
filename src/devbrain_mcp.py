@@ -583,27 +583,74 @@ TOOLS_MANIFEST = [
                 "task_description": {"type": "string", "description": "Descripción clara del objetivo o tarea a realizar"},
                 "project_name": {"type": "string", "description": "Nombre del proyecto (ej: 'Narval-SGN', 'Chambita', o 'General')"},
                 "feature_name": {"type": "string", "description": "Nombre corto o slug de la feature (opcional)"},
-                "mode": {"type": "string", "enum": ["auto", "direct", "odd", "sdd", "creative", "d_odd"], "description": "Modo de ejecución deseado (default: 'auto')", "default": "auto"}
+                "mode": {"type": "string", "enum": ["auto", "direct", "odd", "sdd", "creative", "d_odd"], "description": "Modo de ejecución deseado (default: 'auto')", "default": "auto"},
+                "decision_id": {"type": "string", "description": "ID de una decisión D-ODD ya comprometida para enlazarla al documento ODD (opcional)"}
             },
             "required": ["task_description"]
         }
     },
     {
-        "name": "stimulate_creative_odd",
-        "description": "Marco D-ODD (Dynamic Outcome-Driven Development): Rompe la rigidez cognitiva y el anclaje estático del Vault mediante clasificación Cynefin, pensamiento lateral (Edward de Bono) y triangulación dialéctica (Tesis del Vault vs Antítesis disruptiva de primeros principios).",
+        "name": "assess_decision",
+        "description": "Gate D-ODD: llámala ANTES de actuar cuando una petición pueda implicar una decisión de diseño/arquitectura (o cuando un mensaje [D-ODD gate] lo pida). Puntúa 5 dimensiones de 0 a 3; el servidor determina el dominio Cynefin. Si es complejo abre una decisión en el ledger y devuelve el protocolo de divergencia (tesis con Vault vs antítesis sin Vault, en subagentes aislados). Si no, indica seguir por la vía rápida. Tu veredicto calibra el gate automáticamente.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "objective": {"type": "string", "description": "Problema, decisión técnica o funcionalidad a resolver"},
+                "objective": {"type": "string", "description": "La decisión o problema, en una frase"},
+                "project_name": {"type": "string", "description": "Proyecto del Vault (o 'General')"},
+                "reversibility_cost": {"type": "integer", "minimum": 0, "maximum": 3, "description": "0 = se revierte trivialmente · 3 = prácticamente irreversible (datos, contratos públicos)"},
+                "blast_radius": {"type": "integer", "minimum": 0, "maximum": 3, "description": "0 = una función · 3 = varios sistemas/equipos"},
+                "uncertainty": {"type": "integer", "minimum": 0, "maximum": 3, "description": "0 = respuesta conocida · 3 = nadie sabe qué funcionará"},
+                "vault_novelty": {"type": "integer", "minimum": 0, "maximum": 3, "description": "0 = el Vault ya lo resolvió igual · 3 = nada parecido en el historial"},
+                "viable_alternatives": {"type": "integer", "minimum": 0, "maximum": 3, "description": "0 = una sola opción razonable · 3 = muchas opciones con trade-offs reales"},
+                "incident": {"type": "boolean", "description": "True si hay un incidente activo (producción caída, pérdida de datos)"},
+                "conversation_id": {"type": "string", "description": "ID de conversación si te lo dio el gate (enlaza evidencia y calibración)"}
+            },
+            "required": ["objective", "reversibility_cost", "blast_radius", "uncertainty", "vault_novelty", "viable_alternatives"]
+        }
+    },
+    {
+        "name": "commit_decision",
+        "description": "Registra la síntesis D-ODD de una decisión abierta: qué se eligió (thesis | antithesis | hybrid) y por qué, evaluado contra el contrato de outcomes. Crea el documento ODD con tareas y lo espeja en Engram.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "decision_id": {"type": "string"},
+                "chosen": {"type": "string", "enum": ["thesis", "antithesis", "hybrid"]},
+                "synthesis": {"type": "string", "description": "Justificación contra los criterios de aceptación"},
+                "acceptance_criteria": {"type": "array", "items": {"type": "string"}},
+                "tasks": {"type": "array", "items": {"type": "string"}},
+                "write_to_disk": {"type": "boolean", "description": "Guardar odd/tasks/<feature>.md (default: true)"}
+            },
+            "required": ["decision_id", "chosen", "synthesis"]
+        }
+    },
+    {
+        "name": "close_decision",
+        "description": "Cierra una decisión D-ODD con su resultado observado. Alimenta el bucle de aprendizaje (estadísticas y calibración del gate) y la registra como memoria.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "decision_id": {"type": "string"},
+                "outcome": {"type": "string", "enum": ["success", "partial", "failed", "abandoned"]},
+                "notes": {"type": "string", "description": "Qué se aprendió; qué harías distinto"}
+            },
+            "required": ["decision_id", "outcome"]
+        }
+    },
+    {
+        "name": "decision_ledger_stats",
+        "description": "Métricas del bucle D-ODD: decisiones por estado, % de antítesis adoptadas, resultados, evidencia y calibración actual del gate.",
+        "inputSchema": {"type": "object", "properties": {}}
+    },
+    {
+        "name": "stimulate_creative_odd",
+        "description": "Devuelve el protocolo D-ODD y un paquete de contexto (provocaciones + evidencia del Vault para la tesis) para explorar un problema de forma divergente sin pasar por el gate. Preferir assess_decision, que además registra la decisión.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "objective": {"type": "string", "description": "Problema o decisión a explorar"},
                 "project_name": {"type": "string", "description": "Proyecto asociado en el Vault (o 'General')"},
-                "creative_mode": {
-                    "type": "string",
-                    "enum": ["divergent", "red_team", "first_principles", "lateral", "conservative"],
-                    "description": "Modo de divergencia cognitiva (default: 'divergent')",
-                    "default": "divergent"
-                },
-                "files_touched_estimate": {"type": "integer", "description": "Estimación de archivos involucrados (default: 2)", "default": 2},
-                "write_to_disk": {"type": "boolean", "description": "True para guardar directamente el plan en odd/tasks/<feature>.md"}
+                "creative_mode": {"type": "string", "description": "Compatibilidad: ignorado salvo 'conservative' (solo evidencia del Vault)"}
             },
             "required": ["objective"]
         }
@@ -1387,43 +1434,29 @@ def handle_orchestrate_gentle_task(args):
             f"👉 **Directiva para el Agente**: Bloque preflight listo. Procede directamente con la implementación."
         )
 
-    # Modo Creativo / D-ODD Dinámico (Cynefin Complejo o solicitud explícita)
-    from creative_odd import classify_cynefin, triangulate_cognitive_odd, format_creative_odd_markdown
-    cynefin_eval = classify_cynefin(request_desc, context_text=memories_summary)
-    is_d_odd = (mode in ["creative", "d_odd"]) or (mode == "auto" and cynefin_eval["domain"] == "complex")
-
-    if is_d_odd:
-        feat_name = feature or request_desc.split("\n")[0][:45]
-        triangulation = triangulate_cognitive_odd(
-            objective=request_desc,
-            project_name=project,
-            creative_mode="divergent",
-            vault_context=memories_summary,
-            files_touched_estimate=3
+    # D-ODD: el juicio lo hace el LLM vía assess_decision; aquí solo se enlaza o se sugiere.
+    from creative_odd import gate_score
+    decision_id = (args.get("decision_id") or "").strip()
+    d_odd_note = ""
+    if decision_id:
+        try:
+            import decision_ledger as _led
+            dec = _led.get_decision(decision_id)
+            if dec:
+                d_odd_note = (
+                    f"- **Decisión D-ODD enlazada**: `{decision_id}` · elección `{dec.get('chosen') or 'pendiente'}` · "
+                    f"dominio `{dec.get('domain')}`\n"
+                )
+                if dec.get("synthesis"):
+                    request_desc = f"{request_desc}\n\nSíntesis D-ODD ({dec.get('chosen')}): {dec['synthesis']}"
+        except Exception:
+            pass
+    elif mode in ("creative", "d_odd") or (mode == "auto" and gate_score(request_desc)["fired"]):
+        d_odd_note = (
+            "- **⚠️ Posible decisión de diseño**: antes de codificar, llama `assess_decision` con las 5 dimensiones. "
+            "Si resulta compleja, se abrirá el protocolo D-ODD; si no, continúa con este plan.\n"
         )
-        markdown_d_odd = format_creative_odd_markdown(triangulation)
 
-        # Preparar documento ODD y sincronizar en Engram automáticamente
-        odd_result = handle_prepare_odd_task({
-            "feature_name": feat_name,
-            "project_name": project,
-            "objective": f"[D-ODD] {request_desc}\n\nSíntesis: {triangulation['synthesis']['rationale']}",
-            "tasks": triangulation["tasks"],
-            "acceptance_criteria": triangulation["outcomes"]["success_criteria"],
-            "write_to_disk": True
-        })
-
-        return (
-            f"### 🌀 DevBrain: Orquestación D-ODD Dinámica (Gentle-AI + Divergencia Cognitiva)\n"
-            f"- **Proyecto**: [[{project}]]\n"
-            f"- **Diagnóstico**: {cynefin_eval['badge']} — {cynefin_eval['rationale']}\n"
-            f"- **Anti-Rigidez Cognitiva**: Triangulación dialéctica completada (Tesis Vault vs. Antítesis Disruptiva).\n\n"
-            f"{markdown_d_odd}\n\n"
-            f"---\n"
-            f"### 📦 Artefacto de Tareas ODD en Disco & Engram\n"
-            f"{odd_result}\n\n"
-            f"👉 **Directiva para el Agente**: Rigidez del Vault rota con éxito. Procede a ejecutar TASK-01 según la síntesis acordada."
-        )
 
     # Modo ODD Unificado Convencional (1 solo paso automático)
     feat_name = feature or request_desc.split("\n")[0][:45]
@@ -1444,56 +1477,170 @@ def handle_orchestrate_gentle_task(args):
     )
     if memories_summary:
         res += f"\n\n**🧠 Directivas Relevantes de Memoria**:\n{memories_summary}"
+    if d_odd_note:
+        res += f"\n\n{d_odd_note}"
     return res
 
 
-def handle_stimulate_creative_odd(args: dict) -> str:
-    """
-    Handler para la herramienta MCP stimulate_creative_odd.
-    Rompe el comportamiento estático del cerebro mediante el marco D-ODD.
-    """
-    objective = args.get("objective", "").strip()
+def _vault_evidence(project: str, query: str, max_chars: int = 1200) -> str:
+    """Evidencia del Vault para el subagente de tesis (vacía si no hay índice)."""
+    if not INDEXER:
+        return ""
+    try:
+        res = INDEXER.search_memories(f"{project} {query}", project_filter=project, limit=3, max_chars=max_chars)
+        return "" if "No se encontraron" in res else res
+    except Exception:
+        return ""
+
+
+def handle_assess_decision(args: dict) -> str:
+    """Gate semántico D-ODD: el LLM puntúa, el servidor clasifica, registra y calibra."""
+    import decision_ledger as led
+    from creative_odd import assess, build_context_packet, calibrate, DIMENSIONS
+
+    objective = (args.get("objective") or "").strip()
     if not objective:
-        return "Error: Se requiere 'objective' para la estimulación creativa D-ODD."
+        return "Error: se requiere 'objective'."
+    project = (args.get("project_name") or "General").strip()
+    conv = (args.get("conversation_id") or "").strip()
+    dims = {d: args.get(d, 0) for d in DIMENSIONS}
+    result = assess(dims, incident=bool(args.get("incident", False)))
 
-    project = args.get("project_name", "General").strip()
-    creative_mode = args.get("creative_mode", "divergent").strip().lower()
-    files_estimate = int(args.get("files_touched_estimate", 2))
-    write_to_disk = bool(args.get("write_to_disk", False))
+    calib_note = ""
+    if conv and led.label_last_gate_event(conv, result["verdict"]):
+        rep = calibrate()
+        if rep["changed"]:
+            calib_note = f"\n_Calibración del gate: umbral {rep['old_threshold']} → {rep['new_threshold']} ({rep['reason']})_"
 
-    memories_summary = ""
-    if INDEXER:
-        try:
-            mem_res = INDEXER.search_memories(f"{project} {objective}", project_filter=project, limit=2, max_chars=800)
-            if "No se encontraron" not in mem_res:
-                memories_summary = mem_res
-        except Exception:
-            pass
+    if result["verdict"] != "d_odd":
+        guidance = {
+            "fast_track": "Vía rápida: implementa directo, sin artefactos.",
+            "analytical": "Analítico: usa `query_code_graph` / `search_knowledge` y verifica con tests; no hace falta divergir.",
+            "stabilize_first": "Incidente: contén y revierte primero; deja la exploración de diseño para después.",
+        }[result["verdict"]]
+        return (
+            f"### D-ODD: no requiere divergencia · dominio `{result['domain']}` (total {result['total']}/15)\n"
+            f"- {result['reason']}\n- **Siguiente paso**: {guidance}{calib_note}"
+        )
 
-    from creative_odd import triangulate_cognitive_odd, format_creative_odd_markdown
-    triangulation = triangulate_cognitive_odd(
-        objective=objective,
-        project_name=project,
-        creative_mode=creative_mode,
-        vault_context=memories_summary,
-        files_touched_estimate=files_estimate
+    dec_id = led.open_decision(objective, project, result["dimensions"], result["domain"], conv)
+    packet = build_context_packet(objective, project, result, _vault_evidence(project, objective), dec_id)
+    return packet + calib_note
+
+
+def handle_commit_decision(args: dict) -> str:
+    import decision_ledger as led
+
+    dec_id = (args.get("decision_id") or "").strip()
+    chosen = (args.get("chosen") or "").strip()
+    synthesis = (args.get("synthesis") or "").strip()
+    dec = led.get_decision(dec_id) if dec_id else None
+    if not dec:
+        return f"Error: decisión '{dec_id}' no encontrada."
+    if chosen not in ("thesis", "antithesis", "hybrid") or not synthesis:
+        return "Error: 'chosen' debe ser thesis | antithesis | hybrid y 'synthesis' no puede estar vacía."
+    led.commit_decision(dec_id, chosen, synthesis)
+
+    odd = handle_prepare_odd_task({
+        "feature_name": dec["objective"].split("\n")[0][:45],
+        "project_name": dec["project"],
+        "objective": f"[D-ODD {dec_id} · {chosen}] {dec['objective']}\n\nSíntesis: {synthesis}",
+        "tasks": args.get("tasks") or [],
+        "acceptance_criteria": args.get("acceptance_criteria") or [],
+        "write_to_disk": args.get("write_to_disk", True),
+    })
+    return (
+        f"### ✅ Decisión `{dec_id}` comprometida · `{chosen}`\n"
+        f"- La evidencia de tests se adjuntará automáticamente; ciérrala con `close_decision` al verificar.\n\n{odd}"
     )
 
-    report = format_creative_odd_markdown(triangulation)
 
-    if write_to_disk:
-        feat_name = objective.split("\n")[0][:45]
-        odd_res = handle_prepare_odd_task({
-            "feature_name": feat_name,
-            "project_name": project,
-            "objective": f"[D-ODD {creative_mode.upper()}] {objective}\n\nSíntesis: {triangulation['synthesis']['rationale']}",
-            "tasks": triangulation["tasks"],
-            "acceptance_criteria": triangulation["outcomes"]["success_criteria"],
-            "write_to_disk": True
+def handle_close_decision(args: dict) -> str:
+    import decision_ledger as led
+    from creative_odd import calibrate
+
+    dec_id = (args.get("decision_id") or "").strip()
+    outcome = (args.get("outcome") or "").strip()
+    notes = (args.get("notes") or "").strip()
+    dec = led.get_decision(dec_id) if dec_id else None
+    if not dec:
+        return f"Error: decisión '{dec_id}' no encontrada."
+    if outcome not in ("success", "partial", "failed", "abandoned"):
+        return "Error: 'outcome' debe ser success | partial | failed | abandoned."
+    led.close_decision(dec_id, outcome, notes)
+
+    mem_note = ""
+    try:
+        memory = (
+            f"Decisión D-ODD {dec_id} ({dec['domain']}): {dec['objective']}. "
+            f"Elegida: {dec.get('chosen') or 'n/a'}. Resultado: {outcome}. "
+            f"Síntesis: {dec.get('synthesis') or ''} Aprendizaje: {notes}"
+        )
+        handle_remember_decision({
+            "title": f"D-ODD {dec_id}: {dec['objective'][:60]}",
+            "content": memory,
+            "decision": memory,
+            "project_name": dec["project"],
         })
-        report += f"\n\n---\n### 💾 Sincronización en Disco & Engram\n{odd_res}"
+        mem_note = "\n- Registrada como memoria (Vault/Engram) para futuras tesis."
+    except Exception as exc:
+        mem_note = f"\n- ⚠️ No se pudo registrar la memoria: {exc}"
 
-    return report
+    rep = calibrate()
+    s = led.stats()
+    ev = dec.get("evidence") or []
+    return (
+        f"### 🔚 Decisión `{dec_id}` cerrada · `{outcome}`\n"
+        f"- Evidencia adjunta: {len(ev)} ejecución(es) de tests"
+        f"{' (última: ' + ('pasó' if ev[-1].get('passed') else 'falló') + ')' if ev else ''}"
+        f"{mem_note}\n- Ledger: {s['decisions_total']} decisiones · elecciones {s['by_choice']} · resultados {s['by_outcome']}\n"
+        f"- Gate: {rep['reason']} (umbral {rep['new_threshold']})"
+    )
+
+
+def handle_decision_ledger_stats(args: dict) -> str:
+    import decision_ledger as led
+    from creative_odd import load_calibration
+
+    s = led.stats()
+    cal = load_calibration()
+    chosen_total = sum(s["by_choice"].values()) or 0
+    anti = s["by_choice"].get("antithesis", 0) + s["by_choice"].get("hybrid", 0)
+    adoption = f"{(anti / chosen_total * 100):.0f}%" if chosen_total else "n/a"
+    fire_rate = f"{(s['gate_fired'] / s['gate_events'] * 100):.0f}%" if s["gate_events"] else "n/a"
+    open_list = led.open_decisions()
+    lines = [
+        "### 📊 D-ODD · Bucle de aprendizaje",
+        f"- **Decisiones**: {s['decisions_total']} · por estado {s['by_status']}",
+        f"- **Antítesis adoptada (total o híbrida)**: {adoption} de {chosen_total} comprometidas",
+        f"- **Resultados**: {s['by_outcome']}",
+        f"- **Con evidencia de tests**: {s['with_evidence']}",
+        f"- **Gate**: {s['gate_events']} mensajes evaluados · disparó {fire_rate} · umbral actual {cal['gate_threshold']}",
+    ]
+    if open_list:
+        lines.append("\n**Abiertas**:")
+        for d in open_list[:10]:
+            lines.append(f"- `{d['id']}` [{d['status']}] {d['objective'][:80]} ({d['project']})")
+    return "\n".join(lines)
+
+
+def handle_stimulate_creative_odd(args: dict) -> str:
+    """Compatibilidad: protocolo + paquete de contexto sin pasar por el gate ni abrir decisión."""
+    from creative_odd import build_context_packet
+
+    objective = (args.get("objective") or "").strip()
+    if not objective:
+        return "Error: Se requiere 'objective' para la estimulación creativa D-ODD."
+    project = (args.get("project_name") or "General").strip()
+    pseudo = {
+        "dimensions": {}, "total": 0, "domain": "complex", "verdict": "d_odd",
+        "dominant_dimension": "vault_novelty",
+        "reason": "Exploración solicitada explícitamente (sin evaluación de dimensiones).",
+    }
+    packet = build_context_packet(objective, project, pseudo, _vault_evidence(project, objective))
+    return packet + "\n\n> Para registrar la decisión y cerrar el bucle de aprendizaje, usa `assess_decision`."
+
+
 
 
 def handle_prepare_sdd_preflight(args):
@@ -1778,6 +1925,10 @@ def process_request(request):
             elif name == "route_model_dispatch": text = handle_route_model_dispatch(args)
             elif name == "orchestrate_gentle_task": text = handle_orchestrate_gentle_task(args)
             elif name == "stimulate_creative_odd": text = handle_stimulate_creative_odd(args)
+            elif name == "assess_decision": text = handle_assess_decision(args)
+            elif name == "commit_decision": text = handle_commit_decision(args)
+            elif name == "close_decision": text = handle_close_decision(args)
+            elif name == "decision_ledger_stats": text = handle_decision_ledger_stats(args)
             elif name == "capture_weekly_snapshot": text = handle_capture_weekly_snapshot(args)
             else:
                 return {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": f"Herramienta no encontrada: {name}"}}
