@@ -26,6 +26,11 @@ import unicodedata
 from pathlib import Path
 from datetime import datetime
 
+# Asegurar que el directorio de este módulo esté siempre en sys.path
+_MODULE_DIR = str(Path(__file__).resolve().parent)
+if _MODULE_DIR not in sys.path:
+    sys.path.insert(0, _MODULE_DIR)
+
 def slugify(text: str) -> str:
     """Normaliza tildes y caracteres especiales a un slug ASCII limpio."""
     text = unicodedata.normalize('NFKD', str(text)).encode('ascii', 'ignore').decode('utf-8')
@@ -578,9 +583,29 @@ TOOLS_MANIFEST = [
                 "task_description": {"type": "string", "description": "Descripción clara del objetivo o tarea a realizar"},
                 "project_name": {"type": "string", "description": "Nombre del proyecto (ej: 'Narval-SGN', 'Chambita', o 'General')"},
                 "feature_name": {"type": "string", "description": "Nombre corto o slug de la feature (opcional)"},
-                "mode": {"type": "string", "enum": ["auto", "direct", "odd", "sdd"], "description": "Modo de ejecución deseado (default: 'auto')", "default": "auto"}
+                "mode": {"type": "string", "enum": ["auto", "direct", "odd", "sdd", "creative", "d_odd"], "description": "Modo de ejecución deseado (default: 'auto')", "default": "auto"}
             },
             "required": ["task_description"]
+        }
+    },
+    {
+        "name": "stimulate_creative_odd",
+        "description": "Marco D-ODD (Dynamic Outcome-Driven Development): Rompe la rigidez cognitiva y el anclaje estático del Vault mediante clasificación Cynefin, pensamiento lateral (Edward de Bono) y triangulación dialéctica (Tesis del Vault vs Antítesis disruptiva de primeros principios).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "objective": {"type": "string", "description": "Problema, decisión técnica o funcionalidad a resolver"},
+                "project_name": {"type": "string", "description": "Proyecto asociado en el Vault (o 'General')"},
+                "creative_mode": {
+                    "type": "string",
+                    "enum": ["divergent", "red_team", "first_principles", "lateral", "conservative"],
+                    "description": "Modo de divergencia cognitiva (default: 'divergent')",
+                    "default": "divergent"
+                },
+                "files_touched_estimate": {"type": "integer", "description": "Estimación de archivos involucrados (default: 2)", "default": 2},
+                "write_to_disk": {"type": "boolean", "description": "True para guardar directamente el plan en odd/tasks/<feature>.md"}
+            },
+            "required": ["objective"]
         }
     },
     {
@@ -1362,7 +1387,45 @@ def handle_orchestrate_gentle_task(args):
             f"👉 **Directiva para el Agente**: Bloque preflight listo. Procede directamente con la implementación."
         )
 
-    # Modo ODD Unificado (1 solo paso automático)
+    # Modo Creativo / D-ODD Dinámico (Cynefin Complejo o solicitud explícita)
+    from creative_odd import classify_cynefin, triangulate_cognitive_odd, format_creative_odd_markdown
+    cynefin_eval = classify_cynefin(request_desc, context_text=memories_summary)
+    is_d_odd = (mode in ["creative", "d_odd"]) or (mode == "auto" and cynefin_eval["domain"] == "complex")
+
+    if is_d_odd:
+        feat_name = feature or request_desc.split("\n")[0][:45]
+        triangulation = triangulate_cognitive_odd(
+            objective=request_desc,
+            project_name=project,
+            creative_mode="divergent",
+            vault_context=memories_summary,
+            files_touched_estimate=3
+        )
+        markdown_d_odd = format_creative_odd_markdown(triangulation)
+
+        # Preparar documento ODD y sincronizar en Engram automáticamente
+        odd_result = handle_prepare_odd_task({
+            "feature_name": feat_name,
+            "project_name": project,
+            "objective": f"[D-ODD] {request_desc}\n\nSíntesis: {triangulation['synthesis']['rationale']}",
+            "tasks": triangulation["tasks"],
+            "acceptance_criteria": triangulation["outcomes"]["success_criteria"],
+            "write_to_disk": True
+        })
+
+        return (
+            f"### 🌀 DevBrain: Orquestación D-ODD Dinámica (Gentle-AI + Divergencia Cognitiva)\n"
+            f"- **Proyecto**: [[{project}]]\n"
+            f"- **Diagnóstico**: {cynefin_eval['badge']} — {cynefin_eval['rationale']}\n"
+            f"- **Anti-Rigidez Cognitiva**: Triangulación dialéctica completada (Tesis Vault vs. Antítesis Disruptiva).\n\n"
+            f"{markdown_d_odd}\n\n"
+            f"---\n"
+            f"### 📦 Artefacto de Tareas ODD en Disco & Engram\n"
+            f"{odd_result}\n\n"
+            f"👉 **Directiva para el Agente**: Rigidez del Vault rota con éxito. Procede a ejecutar TASK-01 según la síntesis acordada."
+        )
+
+    # Modo ODD Unificado Convencional (1 solo paso automático)
     feat_name = feature or request_desc.split("\n")[0][:45]
     odd_result = handle_prepare_odd_task({
         "feature_name": feat_name,
@@ -1382,6 +1445,55 @@ def handle_orchestrate_gentle_task(args):
     if memories_summary:
         res += f"\n\n**🧠 Directivas Relevantes de Memoria**:\n{memories_summary}"
     return res
+
+
+def handle_stimulate_creative_odd(args: dict) -> str:
+    """
+    Handler para la herramienta MCP stimulate_creative_odd.
+    Rompe el comportamiento estático del cerebro mediante el marco D-ODD.
+    """
+    objective = args.get("objective", "").strip()
+    if not objective:
+        return "Error: Se requiere 'objective' para la estimulación creativa D-ODD."
+
+    project = args.get("project_name", "General").strip()
+    creative_mode = args.get("creative_mode", "divergent").strip().lower()
+    files_estimate = int(args.get("files_touched_estimate", 2))
+    write_to_disk = bool(args.get("write_to_disk", False))
+
+    memories_summary = ""
+    if INDEXER:
+        try:
+            mem_res = INDEXER.search_memories(f"{project} {objective}", project_filter=project, limit=2, max_chars=800)
+            if "No se encontraron" not in mem_res:
+                memories_summary = mem_res
+        except Exception:
+            pass
+
+    from creative_odd import triangulate_cognitive_odd, format_creative_odd_markdown
+    triangulation = triangulate_cognitive_odd(
+        objective=objective,
+        project_name=project,
+        creative_mode=creative_mode,
+        vault_context=memories_summary,
+        files_touched_estimate=files_estimate
+    )
+
+    report = format_creative_odd_markdown(triangulation)
+
+    if write_to_disk:
+        feat_name = objective.split("\n")[0][:45]
+        odd_res = handle_prepare_odd_task({
+            "feature_name": feat_name,
+            "project_name": project,
+            "objective": f"[D-ODD {creative_mode.upper()}] {objective}\n\nSíntesis: {triangulation['synthesis']['rationale']}",
+            "tasks": triangulation["tasks"],
+            "acceptance_criteria": triangulation["outcomes"]["success_criteria"],
+            "write_to_disk": True
+        })
+        report += f"\n\n---\n### 💾 Sincronización en Disco & Engram\n{odd_res}"
+
+    return report
 
 
 def handle_prepare_sdd_preflight(args):
@@ -1627,7 +1739,7 @@ def process_request(request):
                 "capabilities": {"tools": {}},
                 "serverInfo": {
                     "name": "devbrain-mcp",
-                    "version": "3.5.0",
+                    "version": "3.6.0",
                     "mode": "vault-connected" if HAS_VAULT else "autonomous-standalone"
                 }
             }
@@ -1665,6 +1777,7 @@ def process_request(request):
             elif name == "sync_project_graph": text = handle_sync_project_graph(args)
             elif name == "route_model_dispatch": text = handle_route_model_dispatch(args)
             elif name == "orchestrate_gentle_task": text = handle_orchestrate_gentle_task(args)
+            elif name == "stimulate_creative_odd": text = handle_stimulate_creative_odd(args)
             elif name == "capture_weekly_snapshot": text = handle_capture_weekly_snapshot(args)
             else:
                 return {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32601, "message": f"Herramienta no encontrada: {name}"}}

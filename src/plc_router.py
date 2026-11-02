@@ -33,7 +33,7 @@ class PLCRouter:
         'search_knowledge', 'recall_memory', 'remember_decision',
         'classify_odd_task', 'list_projects', 'get_project_context',
         'route_model_dispatch', 'get_spec_questions', 'optimize_token_budget',
-        'orchestrate_gentle_task'
+        'orchestrate_gentle_task', 'stimulate_creative_odd'
     }
 
     # Tools that CAN be delegated to Gentle-PI if available

@@ -383,6 +383,8 @@ ODD reemplaza la burocracia rígida de los SDD tradicionales por un enfoque prag
         table.add_row("🏷️ ODD & Sesión", "prepare_odd_task", "Crea odd/tasks/<feature>.md y espejo en Engram topic.", "[yellow]DELEGATABLE[/yellow]")
         table.add_row("🏷️ ODD & Sesión", "reconcile_odd_resume", "Reconcilia estado local con memoria Engram tras reinicio.", "[yellow]DELEGATABLE[/yellow]")
         table.add_row("🏷️ ODD & Sesión", "orchestrator_session_bridge", "Mensajería inter-orquestador con ACK de Gentle-Shell.", "[red]ORCHESTRATE[/red]")
+        table.add_row("🚀 Gentle-AI", "orchestrate_gentle_task", "Abstracción unificada Gentle-AI (ODD/SDD/FastPath en 1 paso).", "[green]LOCAL_FAST[/green]")
+        table.add_row("🧠 D-ODD Dinámico", "stimulate_creative_odd", "Marco D-ODD: Divergencia Cynefin, pensamiento lateral y triangulación.", "[green]LOCAL_FAST[/green]")
 
         console.print(Panel(table, title="[bold]🛠️ Catálogo Oficial de Herramientas MCP & Rutas PLC[/bold]", border_style=theme.accent))
 
