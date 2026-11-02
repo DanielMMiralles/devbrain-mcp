@@ -112,10 +112,15 @@ def _ingest_graphify_json(root: Path, conn: sqlite3.Connection) -> tuple[int, in
             src = str(e.get("source") or "").strip()
             tgt = str(e.get("target") or "").strip()
             rel = str(e.get("relation") or e.get("confidence") or "EXTRACTED").upper()
+            also_seen = e.get("also_seen", [])
+            weight = float(e.get("weight", 1.0) or 1.0)
+            # Soporte Graphify 0.9.100: Si la arista fusionada tiene 'also_seen', sumar evidencia sin duplicar
+            if also_seen and isinstance(also_seen, list):
+                weight += min(len(also_seen) * 0.25, 1.5)
             if src and tgt:
                 conn.execute(
                     "INSERT OR REPLACE INTO edges (source, target, relation, weight) VALUES (?, ?, ?, ?)",
-                    (src, tgt, rel, float(e.get("weight", 1.0) or 1.0))
+                    (src, tgt, rel, weight)
                 )
                 edges_merged += 1
     except Exception:

@@ -1246,13 +1246,14 @@ def handle_orchestrator_session_bridge(args):
 
     if action == "explain" or not action:
         return (
-            "### 📡 Protocolo de Mensajería Inter-Orquestador (Gentle-Shell v3.0 / main)\n"
-            "Gentle-Shell introduce comunicación nativa entre orquestadores y sesiones activas en Pi, reemplazando a `intercom`:\n\n"
+            "### 📡 Protocolo de Mensajería Inter-Orquestador (Gentle-Shell v4.5+ / Pi 1.5+)\n"
+            "Gentle-Shell introduce comunicación nativa y coordinación cross-session entre orquestadores y sesiones activas en Pi:\n\n"
             "1. **Identidad**: `orchestrator_session_id` expone el identificador local único de la sesión.\n"
-            "2. **Descubrimiento**: `orchestrator_list` anuncia los IDs de sesiones pares locales (el alcance de conectividad permanece desconocido hasta intentar el envío).\n"
-            "3. **Envío de Notificación**: `orchestrator_send_message` transmite un mensaje al par objetivo.\n"
-            "4. **Semántica ACK**: Un acuse de recibo ACK confirma ÚNICAMENTE que el par aceptó la notificación en su cola de entrega, NO que haya leído el mensaje ni que el trabajo esté completado.\n"
-            "5. **Límites de Diseño**: Sin colas offline, sin reintentos automáticos, sin broadcast, sin consultas cross-session sincrónicas."
+            "2. **Descubrimiento**: `orchestrator_list` anuncia los IDs de sesiones pares locales, su alcance de repositorio y clasificación de trabajo.\n"
+            "3. **Envío de Notificación**: `orchestrator_send_message` transmite un mensaje al par objetivo con semántica ACK.\n"
+            "4. **Monitoreo & Jobs en Segundo Plano**: Soporte nativo para `bash_background` y streaming de eventos en segundo plano.\n"
+            "5. **Semántica ACK**: Un acuse de recibo ACK confirma ÚNICAMENTE que el par aceptó la notificación en su cola de entrega.\n"
+            "6. **Límites de Diseño**: Sin colas offline, sin reintentos automáticos descontrolados, sin broadcast ciego."
         )
 
     if action == "format_notification":
@@ -1626,7 +1627,7 @@ def process_request(request):
                 "capabilities": {"tools": {}},
                 "serverInfo": {
                     "name": "devbrain-mcp",
-                    "version": "3.1.0",
+                    "version": "3.5.0",
                     "mode": "vault-connected" if HAS_VAULT else "autonomous-standalone"
                 }
             }
