@@ -6,6 +6,8 @@ Separación de responsabilidades:
   - El JUICIO lo hace el LLM entregando 5 dimensiones; aquí solo se mapean a Cynefin.
   - La DIVERGENCIA real ocurre en subagentes con contextos aislados (ver PROTOCOL_TEXT);
     este módulo NO fabrica tesis/antítesis/síntesis enlatadas, entrega un paquete de contexto.
+  - Cuando el objetivo involucra UI/UX o un proyecto nuevo, sortea determinísticamente
+    direcciones de arte no clonadas y aplica el Veto Anti-Clon contra la plantilla saturada.
   - La CALIBRACIÓN ajusta el umbral del gate con las etiquetas que deja assess_decision.
 
 Solo stdlib: lo importan los hooks, que deben arrancar rápido.
@@ -103,8 +105,9 @@ SIGNALS: Dict[str, List[str]] = {
     "decision_verbs": [
         r"\bdisen\w*", r"\barquitect\w*", r"\bmigr\w*", r"\belegir\b", r"\bescoger\b", r"\bdecid\w*",
         r"\bconviene\b", r"\bdeberiamos\b", r"\breemplaz\w*", r"\badopt\w*", r"\bestrateg\w*",
-        r"\breestructur\w*", r"\bredisen\w*", r"\bdesacopl\w*", r"\bdecoupl\w*", r"\bdesign\w*", r"\barchitect\w*", r"\bchoose\b",
-        r"\bshould we\b", r"\breplace\b", r"\bplanteamiento\b", r"\benfoque\b",
+        r"\breestructur\w*", r"\bredisen\w*", r"\bdesacopl\w*", r"\bdecoupl\w*", r"\bdesign\w*",
+        r"\barchitect\w*", r"\bchoose\b", r"\bshould we\b", r"\breplace\b", r"\bplanteamiento\b",
+        r"\benfoque\b", r"\biniciar proyecto\b", r"\bdesde cero\b",
     ],
     "comparatives": [
         r"\bvs\.?\b", r"\bversus\b", r"\bo bien\b", r"\ben lugar de\b", r"\bmejor (manera|forma|opcion)\b",
@@ -115,6 +118,8 @@ SIGNALS: Dict[str, List[str]] = {
         r"\bpipeline\w*", r"\binfraestructura\b", r"\bautenticacion\b", r"\bestado global\b",
         r"\bsincroniza\w*", r"\bconcurren\w*", r"\bescalab\w*", r"\bframework\b", r"\bmotor\b",
         r"\bmicroservici\w*", r"\bmonolito\b", r"\bevent\w* bus\b", r"\bprotocolo\b",
+        r"\bdashboard\w*", r"\bprototipo\w*", r"\binterfaz\b", r"\bidentidad visual\b",
+        r"\bsistema de diseno\b", r"\bui/ux\b", r"\blanding\b", r"\bconsola\b",
     ],
     "stack_terms": [
         r"\bkafka\b", r"\bpostgres\w*", r"\bredis\b", r"\bsqlite\b", r"\bmongo\w*", r"\bgraphql\b",
@@ -240,6 +245,70 @@ def provocations_for(dominant_dimension: str) -> List[Dict[str, str]]:
 
 
 # ---------------------------------------------------------------------------
+# Motor de Varianza Visual & Veto Anti-Clon (para decisiones de UI / Frontend)
+# ---------------------------------------------------------------------------
+
+_UI_PAT = re.compile(
+    r"\b(ui|ux|interfaz|diseno visual|dashboard\w*|prototipo\w*|frontend|landing|maquet\w*|"
+    r"pantalla\w*|consola|web app|aplicacion web|layout\w*|componentes|tema|paleta|tipografia)\b"
+)
+
+VISUAL_DIRECTIONS: List[Dict[str, str]] = [
+    {
+        "id": "SWISS_TECHNICAL_PAPER",
+        "name": "Swiss Technical Paper (Luz Diurna & Retícula de Tinta)",
+        "palette": "Fondo papel técnico `#F4F1EA` / `#EBE6DC`, texto tinta `#141413`, bordes de línea continua `1px solid #CFC8BC`, acento primario Bermellón `#D9381E` y secundario Azul Cobalto `#1849D6`.",
+        "typography": "Titulares en `'Space Grotesk'` (700, tracking `-0.03em`), cuerpo en `'DM Sans'`, datos tabulares en `'IBM Plex Mono'`.",
+        "layout": "Retícula suiza de celdas unidas por bordes de 1px sin tarjetas flotantes ni sombras. Navegación lateral izquierda vertical (`220px`) con numeración índice (`01`, `02`, `03`).",
+    },
+    {
+        "id": "INDUSTRIAL_DAYLIGHT_HMI",
+        "name": "ISA-101 High-Contrast Field HMI (Consola Industrial Antirreflejo)",
+        "palette": "Lienzo piedra claro `#E6E8EC` con paneles de control blanco puro `#FFFFFF` y cabecera de grafito sólido `#181B20`. Acentos Naranja Seguridad `#EA580C`, Azul Instrumentación `#0284C7` y Verde Operativo `#15803D`.",
+        "typography": "Titulares industriales condensados en `'Barlow'` / `'Chivo'` (700/800), lectura técnica en `'Fira Code'`.",
+        "layout": "Arquitectura de consola dividida (Split-Workbench): barra de estado física compacta + riel izquierdo de modos + área de trabajo de doble panel sin 'hero' ni tarjetas decorativas.",
+    },
+    {
+        "id": "BRUTALIST_HAIRLINE_MATRIX",
+        "name": "Brutalist Telemetry Matrix (Cero Tarjetas / Bordes al Ras)",
+        "palette": "Fondo carbón cálido `#0E0E10` (prohibido azul `slate-950`), líneas divisorias expuestas `#27272A`, texto marfil `#F4F3EF`, acento Lima Ácido `#A3E635` y Cian Técnico `#06B6D4`.",
+        "typography": "Titulares de alto impacto en `'Syne'` o `'Archivo'` (800), métricas gigantes (`clamp(2rem,3.5vw,3.25rem)`) en `'JetBrains Mono'`.",
+        "layout": "Matriz continua de borde a borde (`gap-px bg-zinc-800`) donde ninguna celda tiene `rounded-xl` ni margen flotante. Cero íconos decorativos en las esquinas.",
+    },
+    {
+        "id": "EDITORIAL_DOSSIER_SPLIT",
+        "name": "Editorial Asymmetric Dossier (Pliego Narrativo + Lienzo en Vivo)",
+        "palette": "Fondo alabastro `#FAF8F5` (o expreso profundo `#161311`), texto `#1C1917`, acento Terracota/Cobre `#C25E38` y Verde Bosque `#2D6A4F`.",
+        "typography": "Contraste editorial: titulares en serif (`'Fraunces'` o `'Instrument Serif'`), interfaz en `'Plus Jakarta Sans'`, código en `'Commit Mono'`.",
+        "layout": "Pliego asimétrico de 2 columnas (`320px` columna índice fija + lienzo principal fluido). Las métricas se integran dentro de bloques tipográficos, nunca en 4 cajitas iguales.",
+    },
+]
+
+ANTI_CLONE_VETO = """\
+### 🚫 VETO ANTI-CLON VISUAL (Obligatorio para UI / Frontend)
+Queda **prohibido** repetir la plantilla saturada de proyectos anteriores del Vault:
+1. **Prohibida la paleta clon:** `bg-slate-950` / `#0b0f19` con tarjetas `bg-slate-900` y acentos `amber-400` + `emerald-400`.
+2. **Prohibido el esqueleto clon:** Topbar horizontal con cuadrado `32x32` de iniciales a la izquierda + 4 pestañas + píldora verde a la derecha, seguido de un *eyebrow* en `font-mono uppercase`, seguido de una fila de **4 tarjetas KPI iguales (`grid-cols-4`)**, seguido de un panel ancho.
+3. **Tipografía real obligatoria:** Carga las fuentes elegidas con `<link>` de Google Fonts en `index.html` y decláralas en `index.css` (nunca dejes la sans del sistema por omisión).
+"""
+
+
+def is_ui_objective(text: str) -> bool:
+    return bool(_UI_PAT.search(_norm(text or "")))
+
+
+def deal_visual_directions(objective: str, project: str = "General", count: int = 2) -> List[Dict[str, str]]:
+    """Sortea determinísticamente direcciones de arte distintas por proyecto/objetivo."""
+    seed = int(hashlib.sha1(f"{project.strip().lower()}::{objective.strip().lower()}".encode("utf-8")).hexdigest()[:8], 16)
+    pool = list(VISUAL_DIRECTIONS)
+    chosen: List[Dict[str, str]] = []
+    for i in range(min(count, len(pool))):
+        idx = (seed + i * 2 + 1) % len(pool)
+        chosen.append(pool.pop(idx))
+    return chosen
+
+
+# ---------------------------------------------------------------------------
 # Paquete de contexto + protocolo (lo consumen el LLM y sus subagentes)
 # ---------------------------------------------------------------------------
 
@@ -247,11 +316,11 @@ PROTOCOL_TEXT = """\
 ## Protocolo D-ODD (divergencia con contextos aislados)
 1. **Contrato de outcomes** (tú, antes de nada): job-to-be-done, 2-4 criterios de aceptación verificables, invariantes.
 2. **Tesis** — subagente CON acceso al Vault/MCP: la mejor solución alineada al historial del proyecto, citando las notas en las que se apoya.
-3. **Antítesis** — subagente SIN notas del Vault (pásale SOLO el contrato de outcomes y las provocaciones): solución desde primeros principios. No le compartas la tesis.
+3. **Antítesis** — subagente SIN notas del Vault (pásale SOLO el contrato de outcomes, las provocaciones y, si es UI, las direcciones visuales sorteadas): solución desde primeros principios. No le compartas la tesis.
    Lanza tesis y antítesis en paralelo. Si tu cliente no tiene subagentes, redacta la antítesis ANTES de leer la evidencia del Vault.
 4. **Síntesis** — evalúa ambas contra el contrato (no contra preferencias): elige `thesis`, `antithesis` o `hybrid` y justifica con criterios concretos.
 5. Llama `commit_decision` con la elección y la síntesis. Implementa. Al verificar con evidencia real, llama `close_decision`.
-Regla: si la antítesis no aporta nada mejor, elegir la tesis es un resultado válido; no fuerces la novedad.
+Regla: si la antítesis no aporta nada mejor, elegir la tesis es un resultado válido; no fuerces la novedad. En UI/diseño visual de un proyecto nuevo, en cambio, **sí es obligatorio diferenciarse de proyectos anteriores del Vault**.
 """
 
 
@@ -272,6 +341,19 @@ def build_context_packet(objective: str, project: str, assessment: Dict[str, Any
     ]
     for p in provs:
         lines.append(f"- **{p['title']}**: {p['question']}")
+
+    if is_ui_objective(objective):
+        directions = deal_visual_directions(objective, project, count=2)
+        lines.append("")
+        lines.append(ANTI_CLONE_VETO.rstrip())
+        lines.append("")
+        lines.append("### 🎨 Direcciones de Arte Sorteadas para la Antítesis (elige 1 o combínalas)")
+        for idx, d in enumerate(directions, 1):
+            lines.append(f"**Opción {idx}: `{d['id']}` — {d['name']}**")
+            lines.append(f"- **Paleta**: {d['palette']}")
+            lines.append(f"- **Tipografía**: {d['typography']}")
+            lines.append(f"- ** Disposición Espacial**: {d['layout']}")
+
     lines.append("")
     lines.append("### 🏛️ Evidencia del Vault (SOLO para el subagente de tesis)")
     lines.append(vault_evidence.strip() if vault_evidence.strip() else "_Sin notas relevantes: la tesis se basa en el código actual del proyecto._")

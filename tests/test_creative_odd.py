@@ -23,21 +23,28 @@ from creative_odd import (
     gate_score,
     assess,
     provocations_for,
+    is_ui_objective,
+    deal_visual_directions,
     build_context_packet,
     calibrate,
     load_calibration,
     DEFAULT_CALIBRATION
 )
 from d_odd_corpus import CORPUS
+import devbrain_mcp
 from devbrain_mcp import (
     handle_assess_decision,
     handle_commit_decision,
     handle_close_decision,
     handle_decision_ledger_stats,
     handle_stimulate_creative_odd,
-    handle_orchestrate_gentle_task
+    handle_orchestrate_gentle_task,
+    process_request
 )
 from plc_router import PLCRouter
+
+# Redirigir DECISIONS_DIR al directorio temporal para no escribir en el Vault real durante tests
+devbrain_mcp.DECISIONS_DIR = Path(_TMP_DIR.name)
 
 
 class TestCreativeODDv2(unittest.TestCase):
@@ -175,6 +182,36 @@ class TestCreativeODDv2(unittest.TestCase):
         router = PLCRouter()
         for t in ["assess_decision", "commit_decision", "close_decision", "decision_ledger_stats", "stimulate_creative_odd"]:
             self.assertEqual(router.classify(t), PLCRouter.ROUTE_LOCAL)
+
+    def test_visual_variance_dealer_and_anti_clone_veto(self):
+        """Verifica que objetivos UI reciban el Anti-Clone Veto y 2 direcciones visuales contrastadas."""
+        ui_obj = "Crear desde cero el dashboard de monitoreo forense de rondas en planta"
+        self.assertTrue(is_ui_objective(ui_obj))
+        d1, d2 = deal_visual_directions(ui_obj, "Leopard")
+        self.assertNotEqual(d1["id"], d2["id"])
+
+        res_cx = assess({
+            "reversibility_cost": 2, "blast_radius": 2, "uncertainty": 2,
+            "vault_novelty": 2, "viable_alternatives": 2
+        })
+        pkt = build_context_packet(ui_obj, "Leopard", res_cx, "", "dec-ui-test")
+        self.assertIn("VETO ANTI-CLON VISUAL", pkt)
+        self.assertIn("Direcciones de Arte Sorteadas", pkt)
+
+    def test_mcp_initialize_and_prompts(self):
+        """Verifica que initialize exponga instructions y prompts/list + prompts/get expongan d-odd."""
+        init_res = process_request({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
+        self.assertIn("instructions", init_res["result"])
+        self.assertIn("prompts", init_res["result"]["capabilities"])
+
+        plist = process_request({"jsonrpc": "2.0", "id": 2, "method": "prompts/list", "params": {}})
+        self.assertEqual(plist["result"]["prompts"][0]["name"], "d-odd")
+
+        pget = process_request({
+            "jsonrpc": "2.0", "id": 3, "method": "prompts/get",
+            "params": {"name": "d-odd", "arguments": {"objective": "Rediseñar dashboard industrial", "project_name": "Leopard"}}
+        })
+        self.assertIn("VETO ANTI-CLON VISUAL", pget["result"]["messages"][0]["content"]["text"])
 
 
 if __name__ == "__main__":

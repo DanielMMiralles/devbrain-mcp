@@ -17,6 +17,8 @@ CORPUS = [
     ("Pros y contras de pasar a microservicios", True),
     ("Estrategia de caché para el endpoint de búsqueda con mucho tráfico", True),
     ("Refactor masivo del módulo de pagos para desacoplarlo del ORM", True),
+    ("Crear desde cero el dashboard de monitoreo forense de rondas en planta", True),
+    ("Rediseñar la interfaz completa y el sistema de diseño del prototipo", True),
     # --- No decisiones (no deben disparar) ---
     ("Refactor del nombre de una variable", False),
     ("Evaluar si el test de login pasa", False),

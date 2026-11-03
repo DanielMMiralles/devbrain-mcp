@@ -960,12 +960,12 @@ def handle_generate_scaffold(args):
         return f"Scaffolding {fw.upper()} generado (Modo Autónomo) en: {target_out}"
 
 def handle_remember_decision(args):
-    title = args.get("title")
-    details = args.get("details")
-    proj = args.get("project", "General")
+    title = (args.get("title") or "Decision").strip()
+    details = args.get("details") or args.get("content") or args.get("decision") or ""
+    proj = args.get("project") or args.get("project_name") or "General"
     tags = args.get("tags", ["decision", "engram-memory"])
     today = datetime.now().strftime("%Y-%m-%d")
-    slug = re.sub(r"\s+", "-", title.lower())[:35]
+    slug = slugify(title)[:45] or "decision"
     fname = f"decision-{today}-{slug}.md"
     fpath = DECISIONS_DIR / fname
     tags_str = ", ".join(tags)
@@ -1305,6 +1305,15 @@ def handle_reconcile_odd_resume(args):
 
     next_task = file_pend[0] if file_pend else (engram_pend[0] if engram_pend else "Ninguna (Feature lista para cierre)")
     report += f"\n👉 **Próximo Paso Recomendado**: {next_task}\n"
+    try:
+        import decision_ledger as _led
+        open_decs = _led.open_decisions(project=project) or _led.open_decisions()
+        if open_decs:
+            report += f"\n### ⚖️ Decisiones D-ODD Abiertas ({len(open_decs)}):\n"
+            for d in open_decs[:5]:
+                report += f"- `{d['id']}` [{d['status']}] {d['objective'][:75]} (elección: {d.get('chosen') or 'pendiente'})\n"
+    except Exception:
+        pass
     report += "> Subagente: Lee siempre el documento de tareas antes de escribir código y verifica con evidencia real."
     return report
 
@@ -1365,8 +1374,21 @@ def handle_capture_weekly_snapshot(args):
         from weekly_snapshot import WeeklySnapshotEngine
         engine = WeeklySnapshotEngine(VAULT_DIR)
         res = engine.capture_snapshot(custom_verdict=verdict, force=force)
+        d_odd_summary = ""
+        try:
+            import decision_ledger as _led
+            from creative_odd import calibrate as _cal
+            cal_rep = _cal()
+            st = _led.stats()
+            d_odd_summary = (
+                f"- **D-ODD Ledger**: {st['decisions_total']} decisiones ({st['by_choice']}) · "
+                f"Gate umbral {cal_rep['new_threshold']} ({cal_rep['reason']})\n"
+            )
+        except Exception:
+            pass
         return (
             f"📸 Snapshot semanal capturado con éxito:\n\n"
+            f"{d_odd_summary}"
             f"- **ID**: {res['snapshot_id']}\n"
             f"- **Fecha**: {res['date']} (Semana {res['week']})\n"
             f"- **Notas Vault**: {res['metrics']['total_notes']} ({res['metrics']['notes_updated_7d']} actualizadas en 7d)\n"
@@ -1878,15 +1900,17 @@ def process_request(request):
                 sys.stderr.write(f"[DevBrain] Cliente conectado: {c_name}\n")
             except Exception:
                 pass
+        from creative_odd import PROTOCOL_TEXT
         return {
             "jsonrpc": "2.0",
             "id": req_id,
             "result": {
                 "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}},
+                "capabilities": {"tools": {}, "prompts": {}},
+                "instructions": PROTOCOL_TEXT,
                 "serverInfo": {
                     "name": "devbrain-mcp",
-                    "version": "3.6.0",
+                    "version": "3.7.0",
                     "mode": "vault-connected" if HAS_VAULT else "autonomous-standalone"
                 }
             }
@@ -1964,9 +1988,49 @@ def process_request(request):
     elif method == "ping":
         return {"jsonrpc": "2.0", "id": req_id, "result": {}}
 
-    elif method in ["resources/list", "prompts/list"]:
-        key = method.split("/")[0]
-        return {"jsonrpc": "2.0", "id": req_id, "result": {key: []}}
+    elif method == "resources/list":
+        return {"jsonrpc": "2.0", "id": req_id, "result": {"resources": []}}
+
+    elif method == "prompts/list":
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "prompts": [
+                    {
+                        "name": "d-odd",
+                        "description": "Protocolo D-ODD (Dynamic Outcome-Driven Development): divergencia Tesis/Antítesis + Visual Variance Engine.",
+                        "arguments": [
+                            {"name": "objective", "description": "Objetivo arquitectónico o visual a evaluar", "required": False},
+                            {"name": "project_name", "description": "Nombre del proyecto", "required": False},
+                        ],
+                    }
+                ]
+            },
+        }
+
+    elif method == "prompts/get":
+        from creative_odd import PROTOCOL_TEXT, build_context_packet
+        p_args = params.get("arguments") or {}
+        obj = (p_args.get("objective") or "").strip()
+        proj = (p_args.get("project_name") or "General").strip()
+        if obj:
+            pseudo = {
+                "dimensions": {}, "total": 0, "domain": "complex", "verdict": "d_odd",
+                "dominant_dimension": "vault_novelty",
+                "reason": "Invocado desde MCP prompt d-odd.",
+            }
+            body = build_context_packet(obj, proj, pseudo, _vault_evidence(proj, obj))
+        else:
+            body = PROTOCOL_TEXT
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "description": "Protocolo D-ODD (Dynamic Outcome-Driven Development)",
+                "messages": [{"role": "user", "content": {"type": "text", "text": body}}],
+            },
+        }
 
     else:
         if is_notification: return None
