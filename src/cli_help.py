@@ -28,12 +28,12 @@ AVAILABLE_TOPICS: dict[str, str] = {
     "cortex": "Motor de auto-revisión e integridad: enlaces rotos, duplicados y ciclo de sueño",
     "tokens": "Optimizador de tokens: AST slicing, chunking sináptico y deduplicación diferencial",
     "odd": "Protocolo Organic Driven Development (ODD), clasificaciones y ciclo de trabajo",
-    "mcp": "Catálogo completo de las 22 herramientas MCP de DevBrain y sus firmas",
+    "mcp": "Catálogo completo de las 29 herramientas MCP de DevBrain v3.7.0 y sus firmas PLC",
     "hosts": "Guía de conexión para Google Antigravity (AGY), Cursor IDE y Claude Code",
     "neuro": "Motor de neuroplasticidad, regla de Hebb, LTP/LTD y bonus sináptico",
     "shell": "Uso de la terminal interactiva REPL, comandos rápidos y dock questions",
     "agent": "Interfaz agéntica en lenguaje natural (estilo OpenCode), despacho dual y síntesis",
-    "gentle": "Novedades de la suite Gentle-AI v3.7.0, selección de modelos por revisor y Gentle-Shell"
+    "gentle": "Novedades de la suite Gentle-AI (gentle-ai 3.7.0, engram 3.6.1, gentle-shell 4.5.1, gga 2.10.1)"
 }
 
 def render_help_overview(console: Console, theme: ThemeColors) -> None:
@@ -44,9 +44,9 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
     grid.add_column(justify="center", ratio=1)
     
     banner = Text.assemble(
-        ("🧠 DEVBRAIN v3.0 ", f"bold {theme.primary}"),
+        ("🧠 DEVBRAIN v3.7.0 ", f"bold {theme.primary}"),
         ("— MANUAL DE COMANDOS & FUNCIONALIDADES\n", f"bold {theme.secondary}"),
-        ("Controlador PLC Neuroplástico • Telemetría Cognitiva • Suite Gentle-AI & ODD", f"dim {theme.dim}")
+        ("Controlador PLC Neuroplástico • Telemetría Cognitiva • Suite Gentle-AI & D-ODD", f"dim {theme.dim}")
     )
     grid.add_row(banner)
     console.print(Panel(grid, box=box.ROUNDED, border_style=theme.primary))
@@ -351,7 +351,7 @@ ODD reemplaza la burocracia rígida de los SDD tradicionales por un enfoque prag
         console.print(Panel(Markdown(content), title="[bold]🏷️ Guía Detallada: Protocolo ODD[/bold]", border_style=theme.primary))
 
     elif t_clean in ["mcp", "tools"]:
-        table = Table(title="🛠️ Las 22 Herramientas MCP de DevBrain v3.0", box=None, expand=True, padding=(0, 1))
+        table = Table(title="🛠️ Las 29 Herramientas MCP de DevBrain v3.7.0 & Rutas PLC", box=None, expand=True, padding=(0, 1))
         table.add_column("Categoría", style=f"bold {theme.primary}", ratio=2)
         table.add_column("Herramienta MCP", style=f"bold {theme.accent}", ratio=3)
         table.add_column("Propósito & Comportamiento", style=f"{theme.text}", ratio=5)
@@ -359,8 +359,8 @@ ODD reemplaza la burocracia rígida de los SDD tradicionales por un enfoque prag
 
         table.add_row("💡 Conocimiento", "get_project_context", "Recupera arquitectura, stack y README de proyectos insignia.", "[green]LOCAL_FAST[/green]")
         table.add_row("💡 Conocimiento", "list_projects", "Lista proyectos activos y descubiertos en disco.", "[green]LOCAL_FAST[/green]")
-        table.add_row("💡 Conocimiento", "search_knowledge", "Búsqueda FTS5 en +1,675 notas con reranking sináptico.", "[green]LOCAL_FAST[/green]")
-        table.add_row("🧠 Memoria", "remember_decision", "Guarda directrices en Vault y sincroniza con Engram v2.", "[green]LOCAL_FAST[/green]")
+        table.add_row("💡 Conocimiento", "search_knowledge", "Búsqueda FTS5 en +6,350 notas con reranking sináptico.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🧠 Memoria", "remember_decision", "Guarda directrices en Vault y sincroniza con Engram (SQLite WAL).", "[green]LOCAL_FAST[/green]")
         table.add_row("🧠 Memoria", "recall_memory", "Consulta decisiones previas en Vault y Engram search.", "[green]LOCAL_FAST[/green]")
 
         table.add_row("📋 OpenSpec / SDD", "propose_spec", "Genera propuestas formales OpenSpec bajo demanda explícita.", "[yellow]DELEGATABLE[/yellow]")
@@ -384,9 +384,15 @@ ODD reemplaza la burocracia rígida de los SDD tradicionales por un enfoque prag
         table.add_row("🏷️ ODD & Sesión", "reconcile_odd_resume", "Reconcilia estado local con memoria Engram tras reinicio.", "[yellow]DELEGATABLE[/yellow]")
         table.add_row("🏷️ ODD & Sesión", "orchestrator_session_bridge", "Mensajería inter-orquestador con ACK de Gentle-Shell.", "[red]ORCHESTRATE[/red]")
         table.add_row("🚀 Gentle-AI", "orchestrate_gentle_task", "Abstracción unificada Gentle-AI (ODD/SDD/FastPath en 1 paso).", "[green]LOCAL_FAST[/green]")
-        table.add_row("🧠 D-ODD Dinámico", "stimulate_creative_odd", "Marco D-ODD: Divergencia Cynefin, pensamiento lateral y triangulación.", "[green]LOCAL_FAST[/green]")
 
-        console.print(Panel(table, title="[bold]🛠️ Catálogo Oficial de Herramientas MCP & Rutas PLC[/bold]", border_style=theme.accent))
+        table.add_row("🌀 Marco D-ODD", "assess_decision", "Gate semántico Cynefin (5 dimensiones), clasificación y apertura de decisión.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🌀 Marco D-ODD", "commit_decision", "Compromete síntesis (tesis/antítesis/híbrido) y genera tareas ODD espejadas.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🌀 Marco D-ODD", "close_decision", "Cierra decisión con evidencia observada de tests y recalibra el gate.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🌀 Marco D-ODD", "decision_ledger_stats", "Métricas del bucle de aprendizaje: adopción de antítesis y fire rate.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🌀 Marco D-ODD", "stimulate_creative_odd", "Estimulación lateral: paquetes de contexto aislados y provocaciones.", "[green]LOCAL_FAST[/green]")
+        table.add_row("📸 Portada & HUD", "capture_weekly_snapshot", "Captura la 'Foto de los Viernes', actualiza Portada.md y calibra gate.", "[green]LOCAL_FAST[/green]")
+
+        console.print(Panel(table, title="[bold]🛠️ Catálogo Oficial de las 29 Herramientas MCP & Rutas PLC[/bold]", border_style=theme.accent))
 
     elif t_clean in ["hosts", "ide", "cursor", "claude", "agy"]:
         content = """### 🔌 Conexión con Hosts e IDEs (Antigravity, Cursor, Claude Code)
@@ -490,31 +496,38 @@ Si prefieres ejecución directa de herramientas específicas:
         console.print(Panel(Markdown(content), title="[bold]🤖 Interfaz Agéntica & Terminal Shell[/bold]", border_style=theme.secondary))
 
     elif t_clean in ["gentle", "suite", "gentle-ai", "gentle-shell"]:
-        content = """### 🎩 Novedades de la Suite Gentle: Gentle-AI v3.7.0 & Gentle-Shell Independiente
+        content = """### 🎩 Estado y Configuración de la Suite Gentle-AI (Noviembre 2026)
 
-La suite Gentle unifica la orquestación, revisión de código (RDD), memoria (Engram) y desarrollo orgánico (ODD).
+La suite Gentle unifica la orquestación, revisión de código (RDD), memoria (Engram), linter de pre-commit (GGA) y desarrollo orgánico (ODD/D-ODD).
 
-#### 1. Selección de Modelos por Revisor (Per-Reviewer Model Selection):
+#### 1. Versiones y Binarios Verificados en el Sistema (`gentle-ai doctor` 8/8 Passed):
+- **`gentle-ai` (v3.7.0)**: CLI central y motor de orquestación (`C:\\Users\\damm1\\go\\bin\\gentle-ai.exe`).
+- **`engram` (v3.6.1)**: Motor de memoria persistente con SQLite WAL y servidor MCP (`C:\\Users\\damm1\\go\\bin\\engram.exe`).
+- **`gga` - Gentleman Guardian Angel (v2.10.1)**: Linter pre-commit e inspector de agentes (`C:\\Users\\damm1\\go\\bin\\gga.cmd`).
+- **`gentle-shell` (v4.5.1) & `pi` (v1.5.0)**: Terminal interactiva agéntica en entorno aislado (`~/.gentle-shell/agent`).
+- **`gentle-engram` (v0.4.2)**: Companion package de sincronización para Pi y Gentle-Shell.
+
+#### 2. Selección de Modelos por Revisor (Per-Reviewer Model Selection):
 Ahora decides con precisión quirúrgica dónde invertir tu presupuesto de tokens:
 - **Claude Code**: Puedes asignarle un modelo específico a cada uno de los seis revisores (riesgo, resiliencia, legibilidad, seguridad, rendimiento, arquitectura).
 - **OpenCode**: Permite editar los modelos de los agentes que implementan y exploran de forma independiente.
 - **Codex**: Configura modelos de los agentes de ODD y revisores, con presets incluidos para **GPT-6**.
 - **Degradación Elegante (Fallback)**: Si el modelo configurado no está disponible en el entorno o proveedor, el sistema cae automáticamente a uno soportado en vez de fallar o interrumpir el flujo.
 
-#### 2. Gentle-Shell como CLI Independiente (`npm i -g gentle-pi`):
+#### 3. Gentle-Shell como CLI Independiente (`npm i -g gentle-pi`):
 - **Aislamiento Total**: Se instala con su propio comando `gentle-shell` y corre en una carpeta aislada (`~/.gentle-shell/agent`), sin tocar ni ensuciar tu instalación previa de `pi`.
 - **Flag `--link`**: Si deseas reutilizar logins, credenciales, modelos locales y el historial de chats existente de tu `pi`, ejecuta:
   ```powershell
   gentle-shell --link
   ```
 - **Cero Configuración**: En el primer arranque provisiona automáticamente todas sus dependencias y arranca con el tema `Gentleman-Cute` por defecto. Si cambias de versión, se reconfigura solo.
-- **In-Pi Review**: Vuelve la compatibilidad completa de revisiones con modelos in-Pi provenientes de extensiones.
+- **In-Pi Review**: Compatibilidad completa de revisiones con modelos in-Pi provenientes de extensiones.
 
-#### 3. Estabilidad en Windows y Sincronización Automática (v3.6.x):
-- El hook de Claude Code opera de forma nativa y robusta en Windows con PowerShell.
-- `gentle-ai sync` detecta y desinstala automáticamente paquetes de preguntas de terceros conflictivos (como `rpiv-ask-user-question`), garantizando la supremacía del dock nativo de Gentle-Shell.
+#### 4. Guardrails y Revisión Inmutable (RDD):
+- El review viene encendido de fábrica con análisis de riesgo **fail-safe** (cualquier error de análisis se asume de alto riesgo por seguridad).
+- `gentle-ai doctor` verifica 8 subsistemas críticos (herramientas, binarios, estado de agentes, handshake MCP de engram y espacio de disco).
 """
-        console.print(Panel(Markdown(content), title="[bold]🎩 Suite Gentle-AI v3.7.0 & Gentle-Shell[/bold]", border_style=theme.accent))
+        console.print(Panel(Markdown(content), title="[bold]🎩 Suite Gentle-AI (v3.7.0 / v4.5.1 / v3.6.1)[/bold]", border_style=theme.accent))
 
     else:
         console.print(f"[red]Tópico desconocido: '{topic}'.[/red]")
