@@ -1518,7 +1518,7 @@ def _vault_evidence(project: str, query: str, max_chars: int = 1200) -> str:
 def handle_assess_decision(args: dict) -> str:
     """Gate semántico D-ODD: el LLM puntúa, el servidor clasifica, registra y calibra."""
     import decision_ledger as led
-    from creative_odd import assess, build_context_packet, calibrate, DIMENSIONS
+    from creative_odd import assess, build_context_packet, calibrate, recommend_specialists, DIMENSIONS
 
     objective = (args.get("objective") or "").strip()
     if not objective:
@@ -1536,13 +1536,18 @@ def handle_assess_decision(args: dict) -> str:
 
     if result["verdict"] != "d_odd":
         guidance = {
-            "fast_track": "Vía rápida: implementa directo, sin artefactos.",
-            "analytical": "Analítico: usa `query_code_graph` / `search_knowledge` y verifica con tests; no hace falta divergir.",
+            "fast_track": "Vía rápida: implementa directo (o 1 especialista ligero si es UI), sin artefactos.",
+            "analytical": "Analítico: despacha la flota de especialistas acotados usando `query_code_graph` / `recall_memory` y verifica con tests; no hace falta divergir.",
             "stabilize_first": "Incidente: contén y revierte primero; deja la exploración de diseño para después.",
         }[result["verdict"]]
+        fleet = recommend_specialists(objective, result["domain"])
+        fleet_block = ""
+        if fleet:
+            fleet_lines = "\n".join(f"  - `{sp['agent']}` (`model: {sp['model']}`): {sp['focus']}" for sp in fleet)
+            fleet_block = f"\n- **Especialistas recomendados**:\n{fleet_lines}"
         return (
             f"### D-ODD: no requiere divergencia · dominio `{result['domain']}` (total {result['total']}/15)\n"
-            f"- {result['reason']}\n- **Siguiente paso**: {guidance}{calib_note}"
+            f"- {result['reason']}\n- **Siguiente paso**: {guidance}{fleet_block}{calib_note}"
         )
 
     dec_id = led.open_decision(objective, project, result["dimensions"], result["domain"], conv)
@@ -1607,6 +1612,39 @@ def handle_close_decision(args: dict) -> str:
         mem_note = "\n- Registrada como memoria (Vault/Engram) para futuras tesis."
     except Exception as exc:
         mem_note = f"\n- ⚠️ No se pudo registrar la memoria: {exc}"
+
+    # Refuerzo sináptico silencioso y extracción de anti-patrón si hubo fallo/parcialidad
+    if SYNAPSE_ENGINE:
+        try:
+            proj_node = slugify(dec.get("project") or "general")
+            choice_node = (dec.get("chosen") or "odd").lower()
+            if outcome == "success":
+                SYNAPSE_ENGINE.record_activation(proj_node, context_type="d-odd-success", session_id=CURRENT_SESSION_ID or dec_id)
+                SYNAPSE_ENGINE.record_activation(choice_node, context_type="d-odd-success", session_id=CURRENT_SESSION_ID or dec_id)
+            elif outcome in ("failed", "partial"):
+                SYNAPSE_ENGINE.record_activation(f"antipattern:{proj_node}", context_type="d-odd-error", session_id=CURRENT_SESSION_ID or dec_id)
+        except Exception:
+            pass
+
+    if outcome in ("failed", "partial") and notes:
+        try:
+            errors_dir = DECISIONS_DIR.parent / "errores"
+            if DECISIONS_DIR.parent.exists():
+                errors_dir.mkdir(parents=True, exist_ok=True)
+                err_slug = slugify(f"{dec_id}-{dec['objective'][:35]}") or dec_id
+                err_file = errors_dir / f"error-{datetime.now().strftime('%Y-%m-%d')}-{err_slug}.md"
+                err_file.write_text(
+                    f"---\ntags: [error, anti-pattern, d-odd]\nproyecto: \"[[{dec['project']}]]\"\nfecha: {datetime.now().strftime('%Y-%m-%d')}\n---\n\n"
+                    f"# ⚠️ Anti-Patrón D-ODD ({dec_id} · {outcome})\n\n"
+                    f"- **Objetivo**: {dec['objective']}\n"
+                    f"- **Rama elegida**: `{dec.get('chosen') or 'n/a'}`\n"
+                    f"- **Síntesis evaluada**: {dec.get('synthesis') or 'n/a'}\n"
+                    f"- **Causa / Aprendizaje**: {notes}\n",
+                    encoding="utf-8",
+                )
+                mem_note += f"\n- Anti-patrón extraído automáticamente en `errores/{err_file.name}`."
+        except Exception:
+            pass
 
     rep = calibrate()
     s = led.stats()

@@ -309,18 +309,77 @@ def deal_visual_directions(objective: str, project: str = "General", count: int 
 
 
 # ---------------------------------------------------------------------------
+# Enrutamiento de Flota de Especialistas ODD (Proporcional al dominio Cynefin)
+# ---------------------------------------------------------------------------
+
+_DATA_PAT = re.compile(
+    r"\b(postgres\w*|sql\w*|supabase|migracion\w*|esquema\w*|tabla\w*|rls|indice\w*|base de datos|db|prisma|orm)\b"
+)
+_BACKEND_PAT = re.compile(
+    r"\b(api\w*|backend|servicio\w*|endpoint\w*|nestjs|fastapi|python|worker\w*|cola\w*|auth\w*|webhook\w*|mcp|cli)\b"
+)
+
+
+def recommend_specialists(objective: str, domain: str) -> List[Dict[str, str]]:
+    """Determina la flota mínima de especialistas según dominio Cynefin y capas afectadas."""
+    norm_obj = _norm(objective or "")
+    has_ui = is_ui_objective(objective)
+    has_data = bool(_DATA_PAT.search(norm_obj))
+    has_backend = bool(_BACKEND_PAT.search(norm_obj))
+
+    if domain == CynefinDomain.CLEAR.value:
+        if has_ui:
+            return [{"agent": "odd-ui-crafter", "model": "flash", "focus": "Ajuste UI puntual"}]
+        return []
+
+    fleet: List[Dict[str, str]] = []
+    if domain == CynefinDomain.COMPLEX.value:
+        fleet.append({
+            "agent": "odd-antithesis",
+            "model": "inherit",
+            "focus": "Propuesta neurodivergente aislada del Vault (primeros principios)",
+        })
+
+    if has_backend or not (has_ui or has_data):
+        fleet.append({
+            "agent": "odd-backend-architect",
+            "model": "inherit",
+            "focus": "Arquitectura, lógica de dominio, AST y contratos API",
+        })
+    if has_data:
+        fleet.append({
+            "agent": "odd-data-guardian",
+            "model": "inherit",
+            "focus": "Esquemas SQL, migraciones, RLS e integridad de datos",
+        })
+    if has_ui:
+        fleet.append({
+            "agent": "odd-ui-crafter",
+            "model": "inherit" if domain == CynefinDomain.COMPLEX.value else "flash",
+            "focus": "Interfaz, sistema de diseño y Veto Anti-Clon Visual",
+        })
+
+    fleet.append({
+        "agent": "odd-qa-sentinel",
+        "model": "flash",
+        "focus": "Verificación independiente (tests reales, build, Playwright)",
+    })
+    return fleet
+
+
+# ---------------------------------------------------------------------------
 # Paquete de contexto + protocolo (lo consumen el LLM y sus subagentes)
 # ---------------------------------------------------------------------------
 
 PROTOCOL_TEXT = """\
-## Protocolo D-ODD (divergencia con contextos aislados)
+## Protocolo D-ODD v3 (Divergencia + Especialistas + Cero Bucles)
 1. **Contrato de outcomes** (tú, antes de nada): job-to-be-done, 2-4 criterios de aceptación verificables, invariantes.
-2. **Tesis** — subagente CON acceso al Vault/MCP: la mejor solución alineada al historial del proyecto, citando las notas en las que se apoya.
-3. **Antítesis** — subagente SIN notas del Vault (pásale SOLO el contrato de outcomes, las provocaciones y, si es UI, las direcciones visuales sorteadas): solución desde primeros principios. No le compartas la tesis.
-   Lanza tesis y antítesis en paralelo. Si tu cliente no tiene subagentes, redacta la antítesis ANTES de leer la evidencia del Vault.
-4. **Síntesis** — evalúa ambas contra el contrato (no contra preferencias): elige `thesis`, `antithesis` o `hybrid` y justifica con criterios concretos.
-5. Llama `commit_decision` con la elección y la síntesis. Implementa. Al verificar con evidencia real, llama `close_decision`.
-Regla: si la antítesis no aporta nada mejor, elegir la tesis es un resultado válido; no fuerces la novedad. En UI/diseño visual de un proyecto nuevo, en cambio, **sí es obligatorio diferenciarse de proyectos anteriores del Vault**.
+2. **Tesis** — especialista(s) CON acceso a DevBrain/Vault: mejor solución alineada al historial del proyecto, citando las notas/errores en las que se apoya.
+3. **Antítesis (`odd-antithesis`)** — subagente SIN notas del Vault (`inheritMcp: false`): pásale SOLO el contrato de outcomes, las provocaciones y (si es UI) las direcciones visuales sorteadas. Lanza Tesis y Antítesis en paralelo.
+4. **Síntesis + Chequeo Adversarial de 1 Sola Pasada (Sin Bucles)**: evalúa ambas contra el contrato (`thesis`, `antithesis` o `hybrid`). Haz **1 único chequeo FMEA** (concurrencia, seguridad, edge cases) e incorpora cualquier mitigación directo como criterio de aceptación en `commit_decision`. **Prohibido abrir bucles de re-debate o guardar borradores intermedios en el Vault.**
+5. **Ejecución por Especialistas + Reporte a AGY**: despacha la flota asignando cada rebanada de contexto a su especialista (`odd-backend-architect`, `odd-data-guardian`, `odd-ui-crafter`, `odd-qa-sentinel`). Todos rinden cuentas al coordinador.
+6. **Cierre Silencioso (`close_decision`)**: al validar con evidencia real, llama `close_decision` para reforzar/penalizar sinapsis y cristalizar **1 única memoria limpia** en el cerebro, y entrega el reporte final consolidado al usuario.
+Regla: en UI de un proyecto nuevo **sí es obligatorio diferenciarse de proyectos anteriores del Vault**.
 """
 
 
@@ -328,6 +387,7 @@ def build_context_packet(objective: str, project: str, assessment: Dict[str, Any
                          vault_evidence: str = "", decision_id: str = "") -> str:
     provs = provocations_for(assessment["dominant_dimension"])
     dims = assessment["dimensions"]
+    fleet = recommend_specialists(objective, assessment["domain"])
     lines = [
         f"### 🌀 D-ODD activado — decisión `{decision_id}`" if decision_id else "### 🌀 D-ODD activado",
         f"- **Proyecto**: [[{project}]]",
@@ -337,8 +397,13 @@ def build_context_packet(objective: str, project: str, assessment: Dict[str, Any
         "- **Dimensiones**: " + ", ".join(f"{k}={v}" for k, v in dims.items()),
         "",
         PROTOCOL_TEXT,
-        "### 🎲 Provocaciones para la antítesis (elegidas por la dimensión dominante)",
+        "### 🤖 Flota de Especialistas Recomendada (Rinden cuentas a AGY)",
     ]
+    for sp in fleet:
+        lines.append(f"- **`{sp['agent']}`** (`model: {sp['model']}`): {sp['focus']}")
+
+    lines.append("")
+    lines.append("### 🎲 Provocaciones para la antítesis (elegidas por la dimensión dominante)")
     for p in provs:
         lines.append(f"- **{p['title']}**: {p['question']}")
 
@@ -355,7 +420,7 @@ def build_context_packet(objective: str, project: str, assessment: Dict[str, Any
             lines.append(f"- ** Disposición Espacial**: {d['layout']}")
 
     lines.append("")
-    lines.append("### 🏛️ Evidencia del Vault (SOLO para el subagente de tesis)")
+    lines.append("### 🏛️ Evidencia del Vault (SOLO para la rama de Tesis / Especialistas con MCP)")
     lines.append(vault_evidence.strip() if vault_evidence.strip() else "_Sin notas relevantes: la tesis se basa en el código actual del proyecto._")
     return "\n".join(lines)
 

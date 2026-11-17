@@ -3,7 +3,7 @@
 [![MCP Specification](https://img.shields.io/badge/MCP-2024--11--05-blue.svg)](https://modelcontextprotocol.io/)
 [![Version](https://img.shields.io/badge/version-3.7.0-brightgreen.svg)](https://github.com/DanielMMiralles/devbrain-mcp)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
-[![Gentle-AI](https://img.shields.io/badge/gentle--ai-3.7.0%20%7C%204.5.1-purple.svg)](https://github.com/Gentleman-Programming/gentle-ai)
+[![Gentle-AI](https://img.shields.io/badge/gentle--ai-4.5.0%20%7C%204.8.0-purple.svg)](https://github.com/Gentleman-Programming/gentle-ai)
 [![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
 
 **DevBrain** es un servidor unificado de [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) que actúa como un **Sistema Operativo Cognitivo, Controlador Lógico Programable (PLC) y Capa de Abstracción Superior sobre Gentle-AI**. Conecta modelos de IA con un cerebro de conocimiento en **Obsidian** (+6,350 notas técnicas), memoria Hebbiana neuroplástica, cuadro de mando ejecutivo vivo (**Portada**), motor de **Razonamiento Bi-Focal** y el marco **D-ODD (Dynamic Outcome-Driven Development)** con motor de varianza visual anti-clon.
@@ -23,12 +23,13 @@ Rompe el anclaje cognitivo estático del Vault aislando contextos entre la Tesis
 - Sortea direcciones de arte contrastadas por proyecto (*Swiss Technical Paper*, *ISA-101 High-Contrast Field HMI*, *Brutalist Hairline Matrix*, *Editorial Dossier Split*).
 - Exige la carga obligatoria de fuentes reales en `index.html` y tipografías industriales/editoriales diferenciadas.
 
-### 3. 🎩 Integración Completa con Gentle-AI Suite (Noviembre 2026)
-- **`gentle-ai` v3.7.0**: Capacidad de asignación granular de modelos por revisor con fallback tolerante a fallos.
-- **`gentle-shell` v4.5.1 / `pi` v1.5.0**: Terminal interactiva aislada en `~/.gentle-shell/agent` con soporte nativo de mensajería inter-orquestador.
-- **`engram` v3.6.1**: Motor de memoria persistente con handshake stdio y SQLite WAL.
+### 3. 🎩 Integración Completa con Gentle-AI Suite & Flota de Especialistas D-ODD v3
+- **`gentle-ai` v4.5.0**: CLI central y orquestación ODD/SDD con selección de modelos por revisor.
+- **`gentle-shell` v4.8.0 / `pi` v1.5.0**: Terminal interactiva aislada en `~/.gentle-shell/agent`.
+- **`engram` v3.7.2**: Motor de memoria persistente con handshake stdio y SQLite WAL.
 - **`gga` v2.10.1**: Gentleman Guardian Angel integrado globalmente en PATH.
-- **Diagnóstico Unificado**: `gentle-ai doctor` verificado en **8/8 checks pasados (Status: healthy)**.
+- **Flota de Especialistas AGY (`~/.gemini/config/agents/`)**: `odd-ui-crafter`, `odd-backend-architect`, `odd-data-guardian`, `odd-qa-sentinel` y `odd-antithesis` con enrutamiento proporcional Cynefin y chequeo FMEA de 1 sola pasada.
+- **Diagnóstico Unificado**: `gentle-ai doctor` verificado en **9/9 checks pasados (Status: healthy)**.
 
 ### 4. 📸 Automatización de Snapshots Semanales (`capture_weekly_snapshot`)
 - Motor nativo [`WeeklySnapshotEngine`](src/weekly_snapshot.py) que automatiza la "Foto de los Viernes".

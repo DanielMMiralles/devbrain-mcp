@@ -25,6 +25,7 @@ from creative_odd import (
     provocations_for,
     is_ui_objective,
     deal_visual_directions,
+    recommend_specialists,
     build_context_packet,
     calibrate,
     load_calibration,
@@ -44,7 +45,9 @@ from devbrain_mcp import (
 from plc_router import PLCRouter
 
 # Redirigir DECISIONS_DIR al directorio temporal para no escribir en el Vault real durante tests
-devbrain_mcp.DECISIONS_DIR = Path(_TMP_DIR.name)
+_TMP_DECISIONS = Path(_TMP_DIR.name) / "decisiones"
+_TMP_DECISIONS.mkdir(parents=True, exist_ok=True)
+devbrain_mcp.DECISIONS_DIR = _TMP_DECISIONS
 
 
 class TestCreativeODDv2(unittest.TestCase):
@@ -124,7 +127,7 @@ class TestCreativeODDv2(unittest.TestCase):
             "conversation_id": conv_id
         })
         self.assertIn("D-ODD activado", assess_res)
-        self.assertIn("Protocolo D-ODD (divergencia con contextos aislados)", assess_res)
+        self.assertIn("Protocolo D-ODD v3", assess_res)
 
         # Extraer decision_id
         open_decs = led.open_decisions(conv_id)
@@ -212,6 +215,56 @@ class TestCreativeODDv2(unittest.TestCase):
             "params": {"name": "d-odd", "arguments": {"objective": "Rediseñar dashboard industrial", "project_name": "Leopard"}}
         })
         self.assertIn("VETO ANTI-CLON VISUAL", pget["result"]["messages"][0]["content"]["text"])
+
+    def test_specialist_fleet_routing_and_1pass_fmea(self):
+        """Verifica el enrutamiento proporcional de especialistas y el chequeo FMEA de 1 pasada."""
+        clear_ui = recommend_specialists("Cambiar color del botón en UI", "clear")
+        self.assertEqual([s["agent"] for s in clear_ui], ["odd-ui-crafter"])
+        self.assertEqual(clear_ui[0]["model"], "flash")
+
+        comp_res = handle_assess_decision({
+            "objective": "Agregar índice y endpoint FastAPI sobre Postgres",
+            "project_name": "DevBrain",
+            "reversibility_cost": 1, "blast_radius": 1, "uncertainty": 1,
+            "vault_novelty": 1, "viable_alternatives": 1,
+        })
+        self.assertIn("Especialistas recomendados", comp_res)
+        self.assertIn("odd-backend-architect", comp_res)
+        self.assertIn("odd-data-guardian", comp_res)
+        self.assertIn("odd-qa-sentinel", comp_res)
+
+        cx_fleet = recommend_specialists("Construir backend API, esquema Postgres y dashboard UI", "complex")
+        names = [s["agent"] for s in cx_fleet]
+        self.assertIn("odd-antithesis", names)
+        self.assertIn("odd-backend-architect", names)
+        self.assertIn("odd-data-guardian", names)
+        self.assertIn("odd-ui-crafter", names)
+        self.assertIn("odd-qa-sentinel", names)
+
+    def test_close_decision_extracts_antipattern_on_failure(self):
+        """Verifica que cerrar una decisión fallida genere una nota anti-patrón en errores/."""
+        handle_assess_decision({
+            "objective": "Probar lock distribuido en memoria local",
+            "project_name": "DevBrain",
+            "reversibility_cost": 2, "blast_radius": 2, "uncertainty": 2,
+            "vault_novelty": 2, "viable_alternatives": 2,
+            "conversation_id": "conv-fail-test",
+        })
+        dec_id = led.open_decisions("conv-fail-test")[0]["id"]
+        handle_commit_decision({
+            "decision_id": dec_id,
+            "chosen": "thesis",
+            "synthesis": "Lock en memoria",
+            "write_to_disk": False,
+        })
+        close_res = handle_close_decision({
+            "decision_id": dec_id,
+            "outcome": "failed",
+            "notes": "Race condition bajo 2 workers concurrentes.",
+        })
+        self.assertIn("Anti-patrón extraído", close_res)
+        err_files = list((_TMP_DECISIONS.parent / "errores").glob("error-*.md"))
+        self.assertTrue(len(err_files) >= 1)
 
 
 if __name__ == "__main__":
