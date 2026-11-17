@@ -160,7 +160,8 @@ class TestCreativeODDv2(unittest.TestCase):
         # 5. Stats
         stats_res = handle_decision_ledger_stats({})
         self.assertIn("D-ODD · Bucle de aprendizaje", stats_res)
-        self.assertIn("100% de 1 comprometidas", stats_res)
+        self.assertIn("Antítesis adoptada (total o híbrida):", stats_res)
+        self.assertIn("comprometidas", stats_res)
 
     def test_orchestrate_gentle_task_with_d_odd(self):
         """Verifica que orchestrate_gentle_task enlace decisiones o sugiera assess sin forzar artefactos."""
