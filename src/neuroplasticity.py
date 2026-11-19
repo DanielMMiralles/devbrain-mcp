@@ -8,6 +8,7 @@ Este módulo implementa un motor de neuroplasticidad inspirado en principios bio
 - Poda Sináptica: Eliminación de sinapsis muy débiles para optimizar la red.
 """
 from __future__ import annotations
+import contextlib
 import sqlite3
 import datetime
 import secrets
@@ -38,11 +39,16 @@ class SynapticEngine:
         self.db_path = db_path
         self._init_db()
 
-    def _get_connection(self) -> sqlite3.Connection:
-        """Devuelve una conexión SQLite configurada."""
+    @contextlib.contextmanager
+    def _get_connection(self):
+        """Devuelve una conexión SQLite configurada y la cierra al salir del contexto."""
         conn = sqlite3.connect(self.db_path, timeout=10.0)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def _init_db(self) -> None:
         """Crea las tablas e índices si no existen."""

@@ -1,76 +1,51 @@
-# 🧠 DevBrain MCP Server (v3.7.0)
+# 🧠 DevBrain MCP Server (v4.0.0)
 
 [![MCP Specification](https://img.shields.io/badge/MCP-2024--11--05-blue.svg)](https://modelcontextprotocol.io/)
-[![Version](https://img.shields.io/badge/version-3.7.0-brightgreen.svg)](https://github.com/DanielMMiralles/devbrain-mcp)
+[![Version](https://img.shields.io/badge/version-4.0.0-brightgreen.svg)](https://github.com/DanielMMiralles/devbrain-mcp)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Gentle-AI](https://img.shields.io/badge/gentle--ai-4.5.0%20%7C%204.8.0-purple.svg)](https://github.com/Gentleman-Programming/gentle-ai)
 [![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
 
-**DevBrain** es un servidor unificado de [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) que actúa como un **Sistema Operativo Cognitivo, Controlador Lógico Programable (PLC) y Capa de Abstracción Superior sobre Gentle-AI**. Conecta modelos de IA con un cerebro de conocimiento en **Obsidian** (+6,350 notas técnicas), memoria Hebbiana neuroplástica, cuadro de mando ejecutivo vivo (**Portada**), motor de **Razonamiento Bi-Focal** y el marco **D-ODD (Dynamic Outcome-Driven Development)** con motor de varianza visual anti-clon.
+**DevBrain** es un Sistema Operativo Cognitivo sobre [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) que integra **Ontología Jerárquica de 4 Niveles**, **Búsqueda Híbrida Local (SQLite FTS5 + Vectores RRF)**, **Portada Viva Materializada**, **Instintos y Guardrails inspirados en ECC**, **Neuroplasticidad Hebbiana**, y **D-ODD v3** sobre la suite **Gentle-AI**.
 
 ---
 
-## 🌟 Novedades de la Versión 3.7.0 (D-ODD & Visual Variance Release)
+## 🌟 Novedades de la Versión 4.0.0 (Autonomía, Ontología 4-Niveles & Activación Nativa)
 
-### 1. 🌀 Marco D-ODD v2 (Dynamic Outcome-Driven Development)
-Rompe el anclaje cognitivo estático del Vault aislando contextos entre la Tesis (apoyada en la historia del proyecto) y la Antítesis (desde primeros principios, sin contaminación de notas):
-- **Gate Semántico Cynefin (`assess_decision`)**: Clasifica en 5 dimensiones (reversibilidad, blast radius, incertidumbre, novedad y alternativas) para activar divergencia lateral solo cuando amerita.
-- **Ledger Inmutable en SQLite WAL (`decision_ledger.py`)**: Registra el ciclo de vida completo (`open` -> `commit` -> `evidence` -> `close`).
-- **Bucle de Aprendizaje y Calibración Continua**: Recalibra dinámicamente el umbral del gate en base a la tasa de adopción de la antítesis y resultados observados.
+### 1. 🏛️ Ontología Jerárquica de 4 Niveles + Actividades tipo Beads
+- **`Dimensiones → Áreas → Proyectos → Actividades`** definida declarativamente en `06-SISTEMA/ontologia.yaml` y servida desde SQLite WAL fuera de OneDrive (`~/.devbrain/cortex.db`) en `<15ms`.
+- Resuelve aliases fragmentados automáticamente (`Lidera_project2026` → `Lidera-Project`, rutas locales → ID canónico).
+- Nivel 4 con grafo de dependencias (`ready` | `in_progress` | `blocked` | `done`).
 
-### 2. 🎨 Motor de Varianza Visual & Veto Anti-Clon
-- Evita que los modelos converjan por defecto en la misma plantilla oscura (`slate-950` + acentos ámbar + fila de 4 tarjetas Bento).
-- Sortea direcciones de arte contrastadas por proyecto (*Swiss Technical Paper*, *ISA-101 High-Contrast Field HMI*, *Brutalist Hairline Matrix*, *Editorial Dossier Split*).
-- Exige la carga obligatoria de fuentes reales en `index.html` y tipografías industriales/editoriales diferenciadas.
+### 2. 🔌 Plugin Nativo AGY + Hooks v4 + Patrones ECC (`affaan-m/ECC`)
+- Empaquetado como plugin nativo en `~/.gemini/config/plugins/devbrain/` (`SessionStart` con briefing L1 `<400` tokens, `PreInvocation` sin campos deprecated, `PreToolUse` guardrail contra `--no-verify` y fuga de secretos `<5ms`, `PostToolUse` y `Stop` con estado de sesión).
+- **ECC Instincts**: aprendizajes acotados al proyecto (`confidence: 0.40 → 0.95`) con auto-promoción a Área al alcanzar `>= 0.80` y `>= 3` confirmaciones.
 
-### 3. 🎩 Integración Completa con Gentle-AI Suite & Flota de Especialistas D-ODD v3
-- **`gentle-ai` v4.5.0**: CLI central y orquestación ODD/SDD con selección de modelos por revisor.
-- **`gentle-shell` v4.8.0 / `pi` v1.5.0**: Terminal interactiva aislada en `~/.gentle-shell/agent`.
-- **`engram` v3.7.2**: Motor de memoria persistente con handshake stdio y SQLite WAL.
-- **`gga` v2.10.1**: Gentleman Guardian Angel integrado globalmente en PATH.
-- **Flota de Especialistas AGY (`~/.gemini/config/agents/`)**: `odd-ui-crafter`, `odd-backend-architect`, `odd-data-guardian`, `odd-qa-sentinel` y `odd-antithesis` con enrutamiento proporcional Cynefin y chequeo FMEA de 1 sola pasada.
-- **Diagnóstico Unificado**: `gentle-ai doctor` verificado en **9/9 checks pasados (Status: healthy)**.
-
-### 4. 📸 Automatización de Snapshots Semanales (`capture_weekly_snapshot`)
-- Motor nativo [`WeeklySnapshotEngine`](src/weekly_snapshot.py) que automatiza la "Foto de los Viernes".
-- Agrega telemetría de tareas ODD, recibos RDD, salud del Cortex y actividad de proyectos.
-- Actualiza atómicamente la Portada y archiva un snapshot inmutable en `04-APRENDIZAJES/snapshots/snapshot-YYYY-WW.md`.
+### 3. 🔍 Búsqueda Híbrida Embebida (FTS5 + Vectorizer RRF) & Memoria Bi-Temporal
+- SQLite fuera de OneDrive (`~/.devbrain/cortex_fts.db`) con guarda contra archivos placeholder de OneDrive Files On-Demand.
+- Fusión Reciprocal Rank Fusion (BM25 + Similitud Coseno Vectorial NumPy 256D) y validez bi-temporal (`valid_from`, `valid_until`, `superseded_by`).
 
 ---
 
-## 🛠️ Catálogo Oficial de las 29 Herramientas MCP Nativas
+## 🛠️ Las 12 Herramientas Profundas MCP + 3 Resources (`v4.0.0`)
 
-| Categoría | Herramienta | Descripción | Ruta PLC |
+*(Todos los endpoints legacy siguen activos en `tools/call` por retrocompatibilidad.)*
+
+| Categoría | Herramienta / Resource | Descripción | Ruta PLC |
 | :--- | :--- | :--- | :---: |
-| **🌀 Marco D-ODD** | `assess_decision` | Gate semántico Cynefin (5 dimensiones), clasificación de veredicto y apertura de decisión. | `LOCAL_FAST` |
-| | `commit_decision` | Compromete síntesis (tesis/antítesis/híbrido) y genera tareas ODD espejadas en Engram. | `LOCAL_FAST` |
-| | `close_decision` | Cierra decisión con evidencia observada de tests y recalibra el gate. | `LOCAL_FAST` |
-| | `decision_ledger_stats` | Métricas del bucle de aprendizaje: adopción de antítesis y fire rate. | `LOCAL_FAST` |
-| | `stimulate_creative_odd` | Estimulación lateral con paquetes de contexto aislados y provocaciones. | `LOCAL_FAST` |
-| **🚀 Abstracción Gentle-AI** | `orchestrate_gentle_task` | Abstracción unificada Gentle-AI (ODD/SDD/FastPath en 1 paso automático). | `LOCAL_FAST` |
-| **📸 Portada & Snapshots** | `capture_weekly_snapshot` | Automatiza el snapshot semanal (Foto de los Viernes), actualiza `Portada.md` y calibra gate. | `LOCAL_FAST` |
-| **💡 Navegación & Contexto** | `get_project_context` | Recupera el 360° de un proyecto o la Portada ejecutiva en <20ms. | `LOCAL_FAST` |
-| | `list_projects` | Lista todos los proyectos insignia descubiertos y el estado de la Portada. | `LOCAL_FAST` |
-| | `search_knowledge` | Búsqueda FTS5 en +6,350 notas del Vault con reranker sináptico de Hebb. | `LOCAL_FAST` |
-| **🧠 Memoria Persistente** | `recall_memory` | Consulta decisiones históricas (ADRs) y reglas persistentes por proyecto. | `LOCAL_FAST` |
-| | `remember_decision` | Registra una nueva decisión arquitectónica duradera en Vault, Engram y SQLite WAL. | `LOCAL_FAST` |
-| **🏷️ ODD & Sesión** | `classify_odd_task` | Clasificación determinista (READ_ONLY, SMALL_DIRECT, SUBSTANTIAL_ODD). | `LOCAL_FAST` |
-| | `prepare_odd_task` | Genera el documento de feature ODD y su espejo en Engram. | `DELEGATABLE` |
-| | `reconcile_odd_resume` | Reconcilia estado local vs memoria Engram y muestra decisiones D-ODD abiertas. | `DELEGATABLE` |
-| | `orchestrator_session_bridge` | Mensajería inter-sesión con semántica ACK para Gentle-Shell. | `ORCHESTRATE` |
-| **📋 OpenSpec / SDD** | `prepare_sdd_preflight` | Bloque de autoridad y contexto SDD liviano. | `ORCHESTRATE` |
-| | `propose_spec` | Crea propuestas formales OpenSpec bajo demanda explícita. | `DELEGATABLE` |
-| | `validate_spec` | Valida cumplimiento de especificaciones spec.md. | `DELEGATABLE` |
-| | `get_spec_questions` | Cuestionario adaptativo por tipo de sistema (API, CLI, Frontend). | `LOCAL_FAST` |
-| | `generate_scaffold` | Generación de esqueletos de código limpios en NestJS o FastAPI. | `DELEGATABLE` |
-| **🛡️ Gobernanza & Calidad** | `package_project_context` | Empaqueta el código real en un bundle Markdown ultracompacto (-85% tokens). | `DELEGATABLE` |
-| | `audit_project_health` | Auditoría con diagnóstico en vivo de Gentle-AI doctor. | `DELEGATABLE` |
-| | `debate_project_feasibility` | Protocolo Red Team para desafiar viabilidad, acoplamientos y costos ocultos. | `DELEGATABLE` |
-| | `audit_cortex_health` | Audita salud del cerebro: enlaces rotos, duplicados y notas viejas (LTD). | `DELEGATABLE` |
-| **⚡ Optimización & Grafo** | `optimize_token_budget` | Compresión de contexto mediante AST code slicing y deduplicación diferencial. | `LOCAL_FAST` |
-| | `route_model_dispatch` | Gateway inteligente que selecciona el modelo óptimo (Fast, Frontier, Coder). | `LOCAL_FAST` |
-| | `query_code_graph` | Consulta el grafo sintáctico para clases, módulos y métodos. | `DELEGATABLE` |
-| | `sync_project_graph` | Indexa el código fuente y genera el grafo AST del proyecto (Graphify). | `DELEGATABLE` |
+| **🧠 Contexto v4** | `brain_context` | Lectura unificada (`<40ms`): Portada L1, Linaje 4-niveles, Actividades, Instintos y Búsqueda Híbrida RRF. | `LOCAL_FAST` |
+| **🏛️ Ontología v4** | `brain_tree` | Navega `Dimensión → Área → Proyecto → Actividad`, lista tareas `ready` o sincroniza `ontologia.yaml`. | `LOCAL_FAST` |
+| **📋 Actividades v4** | `brain_activity` | Gestiona actividades con `blocked_by` y regenera `Portada.md` atómicamente. | `LOCAL_FAST` |
+| **🧩 Memoria v4** | `brain_remember` | Registra decisiones (con reemplazo bi-temporal `supersedes`) o instintos ECC por proyecto. | `LOCAL_FAST` |
+| **🌀 Marco D-ODD** | `assess_decision` | Gate Cynefin (5 dims), recomienda flota de especialistas y abre divergencia Tesis/Antítesis. | `LOCAL_FAST` |
+| | `commit_decision` | Compromete síntesis, espeja Engram, crea actividades Nivel 4 y actualiza `Portada.md`. | `LOCAL_FAST` |
+| | `close_decision` | Cierra con evidencia real, refuerza sinapsis/instintos, extrae anti-patrón si falló y actualiza Portada. | `LOCAL_FAST` |
+| | `decision_ledger_stats` | Métricas de adopción de antítesis y calibración del gate. | `LOCAL_FAST` |
+| **🚀 Gentle-AI** | `orchestrate_gentle_task` | Abstracción unificada Gentle-AI (ODD / SDD / Fast-Path en 1 paso). | `LOCAL_FAST` |
+| **🌲 Grafo AST** | `query_code_graph` | Consulta el grafo sintáctico AST para clases, módulos y dependencias. | `DELEGATABLE` |
+| **🩺 Cortex & HUD** | `audit_cortex_health` | Audita enlaces rotos, duplicados y poda sináptica. | `DELEGATABLE` |
+| | `capture_weekly_snapshot` | Snapshot semanal leyendo métricas de SQLite + materialización de `Portada.md`. | `LOCAL_FAST` |
+| **📡 Resources** | `devbrain://portada\|tree\|ready` | Recursos MCP nativos expuestos en `resources/list` y `resources/read`. | `RESOURCE` |
 
 ---
 
@@ -83,13 +58,13 @@ Rompe el anclaje cognitivo estático del Vault aislando contextos entre la Tesis
 devbrain live
 
 # Capturar la foto semanal de los viernes (Snapshot)
-devbrain snapshot -v "Cierre de semana: suite Playwright y RBAC validados."
+devbrain snapshot -v "Cierre de semana: DevBrain v4 operativo."
 
 # Diagnóstico unificado
 devbrain doctor
 ```
 
-### Opción 2: Configuración en Google Antigravity / Gemini CLI (`mcp_config.json`)
+### Opción 2: Google Antigravity / Gemini CLI (`mcp_config.json` + Plugin Nativo)
 
 ```json
 {
@@ -127,11 +102,9 @@ devbrain doctor
 
 ## 🧪 Verificación de Contratos y Tests
 
-La suite automatizada valida el 100% de la especificación MCP sobre stdio JSON-RPC:
-
 ```bash
+py -3.12 -m unittest discover -s tests -p "test_*.py" -v
 py -3.12 tests/test_mcp_stdio.py
-py -3.12 -m pytest tests/test_odd_mcp.py
 ```
 
 ---

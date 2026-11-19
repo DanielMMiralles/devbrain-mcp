@@ -107,7 +107,8 @@ SIGNALS: Dict[str, List[str]] = {
         r"\bconviene\b", r"\bdeberiamos\b", r"\breemplaz\w*", r"\badopt\w*", r"\bestrateg\w*",
         r"\breestructur\w*", r"\bredisen\w*", r"\bdesacopl\w*", r"\bdecoupl\w*", r"\bdesign\w*",
         r"\barchitect\w*", r"\bchoose\b", r"\bshould we\b", r"\breplace\b", r"\bplanteamiento\b",
-        r"\benfoque\b", r"\biniciar proyecto\b", r"\bdesde cero\b",
+        r"\benfoque\b", r"\biniciar proyecto\b", r"\bdesde cero\b", r"\bmejorar\b", r"\bpotenciar\b",
+        r"\bevolucion\w*", r"\borganiz\w*",
     ],
     "comparatives": [
         r"\bvs\.?\b", r"\bversus\b", r"\bo bien\b", r"\ben lugar de\b", r"\bmejor (manera|forma|opcion)\b",
@@ -120,11 +121,12 @@ SIGNALS: Dict[str, List[str]] = {
         r"\bmicroservici\w*", r"\bmonolito\b", r"\bevent\w* bus\b", r"\bprotocolo\b",
         r"\bdashboard\w*", r"\bprototipo\w*", r"\binterfaz\b", r"\bidentidad visual\b",
         r"\bsistema de diseno\b", r"\bui/ux\b", r"\blanding\b", r"\bconsola\b",
+        r"\bontolog\w*", r"\bjerarqui\w*", r"\bportada\b", r"\bautonomi\w*", r"\bestructura\b",
     ],
     "stack_terms": [
         r"\bkafka\b", r"\bpostgres\w*", r"\bredis\b", r"\bsqlite\b", r"\bmongo\w*", r"\bgraphql\b",
         r"\bkubernetes\b", r"\bk8s\b", r"\bsupabase\b", r"\bnestjs\b", r"\bfastapi\b", r"\bnext\.?js\b",
-        r"\brabbitmq\b", r"\bwebsockets?\b", r"\bgrpc\b", r"\brest\b", r"\borm\b", r"\bsse\b",
+        r"\brabbitmq\b", r"\bwebsockets?\b", r"\bgrpc\b", r"\brest\b", r"\borm\b", r"\bsse\b", r"\bmcp\b",
     ],
     "weak_verbs": [r"\brefactor\w*", r"\bevalu\w*", r"\boptimiz\w*", r"\bintegr\w*", r"\bimplement\w*"],
     "trivial_dampeners": [
@@ -147,13 +149,18 @@ def gate_score(text: str, cal: Optional[Dict[str, Any]] = None) -> Dict[str, Any
     t = _norm(text or "")
     weights = cal["weights"]
     caps = cal.get("caps", {})
-    hits: Dict[str, int] = {}
+    hits: Dict[str, int] = {
+        group: sum(1 for p in pats if p.search(t))
+        for group, pats in _COMPILED.items()
+    }
+    hits = {k: v for k, v in hits.items() if v > 0}
+    has_design_intent = bool(
+        hits.get("decision_verbs") or hits.get("comparatives") or hits.get("structural_nouns", 0) >= 2
+    )
     score = 0.0
-    for group, pats in _COMPILED.items():
-        n = sum(1 for p in pats if p.search(t))
-        if not n:
-            continue
-        hits[group] = n
+    for group, n in hits.items():
+        if group == "read_only_dampeners" and has_design_intent:
+            continue  # Un pedido de análisis + rediseño arquitectónico no es read-only trivial
         w = float(weights.get(group, 0.0))
         if group in caps:
             contrib = min(w * n, float(caps[group]))

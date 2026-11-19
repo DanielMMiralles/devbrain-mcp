@@ -149,6 +149,16 @@ try:
 except Exception as e:
     sys.stderr.write(f"[DevBrain] Info: Telemetría en modo fallback: {e}\n")
 
+# Inicializar Ontología 4-Niveles, Actividades tipo Beads & Instintos ECC (DevBrain v4.0)
+ONTOLOGY = None
+try:
+    import ontology_engine as ONTOLOGY
+    ONTOLOGY.sync_ontology_yaml(vault_dir=VAULT_DIR)
+    sys.stderr.write("[DevBrain] Ontología 4-Niveles (cortex.db) activa\n")
+except Exception as e:
+    ONTOLOGY = None
+    sys.stderr.write(f"[DevBrain] Info: Ontología en modo fallback: {e}\n")
+
 # ==========================================
 # 2. BASE DE CONOCIMIENTO EMBEBIDA (OFFLINE FALLBACK)
 # ==========================================
@@ -291,385 +301,169 @@ BUILTIN_KNOWLEDGE = {
 }
 
 # ==========================================
-# 3. MANIFIESTO DE HERRAMIENTAS UNIFICADAS
+# 3. MANIFIESTO DE 12 HERRAMIENTAS PROFUNDAS (DEVBRAIN v4.0)
+#    (Los 29+ endpoints legacy siguen activos en tools/call por compatibilidad)
 # ==========================================
 TOOLS_MANIFEST = [
     {
-        "name": "get_project_context",
-        "description": "Recupera la documentacion tecnica, stack, dependencias y arquitectura de un proyecto insignia o del workspace actual.",
+        "name": "brain_context",
+        "description": "Lectura unificada del cerebro (<40ms). Sin argumentos devuelve la Portada Viva L1; con project y/o query devuelve su linaje (Dimensión>Área>Proyecto), actividades activas, instintos vigentes y búsqueda híbrida (FTS5 + Vectores RRF).",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_name": {
-                    "type": "string",
-                    "description": "Nombre o palabra clave del proyecto (ej: 'Chambita', 'AliaLog', 'Narval', 'current')"
-                }
-            },
-            "required": ["project_name"]
-        }
-    },
-    {
-        "name": "search_knowledge",
-        "description": "Busca conceptos tecnicos, patrones de arquitectura (GoF/Cloud), gotchas, DDD y buenas practicas (con fallback autonomo si no hay Vault).",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Termino tecnico a buscar (ej: 'CQRS', 'Outbox', 'BOLA', 'Consistent Hashing', 'Circuit Breaker')"
-                }
-            },
-            "required": ["query"]
-        }
-    },
-    {
-        "name": "list_projects",
-        "description": "Lista todos los proyectos documentados o descubiertos en disco con su estado y rutas.",
-        "inputSchema": {"type": "object", "properties": {}}
-    },
-    {
-        "name": "propose_spec",
-        "description": "Crea una propuesta OpenSpec (SDD) para una nueva capacidad con proposal.md, spec.md, design.md y tasks.md.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "feature_name": {"type": "string", "description": "Nombre descriptivo de la funcionalidad"},
-                "project": {"type": "string", "description": "Nombre del proyecto destino"},
-                "stack": {"type": "string", "description": "Stack tecnologico sugerido"}
-            },
-            "required": ["feature_name"]
-        }
-    },
-    {
-        "name": "validate_spec",
-        "description": "Valida que un archivo spec.md cumpla al 100% con los estandares OpenSpec y BDD formal.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "spec_name": {"type": "string", "description": "Nombre o slug de la especificacion a validar"}
-            },
-            "required": ["spec_name"]
-        }
-    },
-    {
-        "name": "get_spec_questions",
-        "description": "Genera preguntas clave adaptadas por tipo de sistema (api, agent, microservice, frontend) para redactar el spec.md.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "system_type": {
-                    "type": "string",
-                    "enum": ["api", "agent", "microservice", "frontend"],
-                    "description": "Tipo de arquitectura a especificar"
-                }
-            },
-            "required": ["system_type"]
-        }
-    },
-    {
-        "name": "generate_scaffold",
-        "description": "Genera codigo funcional esqueleto en NestJS o FastAPI a partir de una especificacion OpenSpec.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "spec_name": {"type": "string", "description": "Nombre de la spec a generar codigo"},
-                "framework": {"type": "string", "enum": ["nestjs", "fastapi"], "description": "Framework destino"}
-            },
-            "required": ["spec_name", "framework"]
-        }
-    },
-    {
-        "name": "prepare_sdd_preflight",
-        "description": "Genera el bloque de autoridad y contexto '## SDD Session Preflight' (Gentle-AI v3.0 Lightened SDD Contract) para despachar subagentes cuando se elige explícitamente el flujo SDD.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "feature_name": {"type": "string", "description": "Nombre de la tarea o feature a delegar"},
-                "project_name": {"type": "string", "description": "Nombre del proyecto (ej: 'Narval-SGN', 'Chambita')"},
-                "task_scope": {"type": "string", "description": "Límites y alcance exacto de lo que debe hacer el subagente"},
-                "allowed_files": {"type": "array", "items": {"type": "string"}, "description": "Lista de archivos permitidos a modificar"},
-                "acceptance_criteria": {"type": "array", "items": {"type": "string"}, "description": "Criterios de aceptación verificables"}
-            },
-            "required": ["feature_name", "project_name"]
-        }
-    },
-    {
-        "name": "remember_decision",
-        "description": "Guarda una decision arquitectonica o directriz en la memoria persistente del agente (local o en Vault).",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "title": {"type": "string", "description": "Titulo corto de la directriz o decision"},
-                "details": {"type": "string", "description": "Explicacion detallada de la regla o decision tomada"},
-                "project": {"type": "string", "description": "Proyecto aplicable (o 'General')"},
-                "tags": {"type": "array", "items": {"type": "string"}, "description": "Etiquetas tematicas"}
-            },
-            "required": ["title", "details"]
-        }
-    },
-    {
-        "name": "recall_memory",
-        "description": "Recupera decisiones arquitectonicas, reglas de diseno o lecciones pasadas de la memoria persistente.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Palabra clave o tema a consultar en memoria"},
-                "project": {"type": "string", "description": "Filtro opcional de proyecto"}
-            },
-            "required": ["query"]
-        }
-    },
-    {
-        "name": "package_project_context",
-        "description": "Genera un bundle markdown ultracompacto del codigo real de un proyecto para ahorrar tokens.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "project_name": {"type": "string", "description": "Nombre del proyecto (ej: 'Chambita', 'AliaLog', o ruta local)"}
-            },
-            "required": ["project_name"]
-        }
-    },
-    {
-        "name": "audit_project_health",
-        "description": "Audita el estado de salud, numero de dependencias y contenerizacion Docker de los proyectos.",
-        "inputSchema": {"type": "object", "properties": {}}
-    },
-    {
-        "name": "debate_project_feasibility",
-        "description": "Evalua una propuesta o arquitectura aplicando el protocolo Red Team sin filtros de cortesia.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "proposal_text": {"type": "string", "description": "Texto detallado de la propuesta"},
-                "project_name": {"type": "string", "description": "Nombre del proyecto o iniciativa"}
-            },
-            "required": ["proposal_text"]
-        }
-    },
-    {
-        "name": "optimize_token_budget",
-        "description": "Optimiza y comprime contexto (AST slicing de código, chunking sináptico de notas con presupuesto estricto de tokens y deduplicación diferencial).",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "target_text": {"type": "string", "description": "Texto de código fuente, notas o contexto a optimizar"},
-                "context_type": {"type": "string", "description": "Tipo de contexto: 'code', 'knowledge' o 'session'", "default": "code"},
-                "max_tokens": {"type": "integer", "description": "Límite superior de tokens deseado", "default": 1200},
-                "language": {"type": "string", "description": "Lenguaje de programación ('python', 'typescript', 'auto')", "default": "auto"},
-                "focus_symbol": {"type": "string", "description": "Símbolo, función o tema al que dar prioridad de detalle"}
-            },
-            "required": ["target_text"]
-        }
-    },
-    {
-        "name": "audit_cortex_health",
-        "description": "Audita la integridad del cerebro: enlaces rotos ([[...]]), notas obsoletas (LTD), duplicados semánticos y poda sináptica.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "auto_prune": {"type": "boolean", "description": "Si es true, poda automáticamente sinapsis residuales débiles (<0.1)", "default": False},
-                "scan_broken_links": {"type": "boolean", "description": "Escanea enlaces rotos a notas inexistentes", "default": True},
-                "scan_duplicates": {"type": "boolean", "description": "Detecta notas con solapamiento semántico o títulos redundantes", "default": True}
+                "project": {"type": "string", "description": "Nombre, alias o ruta del proyecto (opcional; vacío = Portada L1)"},
+                "query": {"type": "string", "description": "Pregunta o tema técnico para búsqueda híbrida en memorias y conocimiento (opcional)"},
+                "include_historical": {"type": "boolean", "description": "Incluir decisiones marcadas como obsoletas/superseded (default: false)", "default": False}
             }
         }
     },
     {
-        "name": "query_code_graph",
-        "description": "Consulta el grafo sintactico (AST) para ver que clases o modulos dependen de un simbolo.",
+        "name": "brain_tree",
+        "description": "Navega programáticamente la jerarquía de 4 niveles (Dimensiones -> Áreas -> Proyectos -> Actividades) o lista tareas desbloqueadas ('ready').",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_name": {"type": "string", "description": "Nombre del proyecto"},
-                "symbol_name": {"type": "string", "description": "Nombre de la clase o funcion"}
-            },
-            "required": ["project_name", "symbol_name"]
+                "mode": {"type": "string", "enum": ["tree", "ready", "sync"], "default": "tree", "description": "tree: árbol completo/filtrado · ready: actividades listas sin bloqueos · sync: recarga ontologia.yaml"},
+                "dimension": {"type": "string", "description": "Filtro por ID de Dimensión (ej: D1, D2, D3)"},
+                "area": {"type": "string", "description": "Filtro por ID de Área"},
+                "project": {"type": "string", "description": "Filtro por nombre o alias de Proyecto"},
+                "include_done": {"type": "boolean", "default": False}
+            }
         }
     },
     {
-        "name": "sync_project_graph",
-        "description": "Indexa el codigo fuente de un proyecto y genera el grafo sintactico AST en formato JSON.",
+        "name": "brain_activity",
+        "description": "Gestiona Actividades (Nivel 4 de la ontología, grafo con dependencias blocked_by) y regenera Portada.md automáticamente.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "project_path": {"type": "string", "description": "Ruta en disco del directorio del proyecto"}
-            },
-            "required": ["project_path"]
-        }
-    },
-    {
-        "name": "route_model_dispatch",
-        "description": "Recomienda el mejor modelo de lenguaje (LLM) segun complejidad, ventana de contexto y costes.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "task_type": {"type": "string", "description": "Tipo de tarea (ej: 'debate', 'architecture', 'daemon', 'scaffold')"}
-            },
-            "required": ["task_type"]
-        }
-    },
-    {
-        "name": "prepare_odd_task",
-        "description": "Genera el documento de feature ODD 'odd/tasks/<feature>.md' y el payload espejado en Engram 'odd/<feature>/tasks' (Gentle-AI v3.0).",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "feature_name": {"type": "string", "description": "Nombre o slug de la funcionalidad/tarea"},
-                "project_name": {"type": "string", "description": "Proyecto asociado (o 'General')"},
-                "objective": {"type": "string", "description": "Objetivo, problema a resolver y justificación del valor"},
-                "scope": {"type": "string", "description": "Límites y restricciones técnicas"},
-                "tasks": {"type": "array", "items": {"type": "string"}, "description": "Lista de tareas accionables con criterio ~400 líneas"},
-                "acceptance_criteria": {"type": "array", "items": {"type": "string"}, "description": "Criterios de aceptación verificables"},
-                "tdd_mode": {"type": "boolean", "description": "True para activar exigencia de TDD observado (RED -> GREEN -> REFACTOR)"},
-                "test_runner": {"type": "string", "description": "Comando runner de pruebas (ej: 'pytest', 'pnpm test')"},
-                "write_to_disk": {"type": "boolean", "description": "True para guardar directamente en odd/tasks/<feature>.md"}
-            },
-            "required": ["feature_name", "objective"]
-        }
-    },
-    {
-        "name": "classify_odd_task",
-        "description": "Evalua deterministamente una petición según las reglas de ODD (READ_ONLY, SMALL_DIRECT, SUBSTANTIAL_ODD, EXPLICIT_SDD).",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "request_description": {"type": "string", "description": "Descripción de la solicitud o prompt del usuario"},
-                "files_touched_estimate": {"type": "integer", "description": "Estimación de archivos a modificar (default: 1)"},
-                "is_read_only": {"type": "boolean", "description": "True si el pedido es solo lectura o explicación"},
-                "explicit_sdd_requested": {"type": "boolean", "description": "True si el usuario pidió explícitamente SDD"}
-            },
-            "required": ["request_description"]
-        }
-    },
-    {
-        "name": "reconcile_odd_resume",
-        "description": "Reconcilia el estado de tareas locales y la memoria de Engram al reanudar una sesión ODD interrumpida.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "feature_name": {"type": "string", "description": "Nombre de la feature a reanudar"},
-                "project_name": {"type": "string", "description": "Proyecto asociado"},
-                "file_content": {"type": "string", "description": "Contenido actual del archivo odd/tasks/<feature>.md si existe"},
-                "engram_mirror_content": {"type": "string", "description": "Contenido recuperado de Engram odd/<feature>/tasks"}
-            },
-            "required": ["feature_name"]
-        }
-    },
-    {
-        "name": "orchestrator_session_bridge",
-        "description": "Valida y formatea notificaciones del protocolo inter-orquestador de Gentle-Shell (main) con semántica ACK.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["explain", "format_notification", "verify_ack"],
-                    "description": "Acción a realizar dentro del protocolo inter-sesión"
-                },
-                "session_id": {"type": "string", "description": "ID de la sesión emisora"},
-                "target_session_id": {"type": "string", "description": "ID de la sesión par destinataria"},
-                "message_payload": {"type": "string", "description": "Mensaje o payload a transmitir"},
-                "ack_received": {"type": "boolean", "description": "Resultado de la recepción de ACK de transporte"}
+                "action": {"type": "string", "enum": ["create", "start", "block", "done", "ready", "list"], "description": "Acción sobre la actividad"},
+                "project": {"type": "string", "description": "Proyecto (se resuelve por alias)"},
+                "title": {"type": "string", "description": "Título de la actividad (requerido en create)"},
+                "activity_id": {"type": "string", "description": "ID de actividad (ej: act-xxxxxxxx)"},
+                "blocked_by": {"type": "string", "description": "ID de actividad bloqueante (opcional)"},
+                "priority": {"type": "integer", "minimum": 1, "maximum": 3, "default": 2}
             },
             "required": ["action"]
         }
     },
     {
-        "name": "orchestrate_gentle_task",
-        "description": "Capa de abstracción superior sobre Gentle-AI: clasifica la tarea, prepara la feature ODD/SDD y sincroniza con Engram en 1 solo paso automático sin burocracia procedimental.",
+        "name": "brain_remember",
+        "description": "Registra conocimiento duradero: decisiones arquitectónicas (con reemplazo bi-temporal opcional vía 'supersedes') o instintos atomizados por proyecto (ECC continuous-learning). Actualiza Portada.md.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "task_description": {"type": "string", "description": "Descripción clara del objetivo o tarea a realizar"},
-                "project_name": {"type": "string", "description": "Nombre del proyecto (ej: 'Narval-SGN', 'Chambita', o 'General')"},
-                "feature_name": {"type": "string", "description": "Nombre corto o slug de la feature (opcional)"},
-                "mode": {"type": "string", "enum": ["auto", "direct", "odd", "sdd", "creative", "d_odd"], "description": "Modo de ejecución deseado (default: 'auto')", "default": "auto"},
-                "decision_id": {"type": "string", "description": "ID de una decisión D-ODD ya comprometida para enlazarla al documento ODD (opcional)"}
+                "kind": {"type": "string", "enum": ["decision", "instinct", "supersede"], "default": "decision"},
+                "title": {"type": "string", "description": "Título de la decisión o trigger del instinto"},
+                "details": {"type": "string", "description": "Regla, decisión o patrón aprendido"},
+                "project": {"type": "string", "description": "Proyecto aplicable (o 'General')"},
+                "supersedes": {"type": "string", "description": "Título/query de decisión previa que queda obsoleta (bi-temporal)"},
+                "scope_type": {"type": "string", "enum": ["project", "area", "dimension", "global"], "default": "project"},
+                "tags": {"type": "array", "items": {"type": "string"}}
             },
-            "required": ["task_description"]
+            "required": ["title", "details"]
         }
     },
     {
         "name": "assess_decision",
-        "description": "Gate D-ODD: llámala ANTES de actuar cuando una petición pueda implicar una decisión de diseño/arquitectura (o cuando un mensaje [D-ODD gate] lo pida). Puntúa 5 dimensiones de 0 a 3; el servidor determina el dominio Cynefin. Si es complejo abre una decisión en el ledger y devuelve el protocolo de divergencia (tesis con Vault vs antítesis sin Vault, en subagentes aislados). Si no, indica seguir por la vía rápida. Tu veredicto calibra el gate automáticamente.",
+        "description": "Gate D-ODD v3: llámala ANTES de actuar cuando una petición implique diseño, arquitectura o UI nueva. Puntúa 5 dimensiones (0-3); clasifica Cynefin, recomienda flota de especialistas y si es complejo abre decisión con divergencia Tesis vs Antítesis.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "objective": {"type": "string", "description": "La decisión o problema, en una frase"},
                 "project_name": {"type": "string", "description": "Proyecto del Vault (o 'General')"},
-                "reversibility_cost": {"type": "integer", "minimum": 0, "maximum": 3, "description": "0 = se revierte trivialmente · 3 = prácticamente irreversible (datos, contratos públicos)"},
-                "blast_radius": {"type": "integer", "minimum": 0, "maximum": 3, "description": "0 = una función · 3 = varios sistemas/equipos"},
-                "uncertainty": {"type": "integer", "minimum": 0, "maximum": 3, "description": "0 = respuesta conocida · 3 = nadie sabe qué funcionará"},
-                "vault_novelty": {"type": "integer", "minimum": 0, "maximum": 3, "description": "0 = el Vault ya lo resolvió igual · 3 = nada parecido en el historial"},
-                "viable_alternatives": {"type": "integer", "minimum": 0, "maximum": 3, "description": "0 = una sola opción razonable · 3 = muchas opciones con trade-offs reales"},
-                "incident": {"type": "boolean", "description": "True si hay un incidente activo (producción caída, pérdida de datos)"},
-                "conversation_id": {"type": "string", "description": "ID de conversación si te lo dio el gate (enlaza evidencia y calibración)"}
+                "reversibility_cost": {"type": "integer", "minimum": 0, "maximum": 3},
+                "blast_radius": {"type": "integer", "minimum": 0, "maximum": 3},
+                "uncertainty": {"type": "integer", "minimum": 0, "maximum": 3},
+                "vault_novelty": {"type": "integer", "minimum": 0, "maximum": 3},
+                "viable_alternatives": {"type": "integer", "minimum": 0, "maximum": 3},
+                "incident": {"type": "boolean"},
+                "conversation_id": {"type": "string"}
             },
             "required": ["objective", "reversibility_cost", "blast_radius", "uncertainty", "vault_novelty", "viable_alternatives"]
         }
     },
     {
         "name": "commit_decision",
-        "description": "Registra la síntesis D-ODD de una decisión abierta: qué se eligió (thesis | antithesis | hybrid) y por qué, evaluado contra el contrato de outcomes. Crea el documento ODD con tareas y lo espeja en Engram.",
+        "description": "Compromete la síntesis D-ODD (thesis | antithesis | hybrid), crea tareas ODD espejadas en Engram, registra actividades en Nivel 4 y actualiza Portada.md.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "decision_id": {"type": "string"},
                 "chosen": {"type": "string", "enum": ["thesis", "antithesis", "hybrid"]},
-                "synthesis": {"type": "string", "description": "Justificación contra los criterios de aceptación"},
+                "synthesis": {"type": "string"},
                 "acceptance_criteria": {"type": "array", "items": {"type": "string"}},
                 "tasks": {"type": "array", "items": {"type": "string"}},
-                "write_to_disk": {"type": "boolean", "description": "Guardar odd/tasks/<feature>.md (default: true)"}
+                "write_to_disk": {"type": "boolean", "default": True}
             },
             "required": ["decision_id", "chosen", "synthesis"]
         }
     },
     {
         "name": "close_decision",
-        "description": "Cierra una decisión D-ODD con su resultado observado. Alimenta el bucle de aprendizaje (estadísticas y calibración del gate) y la registra como memoria.",
+        "description": "Cierra una decisión D-ODD con resultado observado (success | partial | failed | abandoned), refuerza sinapsis/instintos, extrae anti-patrón si falló y actualiza Portada.md.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "decision_id": {"type": "string"},
                 "outcome": {"type": "string", "enum": ["success", "partial", "failed", "abandoned"]},
-                "notes": {"type": "string", "description": "Qué se aprendió; qué harías distinto"}
+                "notes": {"type": "string"}
             },
             "required": ["decision_id", "outcome"]
         }
     },
     {
         "name": "decision_ledger_stats",
-        "description": "Métricas del bucle D-ODD: decisiones por estado, % de antítesis adoptadas, resultados, evidencia y calibración actual del gate.",
+        "description": "Métricas del bucle D-ODD: decisiones por estado, % de antítesis adoptadas, evidencia y calibración del gate.",
         "inputSchema": {"type": "object", "properties": {}}
     },
     {
-        "name": "stimulate_creative_odd",
-        "description": "Devuelve el protocolo D-ODD y un paquete de contexto (provocaciones + evidencia del Vault para la tesis) para explorar un problema de forma divergente sin pasar por el gate. Preferir assess_decision, que además registra la decisión.",
+        "name": "orchestrate_gentle_task",
+        "description": "Abstracción unificada Gentle-AI (ODD / SDD / Fast-Path en 1 paso).",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "objective": {"type": "string", "description": "Problema o decisión a explorar"},
-                "project_name": {"type": "string", "description": "Proyecto asociado en el Vault (o 'General')"},
-                "creative_mode": {"type": "string", "description": "Compatibilidad: ignorado salvo 'conservative' (solo evidencia del Vault)"}
+                "task_description": {"type": "string"},
+                "project_name": {"type": "string"},
+                "feature_name": {"type": "string"},
+                "mode": {"type": "string", "enum": ["auto", "direct", "odd", "sdd", "creative", "d_odd"], "default": "auto"},
+                "decision_id": {"type": "string"}
             },
-            "required": ["objective"]
+            "required": ["task_description"]
+        }
+    },
+    {
+        "name": "query_code_graph",
+        "description": "Consulta el grafo sintáctico AST (símbolos, clases y dependencias) de un proyecto indexado.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project_name": {"type": "string"},
+                "symbol_name": {"type": "string"}
+            },
+            "required": ["project_name", "symbol_name"]
+        }
+    },
+    {
+        "name": "audit_cortex_health",
+        "description": "Audita la salud del cerebro (enlaces rotos, notas obsoletas, duplicados, poda sináptica y resumen ontológico).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "auto_prune": {"type": "boolean", "default": False},
+                "scan_broken_links": {"type": "boolean", "default": True},
+                "scan_duplicates": {"type": "boolean", "default": True}
+            }
         }
     },
     {
         "name": "capture_weekly_snapshot",
-        "description": "Automatiza la captura de estado semanal del Editor en Jefe (Foto de los Viernes): agrega telemetría RDD, salud del Cortex y proyectos, actualizando atómicamente Portada.md y archivando el snapshot.",
+        "description": "Captura el snapshot semanal (Foto de los Viernes), recalibra el gate D-ODD y regenera Portada.md.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "verdict": {
-                    "type": "string",
-                    "description": "Veredicto o síntesis ejecutiva opcional del Editor en Jefe"
-                },
-                "force": {
-                    "type": "boolean",
-                    "description": "Forzar captura (default: true)",
-                    "default": True
-                }
+                "verdict": {"type": "string"},
+                "force": {"type": "boolean", "default": True}
             }
         }
     }
@@ -959,10 +753,183 @@ def handle_generate_scaffold(args):
             (target_out / f"{name}.controller.ts").write_text(code, encoding="utf-8")
         return f"Scaffolding {fw.upper()} generado (Modo Autónomo) en: {target_out}"
 
+def _maybe_refresh_portada() -> None:
+    if not ONTOLOGY:
+        return
+    try:
+        if HAS_VAULT and DECISIONS_DIR != (VAULT_DIR / "04-APRENDIZAJES" / "decisiones"):
+            return
+        ONTOLOGY.render_live_portada(VAULT_DIR, INDEXER.db_path if INDEXER else None)
+    except Exception:
+        pass
+
+
+def handle_brain_context(args: dict) -> str:
+    """Lectura unificada L1/L2 (<40ms): Portada viva + Linaje 4-niveles + Actividades + Instintos + Búsqueda Híbrida."""
+    raw_proj = (args.get("project") or args.get("project_name") or "").strip()
+    query = (args.get("query") or "").strip()
+    include_hist = bool(args.get("include_historical", False))
+
+    if not raw_proj and not query:
+        if ONTOLOGY:
+            res = ONTOLOGY.render_live_portada(VAULT_DIR, INDEXER.db_path if INDEXER else None) if not (
+                HAS_VAULT and DECISIONS_DIR != (VAULT_DIR / "04-APRENDIZAJES" / "decisiones")
+            ) else {"markdown": ONTOLOGY.get_tree_markdown()}
+            return res.get("markdown", ONTOLOGY.get_tree_markdown())
+        return handle_get_project_context({"project_name": "portada"})
+
+    sections: list[str] = []
+    canon_proj = ONTOLOGY.resolve_project(raw_proj) if (ONTOLOGY and raw_proj) else (raw_proj or "General")
+
+    if ONTOLOGY and canon_proj and canon_proj != "General":
+        lineage = ONTOLOGY.get_project_lineage(canon_proj)
+        if lineage:
+            sections.append(
+                f"### 🏛️ Linaje Ontológico: `{lineage['dimension_name']}` > `{lineage['area_name']}` > **[[{lineage['project_id']}]]** (`{lineage['status']}`)"
+            )
+            if lineage.get("repo_path"):
+                sections.append(f"- **Repo en disco**: `{lineage['repo_path']}`")
+
+        acts = ONTOLOGY.manage_activity("list", project=canon_proj).get("activities", [])
+        open_acts = [a for a in acts if a.get("status") != "done"]
+        if open_acts:
+            sections.append("\n### 📋 Actividades Activas (Nivel 4):")
+            for a in open_acts[:6]:
+                blk = f" *(bloqueada por `{a['blocked_by']}`)*" if a.get("blocked_by") else ""
+                sections.append(f"- `{a['id']}` [{a['status']}] {a['title']}{blk}")
+
+        instincts = ONTOLOGY.get_instincts(canon_proj, min_confidence=0.35, limit=5)
+        if instincts:
+            sections.append("\n### 🧩 Instintos Vigentes (ECC):")
+            for ins in instincts:
+                sections.append(f"- [{ins['scope_type']}:{ins['confidence']:.2f}] **{ins['trigger']}** → {ins['pattern']}")
+
+    q_search = query or canon_proj
+    if INDEXER and q_search and q_search != "General":
+        mem = INDEXER.search_memories(
+            q_search,
+            project_filter="" if canon_proj == "General" else canon_proj,
+            limit=4,
+            max_chars=1800,
+            include_historical=include_hist,
+        )
+        if "No se encontraron" not in mem:
+            sections.append("\n" + mem)
+        if query:
+            kn = INDEXER.search_knowledge(query, limit=3, max_chars=1500)
+            if "No se encontraron" not in kn:
+                sections.append("\n### 📚 Conocimiento Técnico Relacionado (Híbrido FTS5+Vector):\n" + kn)
+
+    if not sections:
+        return handle_get_project_context({"project_name": canon_proj})
+    return "\n".join(sections)
+
+
+def handle_brain_tree(args: dict) -> str:
+    """Consulta o sincroniza el árbol de 4 niveles (Dimensiones -> Áreas -> Proyectos -> Actividades)."""
+    if not ONTOLOGY:
+        return "Error: ontology_engine no disponible."
+    mode = (args.get("mode") or "tree").strip().lower()
+    if mode == "sync":
+        rep = ONTOLOGY.sync_ontology_yaml(vault_dir=VAULT_DIR, force=True)
+        _maybe_refresh_portada()
+        return (
+            f"### 🔄 Ontología Sincronizada\n"
+            f"- **Dimensiones**: {rep.get('dimensions', 0)} · **Áreas**: {rep.get('areas', 0)} · **Proyectos**: {rep.get('projects', 0)}"
+        )
+    if mode == "ready":
+        proj = (args.get("project") or "").strip()
+        items = ONTOLOGY.ready_activities(project_id=proj, limit=20)
+        if not items:
+            return "No hay actividades `ready` sin bloqueos en este filtro."
+        lines = ["### ✅ Actividades Desbloqueadas (`ready`):"]
+        for it in items:
+            lines.append(f"- `{it['id']}` **[[{it['project_id']}]]** (P{it['priority']}): {it['title']}")
+        return "\n".join(lines)
+
+    return ONTOLOGY.get_tree_markdown(
+        dimension_id=(args.get("dimension") or "").strip(),
+        area_id=(args.get("area") or "").strip(),
+        project_id=(args.get("project") or "").strip(),
+        include_done=bool(args.get("include_done", False)),
+    )
+
+
+def handle_brain_activity(args: dict) -> str:
+    """Gestiona actividades del Nivel 4 (create, start, block, done, ready, list) y actualiza Portada.md."""
+    if not ONTOLOGY:
+        return "Error: ontology_engine no disponible."
+    res = ONTOLOGY.manage_activity(
+        action=args.get("action") or "list",
+        project=args.get("project") or "",
+        title=args.get("title") or "",
+        activity_id=args.get("activity_id") or "",
+        blocked_by=args.get("blocked_by") or "",
+        priority=int(args.get("priority", 2) or 2),
+        source="mcp",
+    )
+    if not res.get("ok"):
+        return f"Error: {res.get('error', 'No se pudo ejecutar la acción.')}"
+    if res.get("action") in ("create", "start", "in_progress", "block", "done", "ready") and "activity" in res:
+        _maybe_refresh_portada()
+        ac = res["activity"]
+        return f"✅ Actividad `{ac['id']}` [{ac['status']}] en **[[{ac['project_id']}]]**: {ac['title']}"
+    items = res.get("activities", [])
+    if not items:
+        return "No hay actividades registradas para ese filtro."
+    return "\n".join(f"- `{a['id']}` [{a['status']}] **[[{a['project_id']}]]**: {a['title']}" for a in items)
+
+
+def handle_brain_remember(args: dict) -> str:
+    """Registra decisión (con soporte bi-temporal 'supersedes') o instinto ECC con project-scoping."""
+    kind = (args.get("kind") or "decision").strip().lower()
+    title = (args.get("title") or "").strip()
+    details = (args.get("details") or "").strip()
+    proj = (args.get("project") or "General").strip()
+    if ONTOLOGY and proj:
+        proj = ONTOLOGY.resolve_project(proj)
+
+    if kind == "instinct":
+        if not ONTOLOGY:
+            return "Error: ontology_engine no disponible."
+        rep = ONTOLOGY.record_instinct(
+            scope_id=proj,
+            trigger=title,
+            pattern=details,
+            scope_type=args.get("scope_type") or "project",
+        )
+        if not rep.get("ok"):
+            return f"Error: {rep.get('error')}"
+        ins = rep["instinct"]
+        promo = f" (🚀 Auto-promovido a Área `{rep['promoted_to']}`)" if rep.get("promoted_to") else ""
+        _maybe_refresh_portada()
+        return f"🧩 Instinto `{ins['id']}` [{ins['scope_type']}:{ins['scope_id']}] confianza `{ins['confidence']:.2f}` ({ins['confirmations']}x){promo}: **{ins['trigger']}** → {ins['pattern']}"
+
+    # kind == "decision" o "supersede"
+    superseded_cnt = 0
+    supersedes_q = (args.get("supersedes") or "").strip()
+    if supersedes_q and INDEXER:
+        try:
+            superseded_cnt = INDEXER.supersede_memory(supersedes_q, title)
+        except Exception:
+            pass
+
+    res_msg = handle_remember_decision({
+        "title": title,
+        "details": details,
+        "project": proj,
+        "tags": args.get("tags") or ["decision", "engram-memory"],
+    })
+    if superseded_cnt:
+        res_msg += f"\n(Bi-temporal: {superseded_cnt} memoria(s) previa(s) marcada(s) como reemplazada(s))"
+    return res_msg
+
+
 def handle_remember_decision(args):
     title = (args.get("title") or "Decision").strip()
     details = args.get("details") or args.get("content") or args.get("decision") or ""
-    proj = args.get("project") or args.get("project_name") or "General"
+    raw_proj = args.get("project") or args.get("project_name") or "General"
+    proj = ONTOLOGY.resolve_project(raw_proj) if ONTOLOGY else raw_proj
     tags = args.get("tags", ["decision", "engram-memory"])
     today = datetime.now().strftime("%Y-%m-%d")
     slug = slugify(title)[:45] or "decision"
@@ -973,6 +940,7 @@ def handle_remember_decision(args):
 tags: [{tags_str}]
 proyecto: "[[{proj}]]"
 fecha: {today}
+valid_from: {today}
 ---
 
 # 🧠 Decisión / Regla Persistente: {title}
@@ -990,9 +958,10 @@ fecha: {today}
     fpath.write_text(content.strip() + "\n", encoding="utf-8")
     if INDEXER:
         try:
-            INDEXER.sync_index()
+            INDEXER.sync_index(force=True, fast_only=True)
         except Exception:
             pass
+    _maybe_refresh_portada()
     loc_str = str(fpath.relative_to(VAULT_DIR)) if HAS_VAULT else str(fpath)
     res_msg = f"Directriz guardada en la memoria persistente del agente en: {loc_str}"
     if GENTLE_PI_BRIDGE:
@@ -1576,6 +1545,13 @@ def handle_commit_decision(args: dict) -> str:
         "acceptance_criteria": args.get("acceptance_criteria") or [],
         "write_to_disk": args.get("write_to_disk", True),
     })
+    if ONTOLOGY:
+        try:
+            for t in (args.get("tasks") or [])[:6]:
+                ONTOLOGY.manage_activity("create", project=dec["project"], title=str(t), source=f"d-odd:{dec_id}")
+            _maybe_refresh_portada()
+        except Exception:
+            pass
     return (
         f"### ✅ Decisión `{dec_id}` comprometida · `{chosen}`\n"
         f"- La evidencia de tests se adjuntará automáticamente; ciérrala con `close_decision` al verificar.\n\n{odd}"
@@ -1647,6 +1623,18 @@ def handle_close_decision(args: dict) -> str:
             pass
 
     rep = calibrate()
+    if ONTOLOGY:
+        try:
+            if outcome == "success" and notes:
+                ONTOLOGY.record_instinct(
+                    scope_id=dec.get("project") or "General",
+                    trigger=dec["objective"][:80],
+                    pattern=notes[:240],
+                    scope_type="project",
+                )
+            _maybe_refresh_portada()
+        except Exception:
+            pass
     s = led.stats()
     ev = dec.get("evidence") or []
     return (
@@ -1944,11 +1932,11 @@ def process_request(request):
             "id": req_id,
             "result": {
                 "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}, "prompts": {}},
+                "capabilities": {"tools": {}, "prompts": {}, "resources": {}},
                 "instructions": PROTOCOL_TEXT,
                 "serverInfo": {
                     "name": "devbrain-mcp",
-                    "version": "3.7.0",
+                    "version": "4.0.0",
                     "mode": "vault-connected" if HAS_VAULT else "autonomous-standalone"
                 }
             }
@@ -1963,7 +1951,11 @@ def process_request(request):
         call_start = time.time()
         
         try:
-            if name == "get_project_context": text = handle_get_project_context(args)
+            if name == "brain_context": text = handle_brain_context(args)
+            elif name == "brain_tree": text = handle_brain_tree(args)
+            elif name == "brain_activity": text = handle_brain_activity(args)
+            elif name == "brain_remember": text = handle_brain_remember(args)
+            elif name == "get_project_context": text = handle_get_project_context(args)
             elif name == "search_knowledge": text = handle_search_knowledge(args)
             elif name == "list_projects": text = handle_list_projects(args)
             elif name == "propose_spec": text = handle_propose_spec(args)
@@ -2027,7 +2019,48 @@ def process_request(request):
         return {"jsonrpc": "2.0", "id": req_id, "result": {}}
 
     elif method == "resources/list":
-        return {"jsonrpc": "2.0", "id": req_id, "result": {"resources": []}}
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "resources": [
+                    {
+                        "uri": "devbrain://portada",
+                        "name": "Portada Viva (L1 Cache)",
+                        "description": "Estado ejecutivo vivo generado desde cortex.db (Dimensiones, Áreas, Proyectos y Actividades).",
+                        "mimeType": "text/markdown",
+                    },
+                    {
+                        "uri": "devbrain://tree",
+                        "name": "Árbol Ontológico 4-Niveles",
+                        "description": "Jerarquía completa Dimensión -> Área -> Proyecto -> Actividad.",
+                        "mimeType": "text/markdown",
+                    },
+                    {
+                        "uri": "devbrain://ready",
+                        "name": "Actividades Desbloqueadas (Ready)",
+                        "description": "Lista inmediata de actividades listas para ejecutar sin dependencias bloqueantes.",
+                        "mimeType": "text/markdown",
+                    },
+                ]
+            },
+        }
+
+    elif method == "resources/read":
+        uri = (params.get("uri") or "").strip()
+        if uri == "devbrain://portada":
+            body = handle_brain_context({})
+        elif uri == "devbrain://tree":
+            body = handle_brain_tree({"mode": "tree"})
+        elif uri == "devbrain://ready":
+            body = handle_brain_tree({"mode": "ready"})
+        else:
+            return {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32602, "message": f"Recurso no encontrado: {uri}"}}
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {"contents": [{"uri": uri, "mimeType": "text/markdown", "text": body}]},
+        }
 
     elif method == "prompts/list":
         return {

@@ -42,7 +42,7 @@ def run_test():
     assert init_response.get("id") == 1, "Initialize response ID mismatch"
     assert "result" in init_response, "Initialize response missing result"
     server_info = init_response["result"].get("serverInfo", {})
-    assert server_info.get("version") == "3.1.0", f"Expected version 3.1.0, got {server_info.get('version')}"
+    assert server_info.get("version") == "4.0.0", f"Expected version 4.0.0, got {server_info.get('version')}"
     print(f"  [OK] Initialized: {server_info.get('name')} v{server_info.get('version')}")
 
     # 2. Test tools/list
@@ -59,13 +59,19 @@ def run_test():
     print(f"  [OK] tools/list returned {len(tools)} tools:")
     for t in tools:
         print(f"       - {t['name']}: {t['description'][:60]}...")
-    assert len(tools) == 24, f"Expected 24 tools, got {len(tools)}"
+    assert len(tools) == 12, f"Expected 12 consolidated tools, got {len(tools)}"
     tool_names = [t["name"] for t in tools]
-    assert "orchestrate_gentle_task" in tool_names, "orchestrate_gentle_task missing from tools list"
-    assert "capture_weekly_snapshot" in tool_names, "capture_weekly_snapshot missing from tools list"
-    assert "optimize_token_budget" in tool_names, "optimize_token_budget missing from tools list"
-    assert "audit_cortex_health" in tool_names, "audit_cortex_health missing from tools list"
-    assert "audit_ponytail_complexity" not in tool_names, "audit_ponytail_complexity should have been retired"
+    for expected in ["brain_context", "brain_tree", "brain_activity", "brain_remember", "assess_decision", "orchestrate_gentle_task", "capture_weekly_snapshot", "audit_cortex_health"]:
+        assert expected in tool_names, f"{expected} missing from tools list"
+
+    # 2b. Test resources/list
+    res_request = {"jsonrpc": "2.0", "id": 21, "method": "resources/list", "params": {}}
+    proc.stdin.write(json.dumps(res_request) + "\n")
+    proc.stdin.flush()
+    res_response = json.loads(proc.stdout.readline())
+    resources = res_response.get("result", {}).get("resources", [])
+    assert len(resources) == 3, f"Expected 3 MCP resources, got {len(resources)}"
+    print(f"  [OK] resources/list returned {len(resources)} resources")
 
     # 3. Test tools/call (classify_odd_task)
     odd_request = {

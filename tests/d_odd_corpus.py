@@ -19,6 +19,7 @@ CORPUS = [
     ("Refactor masivo del módulo de pagos para desacoplarlo del ORM", True),
     ("Crear desde cero el dashboard de monitoreo forense de rondas en planta", True),
     ("Rediseñar la interfaz completa y el sistema de diseño del prototipo", True),
+    ("Necesito que analices la estructura completa de DevBrain para mejorar su autonomia y organizar la portada", True),
     # --- No decisiones (no deben disparar) ---
     ("Refactor del nombre de una variable", False),
     ("Evaluar si el test de login pasa", False),

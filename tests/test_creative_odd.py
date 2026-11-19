@@ -13,9 +13,10 @@ from pathlib import Path
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-# Aislar el entorno de pruebas para no alterar la BD de producción
+# Aislar el entorno de pruebas para no alterar la BD ni el Vault de producción
 _TMP_DIR = tempfile.TemporaryDirectory()
-os.environ["DEVBRAIN_HOME"] = _TMP_DIR.name
+os.environ.setdefault("DEVBRAIN_HOME", _TMP_DIR.name)
+os.environ.setdefault("DEVBRAIN_SKIP_LEGACY_MIGRATION", "1")
 
 import decision_ledger as led
 from creative_odd import (
@@ -264,7 +265,7 @@ class TestCreativeODDv2(unittest.TestCase):
             "notes": "Race condition bajo 2 workers concurrentes.",
         })
         self.assertIn("Anti-patrón extraído", close_res)
-        err_files = list((_TMP_DECISIONS.parent / "errores").glob("error-*.md"))
+        err_files = list((devbrain_mcp.DECISIONS_DIR.parent / "errores").glob("error-*.md"))
         self.assertTrue(len(err_files) >= 1)
 
 

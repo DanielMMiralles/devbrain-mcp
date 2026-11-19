@@ -28,7 +28,7 @@ AVAILABLE_TOPICS: dict[str, str] = {
     "cortex": "Motor de auto-revisión e integridad: enlaces rotos, duplicados y ciclo de sueño",
     "tokens": "Optimizador de tokens: AST slicing, chunking sináptico y deduplicación diferencial",
     "odd": "Protocolo Organic Driven Development (ODD), clasificaciones y ciclo de trabajo",
-    "mcp": "Catálogo completo de las 29 herramientas MCP de DevBrain v3.7.0 y sus firmas PLC",
+    "mcp": "Catálogo de las 12 herramientas profundas MCP + 3 Resources de DevBrain v4.0.0",
     "hosts": "Guía de conexión para Google Antigravity (AGY), Cursor IDE y Claude Code",
     "neuro": "Motor de neuroplasticidad, regla de Hebb, LTP/LTD y bonus sináptico",
     "shell": "Uso de la terminal interactiva REPL, comandos rápidos y dock questions",
@@ -44,9 +44,9 @@ def render_help_overview(console: Console, theme: ThemeColors) -> None:
     grid.add_column(justify="center", ratio=1)
     
     banner = Text.assemble(
-        ("🧠 DEVBRAIN v3.7.0 ", f"bold {theme.primary}"),
+        ("🧠 DEVBRAIN v4.0.0 ", f"bold {theme.primary}"),
         ("— MANUAL DE COMANDOS & FUNCIONALIDADES\n", f"bold {theme.secondary}"),
-        ("Controlador PLC Neuroplástico • Telemetría Cognitiva • Suite Gentle-AI & D-ODD", f"dim {theme.dim}")
+        ("Ontología 4-Niveles • Híbrido FTS5+Vector • ECC Instincts/Guardrails • Suite Gentle-AI & D-ODD v3", f"dim {theme.dim}")
     )
     grid.add_row(banner)
     console.print(Panel(grid, box=box.ROUNDED, border_style=theme.primary))
@@ -351,48 +351,29 @@ ODD reemplaza la burocracia rígida de los SDD tradicionales por un enfoque prag
         console.print(Panel(Markdown(content), title="[bold]🏷️ Guía Detallada: Protocolo ODD[/bold]", border_style=theme.primary))
 
     elif t_clean in ["mcp", "tools"]:
-        table = Table(title="🛠️ Las 29 Herramientas MCP de DevBrain v3.7.0 & Rutas PLC", box=None, expand=True, padding=(0, 1))
+        table = Table(title="🛠️ Las 12 Herramientas Profundas MCP + 3 Resources (DevBrain v4.0.0)", box=None, expand=True, padding=(0, 1))
         table.add_column("Categoría", style=f"bold {theme.primary}", ratio=2)
-        table.add_column("Herramienta MCP", style=f"bold {theme.accent}", ratio=3)
+        table.add_column("Herramienta / Recurso MCP", style=f"bold {theme.accent}", ratio=3)
         table.add_column("Propósito & Comportamiento", style=f"{theme.text}", ratio=5)
         table.add_column("Ruta PLC", justify="center", ratio=2)
 
-        table.add_row("💡 Conocimiento", "get_project_context", "Recupera arquitectura, stack y README de proyectos insignia.", "[green]LOCAL_FAST[/green]")
-        table.add_row("💡 Conocimiento", "list_projects", "Lista proyectos activos y descubiertos en disco.", "[green]LOCAL_FAST[/green]")
-        table.add_row("💡 Conocimiento", "search_knowledge", "Búsqueda FTS5 en +6,350 notas con reranking sináptico.", "[green]LOCAL_FAST[/green]")
-        table.add_row("🧠 Memoria", "remember_decision", "Guarda directrices en Vault y sincroniza con Engram (SQLite WAL).", "[green]LOCAL_FAST[/green]")
-        table.add_row("🧠 Memoria", "recall_memory", "Consulta decisiones previas en Vault y Engram search.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🧠 Núcleo v4", "brain_context", "Lectura unificada (<40ms): Portada L1, Linaje, Actividades, Instintos y Búsqueda Híbrida RRF.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🏛️ Ontología v4", "brain_tree", "Navegación 4 niveles (Dimensión->Área->Proyecto->Actividad), ready o sync YAML.", "[green]LOCAL_FAST[/green]")
+        table.add_row("📋 Actividades v4", "brain_activity", "Grafo tipo Beads (create/start/block/done) con regeneración automática de Portada.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🧩 Memoria v4", "brain_remember", "Decisiones bi-temporales ('supersedes') e Instintos ECC con auto-promoción.", "[green]LOCAL_FAST[/green]")
 
-        table.add_row("📋 OpenSpec / SDD", "propose_spec", "Genera propuestas formales OpenSpec bajo demanda explícita.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("📋 OpenSpec / SDD", "validate_spec", "Valida que spec.md cumpla el 100% de la especificación.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("📋 OpenSpec / SDD", "get_spec_questions", "Preguntas clave adaptadas por tipo de sistema.", "[green]LOCAL_FAST[/green]")
-        table.add_row("📋 OpenSpec / SDD", "generate_scaffold", "Genera esqueleto funcional en NestJS o FastAPI.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("📋 OpenSpec / SDD", "prepare_sdd_preflight", "Contrato SDD liviano con preflight de autoridad.", "[red]ORCHESTRATE[/red]")
+        table.add_row("🌀 Marco D-ODD", "assess_decision", "Gate Cynefin (5 dims), flota de especialistas y divergencia Tesis vs Antítesis.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🌀 Marco D-ODD", "commit_decision", "Compromete síntesis, espeja Engram y puebla actividades Nivel 4.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🌀 Marco D-ODD", "close_decision", "Cierra decisión con evidencia de tests, refuerza sinapsis/instintos y extrae anti-patrón.", "[green]LOCAL_FAST[/green]")
+        table.add_row("🌀 Marco D-ODD", "decision_ledger_stats", "Métricas del bucle de aprendizaje y calibración de umbral del gate.", "[green]LOCAL_FAST[/green]")
 
-        table.add_row("🛡️ Gobernanza", "package_project_context", "Bundle markdown ultracompacto del código real.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("🛡️ Gobernanza", "audit_project_health", "Auditoría con diagnóstico en vivo de Gentle-AI doctor.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("🛡️ Gobernanza", "debate_project_feasibility", "Modo Debate Sin Filtros (Red Team) contra SPOF y costos.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("🩺 Auto-Revisión", "audit_cortex_health", "Audita enlaces rotos, notas viejas (LTD), duplicados y poda sinapsis.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("⚡ Optimización", "optimize_token_budget", "Compresión AST de código y chunking sináptico por Token Budget.", "[green]LOCAL_FAST[/green]")
-        table.add_row("⚡ Optimización", "route_model_dispatch", "Recomienda LLM costo-eficiente (Fast, Frontier, Coder).", "[green]LOCAL_FAST[/green]")
-
-        table.add_row("🌲 Grafo AST", "query_code_graph", "Consulta grafo sintáctico AST de símbolos y clases.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("🌲 Grafo AST", "sync_project_graph", "Indexa código fuente y genera relaciones AST Graphify.", "[yellow]DELEGATABLE[/yellow]")
-
-        table.add_row("🏷️ ODD & Sesión", "classify_odd_task", "Clasificación determinista ODD (READ_ONLY, SMALL, SUBSTANTIAL).", "[green]LOCAL_FAST[/green]")
-        table.add_row("🏷️ ODD & Sesión", "prepare_odd_task", "Crea odd/tasks/<feature>.md y espejo en Engram topic.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("🏷️ ODD & Sesión", "reconcile_odd_resume", "Reconcilia estado local con memoria Engram tras reinicio.", "[yellow]DELEGATABLE[/yellow]")
-        table.add_row("🏷️ ODD & Sesión", "orchestrator_session_bridge", "Mensajería inter-orquestador con ACK de Gentle-Shell.", "[red]ORCHESTRATE[/red]")
         table.add_row("🚀 Gentle-AI", "orchestrate_gentle_task", "Abstracción unificada Gentle-AI (ODD/SDD/FastPath en 1 paso).", "[green]LOCAL_FAST[/green]")
+        table.add_row("🌲 Grafo AST", "query_code_graph", "Consulta grafo sintáctico AST de símbolos y dependencias.", "[yellow]DELEGATABLE[/yellow]")
+        table.add_row("🩺 Auto-Revisión", "audit_cortex_health", "Audita enlaces rotos, notas viejas (LTD), duplicados y poda sinapsis.", "[yellow]DELEGATABLE[/yellow]")
+        table.add_row("📸 Portada & HUD", "capture_weekly_snapshot", "Snapshot semanal desde SQLite, recalibra gate y materializa Portada.md.", "[green]LOCAL_FAST[/green]")
+        table.add_row("📡 MCP Resources", "devbrain://portada|tree|ready", "Exposición pasiva L1 sin gastar esquema extra (retrocompatibilidad legacy activa en tools/call).", "[green]RESOURCE[/green]")
 
-        table.add_row("🌀 Marco D-ODD", "assess_decision", "Gate semántico Cynefin (5 dimensiones), clasificación y apertura de decisión.", "[green]LOCAL_FAST[/green]")
-        table.add_row("🌀 Marco D-ODD", "commit_decision", "Compromete síntesis (tesis/antítesis/híbrido) y genera tareas ODD espejadas.", "[green]LOCAL_FAST[/green]")
-        table.add_row("🌀 Marco D-ODD", "close_decision", "Cierra decisión con evidencia observada de tests y recalibra el gate.", "[green]LOCAL_FAST[/green]")
-        table.add_row("🌀 Marco D-ODD", "decision_ledger_stats", "Métricas del bucle de aprendizaje: adopción de antítesis y fire rate.", "[green]LOCAL_FAST[/green]")
-        table.add_row("🌀 Marco D-ODD", "stimulate_creative_odd", "Estimulación lateral: paquetes de contexto aislados y provocaciones.", "[green]LOCAL_FAST[/green]")
-        table.add_row("📸 Portada & HUD", "capture_weekly_snapshot", "Captura la 'Foto de los Viernes', actualiza Portada.md y calibra gate.", "[green]LOCAL_FAST[/green]")
-
-        console.print(Panel(table, title="[bold]🛠️ Catálogo Oficial de las 29 Herramientas MCP & Rutas PLC[/bold]", border_style=theme.accent))
+        console.print(Panel(table, title="[bold]🛠️ Catálogo Oficial DevBrain v4.0.0 & Rutas PLC[/bold]", border_style=theme.accent))
 
     elif t_clean in ["hosts", "ide", "cursor", "claude", "agy"]:
         content = """### 🔌 Conexión con Hosts e IDEs (Antigravity, Cursor, Claude Code)
