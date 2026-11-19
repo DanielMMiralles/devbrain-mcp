@@ -109,16 +109,38 @@ def hook_guard(payload: dict) -> dict:
 
 
 def hook_evidence(payload: dict) -> dict:
-    """PostToolUse(run_command): si corrieron tests, adjunta el resultado a decisiones abiertas."""
+    """PostToolUse(run_command): adjunta evidencia de tests y registra traza Vigilia en fallos (0 tokens LLM)."""
     import decision_ledger as led
 
     call = payload.get("toolCall") or {}
     cmd = str((call.get("args") or {}).get("CommandLine") or "")
-    conv = payload.get("conversationId") or ""
-    if not conv or not TEST_CMD.search(cmd):
+    if not TEST_CMD.search(cmd):
         return {}
     err = payload.get("error") or ""
-    led.attach_evidence(conv, {"type": "test_run", "command": cmd[:200], "passed": not err, "error": str(err)[:200]})
+    conv = payload.get("conversationId") or ""
+    if conv:
+        led.attach_evidence(conv, {"type": "test_run", "command": cmd[:200], "passed": not err, "error": str(err)[:200]})
+    if err:
+        try:
+            import hashlib
+            from ontology_engine import resolve_project, record_wake_trace
+            proj = "General"
+            for cand in [*(payload.get("workspacePaths") or []), payload.get("cwd") or ""]:
+                if cand:
+                    r = resolve_project(str(cand))
+                    if r != str(cand) and r != "General":
+                        proj = r
+                        break
+            sig = hashlib.sha1(cmd.strip().lower()[:120].encode("utf-8")).hexdigest()[:10]
+            record_wake_trace(
+                proj,
+                "test_failure",
+                f"cmd-{sig}",
+                f"Fallo en `{cmd.strip()[:85]}`: {str(err).strip()[:140]}",
+                evidence_passed=False,
+            )
+        except Exception:
+            pass
     return {}
 
 

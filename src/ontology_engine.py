@@ -14,9 +14,10 @@ import json
 import os
 import re
 import sqlite3
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from decision_ledger import devbrain_home, open_decisions, stats as ledger_stats
 
@@ -118,9 +119,22 @@ def _conn(db_path: Optional[Path] = None):
                 open_activities_json TEXT DEFAULT '[]',
                 updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS wake_traces (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project TEXT NOT NULL,
+                category TEXT NOT NULL,
+                signature TEXT NOT NULL,
+                detail TEXT NOT NULL,
+                evidence_passed INTEGER DEFAULT 1,
+                supersedes_query TEXT DEFAULT '',
+                created_at TEXT NOT NULL,
+                consolidated INTEGER DEFAULT 0,
+                consolidation_status TEXT DEFAULT 'pending'
+            );
             CREATE INDEX IF NOT EXISTS idx_activities_proj ON activities(project_id, status);
             CREATE INDEX IF NOT EXISTS idx_instincts_scope ON instincts(scope_type, scope_id, confidence DESC);
             CREATE INDEX IF NOT EXISTS idx_projects_area ON projects(area_id, status);
+            CREATE INDEX IF NOT EXISTS idx_wake_pending ON wake_traces(consolidated, project);
             """
         )
         yield con
@@ -846,4 +860,120 @@ def render_live_portada(vault_dir: Optional[Path] = None, fts_db_path: Optional[
         "projects": len(projs),
         "activities_open": ready_cnt + in_prog_cnt,
         "markdown": auto_block,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Ciclo Dual Vigilia / Sueño D-ODD v4 (0 tokens en vivo, consolidación offline)
+# ---------------------------------------------------------------------------
+
+def record_wake_trace(
+    project: str,
+    category: str,
+    signature: str,
+    detail: str,
+    evidence_passed: bool = True,
+    supersedes_query: str = "",
+) -> Dict[str, Any]:
+    """Graba una traza cruda en SQLite durante Vigilia (<5ms, 0 tokens de LLM)."""
+    t0 = time.perf_counter()
+    canon = resolve_project(project) if project and project != "General" else "General"
+    now = _now_iso()
+    with _conn() as c:
+        cur = c.execute(
+            """
+            INSERT INTO wake_traces(project, category, signature, detail, evidence_passed, supersedes_query, created_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                canon,
+                (category or "observation").strip(),
+                (signature or "generic").strip(),
+                (detail or "").strip(),
+                1 if evidence_passed else 0,
+                (supersedes_query or "").strip(),
+                now,
+            ),
+        )
+        tid = cur.lastrowid
+    return {
+        "trace_id": tid,
+        "project": canon,
+        "online_llm_tokens": 0,
+        "latency_ms": round((time.perf_counter() - t0) * 1000.0, 3),
+    }
+
+
+def run_sleep_consolidation(indexer: Any = None, min_recurrence: int = 2) -> Dict[str, Any]:
+    """Proceso offline (Sueño): consolida trazas recurrentes en instintos, aplica olvido bi-temporal y poda ruido."""
+    t0 = time.perf_counter()
+    with _conn() as c:
+        pending = [
+            dict(r)
+            for r in c.execute("SELECT * FROM wake_traces WHERE consolidated = 0 ORDER BY id ASC").fetchall()
+        ]
+
+    groups: Dict[Tuple[str, str, str], List[Dict[str, Any]]] = {}
+    for row in pending:
+        groups.setdefault((row["project"], row["category"], row["signature"]), []).append(row)
+
+    instincts_consolidated: List[Dict[str, Any]] = []
+    auto_promoted_areas: List[str] = []
+    memories_superseded = 0
+    pruned_noise_count = 0
+    updates: List[Tuple[str, List[int]]] = []
+
+    for (project, category, signature), items in groups.items():
+        ids = [int(it["id"]) for it in items]
+        latest = items[-1]
+        sup_queries = [
+            it["supersedes_query"]
+            for it in items
+            if it.get("supersedes_query") and it.get("evidence_passed")
+        ]
+        if indexer is not None and sup_queries:
+            for sq in sup_queries:
+                try:
+                    memories_superseded += int(indexer.supersede_memory(sq, latest["detail"]))
+                except Exception:
+                    pass
+
+        if len(items) >= int(min_recurrence):
+            last_res: Dict[str, Any] = {}
+            for _ in items:
+                last_res = record_instinct(
+                    scope_id=project,
+                    trigger=f"{category}:{signature}",
+                    pattern=latest["detail"],
+                    scope_type="project",
+                    delta=0.20,
+                )
+                if last_res.get("promoted_to") and last_res["promoted_to"] not in auto_promoted_areas:
+                    auto_promoted_areas.append(last_res["promoted_to"])
+            if last_res.get("ok"):
+                instincts_consolidated.append(last_res["instinct"])
+            updates.append(("consolidated_instinct", ids))
+        elif sup_queries:
+            updates.append(("superseded_memory", ids))
+        else:
+            pruned_noise_count += len(items)
+            updates.append(("pruned_noise", ids))
+
+    if updates:
+        with _conn() as c:
+            for status_lbl, ids in updates:
+                placeholders = ",".join("?" for _ in ids)
+                c.execute(
+                    f"UPDATE wake_traces SET consolidated = 1, consolidation_status = ? WHERE id IN ({placeholders})",
+                    [status_lbl, *ids],
+                )
+
+    return {
+        "traces_processed": len(pending),
+        "instincts_consolidated_count": len(instincts_consolidated),
+        "instincts_consolidated": instincts_consolidated,
+        "auto_promoted_areas": sorted(auto_promoted_areas),
+        "memories_superseded": memories_superseded,
+        "pruned_noise_count": pruned_noise_count,
+        "sleep_duration_ms": round((time.perf_counter() - t0) * 1000.0, 2),
     }

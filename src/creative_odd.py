@@ -304,6 +304,58 @@ def is_ui_objective(text: str) -> bool:
     return bool(_UI_PAT.search(_norm(text or "")))
 
 
+_REDESIGN_PAT = re.compile(
+    r"\b(redisen\w*|simplific\w*|limpi\w*|abrumador\w*|sobrecarg\w*|demasiad\w*|"
+    r"menos (?:datos|informacion|ruido|tarjetas|metricas|elementos)|densidad|despej\w*|minimal\w*|"
+    r"redesign\w*|declutter\w*|simplif\w*|overwhelm\w*|too much (?:data|info)|clean up|cleaner)\b"
+)
+
+
+def detect_redesign_intent(objective: str) -> Dict[str, Any]:
+    """Detecta si una petición pide rediseñar o reducir densidad cognitiva en UI."""
+    norm = _norm(objective or "")
+    is_ui = is_ui_objective(objective)
+    hits = _REDESIGN_PAT.findall(norm)
+    is_subtractive = bool(hits)
+    return {
+        "is_ui": is_ui,
+        "is_subtractive": is_subtractive,
+        "quarantine_legacy_ui": bool(is_ui and is_subtractive),
+        "signal_hits": hits,
+    }
+
+
+def compile_ui_density_budget(
+    objective: str,
+    redesign_info: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Compila peticiones cualitativas de simplificación UI en cotas verificables en DOM real."""
+    info = redesign_info or detect_redesign_intent(objective)
+    if not info.get("is_ui"):
+        return {"active": False, "mode": "non_ui"}
+    if info.get("quarantine_legacy_ui"):
+        return {
+            "active": True,
+            "mode": "subtractive_ui_redesign",
+            "max_primary_kpis": 4,
+            "max_visible_tables": 1,
+            "max_charts_above_fold": 1,
+            "require_progressive_disclosure": True,
+            "require_real_fonts_in_index_html": True,
+            "forbid_clone_palette": True,
+        }
+    return {
+        "active": True,
+        "mode": "standard_ui",
+        "max_primary_kpis": 6,
+        "max_visible_tables": 2,
+        "max_charts_above_fold": 3,
+        "require_progressive_disclosure": False,
+        "require_real_fonts_in_index_html": True,
+        "forbid_clone_palette": True,
+    }
+
+
 def deal_visual_directions(objective: str, project: str = "General", count: int = 2) -> List[Dict[str, str]]:
     """Sortea determinísticamente direcciones de arte distintas por proyecto/objetivo."""
     seed = int(hashlib.sha1(f"{project.strip().lower()}::{objective.strip().lower()}".encode("utf-8")).hexdigest()[:8], 16)
@@ -379,14 +431,13 @@ def recommend_specialists(objective: str, domain: str) -> List[Dict[str, str]]:
 # ---------------------------------------------------------------------------
 
 PROTOCOL_TEXT = """\
-## Protocolo D-ODD v3 (Divergencia + Especialistas + Cero Bucles)
-1. **Contrato de outcomes** (tú, antes de nada): job-to-be-done, 2-4 criterios de aceptación verificables, invariantes.
-2. **Tesis** — especialista(s) CON acceso a DevBrain/Vault: mejor solución alineada al historial del proyecto, citando las notas/errores en las que se apoya.
-3. **Antítesis (`odd-antithesis`)** — subagente SIN notas del Vault (`inheritMcp: false`): pásale SOLO el contrato de outcomes, las provocaciones y (si es UI) las direcciones visuales sorteadas. Lanza Tesis y Antítesis en paralelo.
-4. **Síntesis + Chequeo Adversarial de 1 Sola Pasada (Sin Bucles)**: evalúa ambas contra el contrato (`thesis`, `antithesis` o `hybrid`). Haz **1 único chequeo FMEA** (concurrencia, seguridad, edge cases) e incorpora cualquier mitigación directo como criterio de aceptación en `commit_decision`. **Prohibido abrir bucles de re-debate o guardar borradores intermedios en el Vault.**
-5. **Ejecución por Especialistas + Reporte a AGY**: despacha la flota asignando cada rebanada de contexto a su especialista (`odd-backend-architect`, `odd-data-guardian`, `odd-ui-crafter`, `odd-qa-sentinel`). Todos rinden cuentas al coordinador.
-6. **Cierre Silencioso (`close_decision`)**: al validar con evidencia real, llama `close_decision` para reforzar/penalizar sinapsis y cristalizar **1 única memoria limpia** en el cerebro, y entrega el reporte final consolidado al usuario.
-Regla: en UI de un proyecto nuevo **sí es obligatorio diferenciarse de proyectos anteriores del Vault**.
+## Protocolo D-ODD v4 (Bifurcación + Cuarentena Sustractiva + Lentes + Cero Bucles)
+1. **Contrato de outcomes**: job-to-be-done, 2-4 criterios verificables e invariantes. Separa zonas conocidas (`flash`/`flash_lite`) de los 1-2 puntos de bifurcación reales (donde sí inviertes modelo fuerte + `odd-antithesis`, sin papeleo JSON).
+2. **Tesis (con Lente Epistémico)** — usa `brain_context(agent_role=...)` para traer solo memoria del dominio afectado (`ui` | `backend` | `data` | `qa`) sin contaminación cruzada.
+3. **Antítesis (`odd-antithesis`)** — subagente SIN notas del Vault (`inheritMcp: false`): recibe SOLO el contrato de outcomes, provocaciones y (si es UI) direcciones de arte. **Cuarentena Sustractiva**: si es un rediseño/simplificación UI, también se oculta el código UI legado durante esta fase.
+4. **Síntesis + FMEA de 1 Sola Pasada (Sin Bucles)**: decide `thesis` | `antithesis` | `hybrid` en `commit_decision` con 1 chequeo de riesgos. **Prohibido abrir bucles de debate o borradores intermedios.**
+5. **Ejecución Acotada + Verificación Real (`odd-qa-sentinel`)**: aplica Veto Anti-Clon + fuentes reales en `index.html` tanto en UI nueva como en rediseños, y audita presupuestos de densidad en DOM/Playwright real.
+6. **Vigilia Silenciosa → Cierre (`close_decision`)**: cero ensayos en Markdown durante la ejecución; al verificar con tests reales, cierra la decisión para consolidar memoria útil en segundo plano.
 """
 
 
@@ -416,6 +467,25 @@ def build_context_packet(objective: str, project: str, assessment: Dict[str, Any
 
     if is_ui_objective(objective):
         directions = deal_visual_directions(objective, project, count=2)
+        redesign_info = detect_redesign_intent(objective)
+        if redesign_info["quarantine_legacy_ui"]:
+            budget = compile_ui_density_budget(objective, redesign_info)
+            lines.append("")
+            lines.append("### 🧹 Cuarentena Sustractiva & Presupuesto de Densidad UI (D-ODD v4)")
+            lines.append(
+                "- **Cuarentena en Antítesis**: **PROHIBIDO** entregar el TSX/CSS legado a `odd-antithesis`; "
+                "diseña la arquitectura de información solo desde tipos/contratos de dominio."
+            )
+            lines.append(
+                "- **Mandato Sustractivo**: aplica `EXCEPTION_FIRST` / `PROGRESSIVE_DISCLOSURE` / `SINGLE_FOCUS_WORKSPACE` "
+                "y mueve >=60% de elementos secundarios a `Drawer`/`Tabs`/`Accordion`/`role=\"tablist\"`."
+            )
+            lines.append(
+                f"- **Presupuesto verificable en DOM/Playwright**: `max_primary_kpis={budget['max_primary_kpis']}`, "
+                f"`max_visible_tables={budget['max_visible_tables']}`, `max_charts_above_fold={budget['max_charts_above_fold']}`, "
+                f"`require_progressive_disclosure={budget['require_progressive_disclosure']}`, "
+                f"fuentes reales en `index.html` obligatorio."
+            )
         lines.append("")
         lines.append(ANTI_CLONE_VETO.rstrip())
         lines.append("")

@@ -128,7 +128,7 @@ class TestCreativeODDv2(unittest.TestCase):
             "conversation_id": conv_id
         })
         self.assertIn("D-ODD activado", assess_res)
-        self.assertIn("Protocolo D-ODD v3", assess_res)
+        self.assertIn("Protocolo D-ODD v4", assess_res)
 
         # Extraer decision_id
         open_decs = led.open_decisions(conv_id)

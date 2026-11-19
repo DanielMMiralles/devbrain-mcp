@@ -313,7 +313,9 @@ TOOLS_MANIFEST = [
             "properties": {
                 "project": {"type": "string", "description": "Nombre, alias o ruta del proyecto (opcional; vacío = Portada L1)"},
                 "query": {"type": "string", "description": "Pregunta o tema técnico para búsqueda híbrida en memorias y conocimiento (opcional)"},
-                "include_historical": {"type": "boolean", "description": "Incluir decisiones marcadas como obsoletas/superseded (default: false)", "default": False}
+                "include_historical": {"type": "boolean", "description": "Incluir decisiones marcadas como obsoletas/superseded (default: false)", "default": False},
+                "agent_role": {"type": "string", "enum": ["", "ui", "backend", "data", "qa", "antithesis"], "description": "Lente epistémico opcional para filtrar ruido fuera de dominio (default: vacío)", "default": ""},
+                "quarantine": {"type": "boolean", "description": "Aislamiento sustractivo en rediseños UI: bloquea memorias de proyectos hermanos (default: false)", "default": False}
             }
         }
     },
@@ -765,10 +767,19 @@ def _maybe_refresh_portada() -> None:
 
 
 def handle_brain_context(args: dict) -> str:
-    """Lectura unificada L1/L2 (<40ms): Portada viva + Linaje 4-niveles + Actividades + Instintos + Búsqueda Híbrida."""
+    """Lectura unificada L1/L2 (<40ms): Portada viva + Linaje 4-niveles + Actividades + Instintos + Búsqueda Híbrida con Lentes."""
     raw_proj = (args.get("project") or args.get("project_name") or "").strip()
     query = (args.get("query") or "").strip()
     include_hist = bool(args.get("include_historical", False))
+    agent_role = (args.get("agent_role") or "").strip()
+    quarantine = bool(args.get("quarantine", False))
+
+    if agent_role.lower() in ("antithesis", "odd-antithesis"):
+        return (
+            "### 🔒 Aislamiento D-ODD (`antithesis`)\n"
+            "- **0 memorias/instintos del Vault inyectados**: trabaja únicamente desde el Contrato de Outcomes, "
+            "las provocaciones y los tipos/contratos del dominio."
+        )
 
     if not raw_proj and not query:
         if ONTOLOGY:
@@ -812,6 +823,8 @@ def handle_brain_context(args: dict) -> str:
             limit=4,
             max_chars=1800,
             include_historical=include_hist,
+            agent_role=agent_role,
+            quarantine=quarantine,
         )
         if "No se encontraron" not in mem:
             sections.append("\n" + mem)
@@ -1473,12 +1486,20 @@ def handle_orchestrate_gentle_task(args):
     return res
 
 
-def _vault_evidence(project: str, query: str, max_chars: int = 1200) -> str:
-    """Evidencia del Vault para el subagente de tesis (vacía si no hay índice)."""
+def _vault_evidence(project: str, query: str, max_chars: int = 1200,
+                    agent_role: str = "", quarantine: bool = False) -> str:
+    """Evidencia del Vault para el subagente de tesis (filtrada por lente epistémico y cuarentena)."""
     if not INDEXER:
         return ""
     try:
-        res = INDEXER.search_memories(f"{project} {query}", project_filter=project, limit=3, max_chars=max_chars)
+        res = INDEXER.search_memories(
+            f"{project} {query}",
+            project_filter=project,
+            limit=3,
+            max_chars=max_chars,
+            agent_role=agent_role,
+            quarantine=quarantine,
+        )
         return "" if "No se encontraron" in res else res
     except Exception:
         return ""
@@ -1487,7 +1508,10 @@ def _vault_evidence(project: str, query: str, max_chars: int = 1200) -> str:
 def handle_assess_decision(args: dict) -> str:
     """Gate semántico D-ODD: el LLM puntúa, el servidor clasifica, registra y calibra."""
     import decision_ledger as led
-    from creative_odd import assess, build_context_packet, calibrate, recommend_specialists, DIMENSIONS
+    from creative_odd import (
+        assess, build_context_packet, calibrate, detect_redesign_intent,
+        recommend_specialists, DIMENSIONS,
+    )
 
     objective = (args.get("objective") or "").strip()
     if not objective:
@@ -1520,7 +1544,14 @@ def handle_assess_decision(args: dict) -> str:
         )
 
     dec_id = led.open_decision(objective, project, result["dimensions"], result["domain"], conv)
-    packet = build_context_packet(objective, project, result, _vault_evidence(project, objective), dec_id)
+    redesign = detect_redesign_intent(objective)
+    ev = _vault_evidence(
+        project,
+        objective,
+        agent_role="ui" if redesign["is_ui"] else "",
+        quarantine=redesign["quarantine_legacy_ui"],
+    )
+    packet = build_context_packet(objective, project, result, ev, dec_id)
     return packet + calib_note
 
 

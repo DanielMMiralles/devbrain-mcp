@@ -84,6 +84,27 @@ def _maybe_weekly_snapshot() -> None:
         _log(f"Error en weekly snapshot automático: {e}")
 
 
+def _run_sleep_cycle(vault_dir: Path = VAULT_DIR) -> None:
+    """Ejecuta el ciclo offline de Sueño (consolida trazas de Vigilia recurrentes y poda ruido)."""
+    idx = None
+    try:
+        import ontology_engine as ont
+        from devbrain_index import DevBrainIndex
+        idx = DevBrainIndex(vault_dir)
+        rep = ont.run_sleep_consolidation(indexer=idx, min_recurrence=2)
+        if rep.get("traces_processed", 0) > 0:
+            _log(
+                f"Sueño offline: {rep['traces_processed']} trazas -> "
+                f"{rep['instincts_consolidated_count']} instinto(s), "
+                f"superseded={rep['memories_superseded']}, pruned={rep['pruned_noise_count']}"
+            )
+    except Exception as e:
+        _log(f"Error en ciclo Sueño offline: {e}")
+    finally:
+        if idx is not None:
+            idx.close()
+
+
 def scan_all_repos(vault_dir: Path = VAULT_DIR) -> int:
     """Escanea los repositorios de ontologia.yaml y registra nuevos commits en cortex.db."""
     import ontology_engine as ont
@@ -186,6 +207,7 @@ def main():
     _log(f"Daemon v4.0 iniciado (PID {os.getpid()})")
     if "--once" in sys.argv:
         scan_all_repos()
+        _run_sleep_cycle()
         _maybe_weekly_snapshot()
         return
 
@@ -194,6 +216,7 @@ def main():
         while True:
             try:
                 scan_all_repos()
+                _run_sleep_cycle()
                 _maybe_weekly_snapshot()
             except Exception as e:
                 _log(f"Error en ciclo daemon: {e}")

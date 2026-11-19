@@ -16,7 +16,7 @@ import unicodedata
 import weakref
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     import numpy as np  # type: ignore
@@ -155,6 +155,47 @@ class HybridVectorizer:
             v = cls.from_blob(b)
             res.append(sum(a * c for a, c in zip(q_py, v)))
         return res
+
+
+EPISTEMIC_LENSES: Dict[str, Dict[str, Any]] = {
+    "antithesis": {
+        "allow_vault_memory": False,
+        "blocked_tags": {"*"},
+    },
+    "ui": {
+        "allow_vault_memory": True,
+        "blocked_tags": {"sql", "rls", "migration", "scada-dense", "backend"},
+    },
+    "backend": {
+        "allow_vault_memory": True,
+        "blocked_tags": {"ui", "ux", "css", "typography", "palette", "tokens", "density", "scada-dense"},
+    },
+    "data": {
+        "allow_vault_memory": True,
+        "blocked_tags": {"ui", "ux", "css", "typography", "palette", "tokens", "density", "scada-dense"},
+    },
+    "qa": {
+        "allow_vault_memory": True,
+        "blocked_tags": {"palette", "typography"},
+    },
+}
+
+_ROLE_ALIASES: Dict[str, str] = {
+    "odd-antithesis": "antithesis",
+    "antithesis": "antithesis",
+    "odd-ui-crafter": "ui",
+    "ui": "ui",
+    "odd-backend-architect": "backend",
+    "backend": "backend",
+    "odd-data-guardian": "data",
+    "data": "data",
+    "odd-qa-sentinel": "qa",
+    "qa": "qa",
+}
+
+
+def normalize_agent_role(role: str) -> str:
+    return _ROLE_ALIASES.get((role or "").strip().lower(), "")
 
 
 class DevBrainIndex:
@@ -552,9 +593,17 @@ class DevBrainIndex:
 
     def search_memories(self, query: str, project_filter: str = "", limit: int = 6,
                         max_chars: int = 3500, session_nodes: list = None,
-                        include_historical: bool = False):
-        """Búsqueda híbrida (FTS5 BM25 + Vector Cos + RRF + Pinned + Recency + Sinapsis) con filtro bi-temporal."""
-        cache_key = f"m_{query.strip().lower()}_{project_filter}_{limit}_{max_chars}_{tuple(session_nodes or [])}_{include_historical}"
+                        include_historical: bool = False,
+                        agent_role: str = "", quarantine: bool = False):
+        """Búsqueda híbrida (FTS5 BM25 + Vector Cos + RRF + Pinned + Recency + Sinapsis) con lente epistémico y filtro bi-temporal."""
+        role_key = normalize_agent_role(agent_role)
+        if role_key == "antithesis":
+            return "Aislamiento D-ODD (`antithesis`): 0 memorias del Vault inyectadas."
+
+        cache_key = (
+            f"m_{query.strip().lower()}_{project_filter}_{limit}_{max_chars}_"
+            f"{tuple(session_nodes or [])}_{include_historical}_{role_key}_{quarantine}"
+        )
         if cache_key in self._cache:
             res, t_cached = self._cache[cache_key]
             if time.time() - t_cached < 120.0:
@@ -575,6 +624,7 @@ class DevBrainIndex:
             pf_canon = pf
 
         temporal_clause = "" if include_historical else " AND (m.valid_until IS NULL OR m.valid_until = '') AND (m.superseded_by IS NULL OR m.superseded_by = '')"
+        strict_proj = bool(quarantine and pf)
 
         bm25_ranks: Dict[int, int] = {}
         vec_ranks: Dict[int, int] = {}
@@ -591,9 +641,13 @@ class DevBrainIndex:
                 )
                 params: List[object] = [fts_query]
                 if pf:
-                    sql += " AND (LOWER(m.project) LIKE ? OR LOWER(m.project) = ? OR LOWER(m.content) LIKE ?)"
-                    params.extend([f"%{pf}%", pf_canon, f"%{pf}%"])
-                sql += " ORDER BY bm25_rank ASC LIMIT 25"
+                    if strict_proj:
+                        sql += " AND (LOWER(m.project) LIKE ? OR LOWER(m.project) = ?)"
+                        params.extend([f"%{pf}%", pf_canon])
+                    else:
+                        sql += " AND (LOWER(m.project) LIKE ? OR LOWER(m.project) = ? OR LOWER(m.content) LIKE ?)"
+                        params.extend([f"%{pf}%", pf_canon, f"%{pf}%"])
+                sql += " ORDER BY bm25_rank ASC LIMIT 30"
                 try:
                     for rank_idx, r in enumerate(cur.execute(sql, params).fetchall()):
                         mid = int(r["id"])
@@ -611,18 +665,37 @@ class DevBrainIndex:
             )
             vec_params: List[object] = []
             if pf:
-                vec_sql += " AND (LOWER(m.project) LIKE ? OR LOWER(m.project) = ? OR LOWER(m.content) LIKE ?)"
-                vec_params.extend([f"%{pf}%", pf_canon, f"%{pf}%"])
+                if strict_proj:
+                    vec_sql += " AND (LOWER(m.project) LIKE ? OR LOWER(m.project) = ?)"
+                    vec_params.extend([f"%{pf}%", pf_canon])
+                else:
+                    vec_sql += " AND (LOWER(m.project) LIKE ? OR LOWER(m.project) = ? OR LOWER(m.content) LIKE ?)"
+                    vec_params.extend([f"%{pf}%", pf_canon, f"%{pf}%"])
             vrows = cur.execute(vec_sql, vec_params).fetchall()
             if vrows:
                 cos_scores = HybridVectorizer.cosine_batch(query, [r["vec"] for r in vrows])
                 scored_vecs = sorted(zip(cos_scores, vrows), key=lambda x: x[0], reverse=True)
-                for rank_idx, (cs, r) in enumerate(scored_vecs[:25]):
+                for rank_idx, (cs, r) in enumerate(scored_vecs[:30]):
                     if cs > 0.12:
                         mid = int(r["id"])
                         vec_ranks[mid] = rank_idx
                         if mid not in rows_by_id:
                             rows_by_id[mid] = r
+
+        lens = EPISTEMIC_LENSES.get(role_key) if role_key else None
+        if lens:
+            blocked_tags = lens["blocked_tags"]
+            filtered_rows: Dict[int, sqlite3.Row] = {}
+            for mid, r in rows_by_id.items():
+                mem_tags = set(re.findall(r"[\w\-]+", (r["tags"] or "").lower()))
+                if blocked_tags & mem_tags:
+                    continue
+                if quarantine and pf_canon:
+                    row_proj = (r["project"] or "").strip().lower()
+                    if row_proj != pf_canon and pf not in row_proj:
+                        continue
+                filtered_rows[mid] = r
+            rows_by_id = filtered_rows
 
         results = []
         for mid, r in rows_by_id.items():
