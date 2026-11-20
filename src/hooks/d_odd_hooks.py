@@ -9,11 +9,13 @@ neutra y sale con código 0: un hook nunca debe romper el loop del agente.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+_SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _SRC_DIR not in sys.path:
+    sys.path.insert(0, _SRC_DIR)
 
 NEUTRAL = {
     "session_start": {},
@@ -94,7 +96,7 @@ def hook_guard(payload: dict) -> dict:
 
     if tname in ("write_file", "edit_file"):
         fpath = str(args.get("Path") or "")
-        fname = Path(fpath).name.lower()
+        fname = os.path.basename(fpath).lower()
         if fname in ("mcp_config.json", ".env") or fname.startswith(".env.") or fname.startswith("test_"):
             return {"decision": "allow"}
         body = str(args.get("Content") or args.get("Replacement") or "")
@@ -110,12 +112,11 @@ def hook_guard(payload: dict) -> dict:
 
 def hook_evidence(payload: dict) -> dict:
     """PostToolUse(run_command): adjunta evidencia de tests y registra traza Vigilia en fallos (0 tokens LLM)."""
-    import decision_ledger as led
-
     call = payload.get("toolCall") or {}
     cmd = str((call.get("args") or {}).get("CommandLine") or "")
     if not TEST_CMD.search(cmd):
         return {}
+    import decision_ledger as led
     err = payload.get("error") or ""
     conv = payload.get("conversationId") or ""
     if conv:

@@ -205,6 +205,7 @@ class DevBrainIndex:
         self.sync_interval = 300.0
         self._conn = None
         self._cache = {}
+        self._vec_cache: Dict[str, Tuple[List[int], Any]] = {}
         if db_path is None:
             local_db = devbrain_home() / "cortex_fts.db"
             legacy_db = self.vault_dir / "06-SISTEMA" / "cache" / "devbrain_fts.db"
@@ -432,7 +433,45 @@ class DevBrainIndex:
                 created += 1
             if created:
                 conn.commit()
+                self._vec_cache.pop(doc_type, None)
         return created
+
+    def _top_vector_ids(self, doc_type: str, query: str, top_k: int, min_score: float) -> List[Tuple[int, float]]:
+        """Calcula top-k por similitud coseno usando matriz cacheada en RAM (sin leer content)."""
+        cached = self._vec_cache.get(doc_type)
+        if cached is None:
+            with self._get_conn() as conn:
+                rows = conn.execute(
+                    "SELECT doc_id, vec FROM doc_vectors WHERE doc_type = ?",
+                    (doc_type,),
+                ).fetchall()
+            if not rows:
+                return []
+            ids = [int(r["doc_id"]) for r in rows]
+            if _HAS_NUMPY:
+                mat = np.vstack([HybridVectorizer.from_blob(r["vec"]) for r in rows])
+                cached = (ids, mat)
+            else:
+                cached = (ids, [r["vec"] for r in rows])
+            self._vec_cache[doc_type] = cached
+
+        ids, payload = cached
+        if not ids:
+            return []
+        if _HAS_NUMPY:
+            q = HybridVectorizer.encode(query).astype(np.float32)
+            scores = payload @ q
+            k = min(top_k, len(ids))
+            if k < len(ids):
+                part = np.argpartition(scores, -k)[-k:]
+                top_idx = part[np.argsort(scores[part])[::-1]]
+            else:
+                top_idx = np.argsort(scores)[::-1]
+            return [(ids[int(i)], float(scores[int(i)])) for i in top_idx if float(scores[int(i)]) > min_score]
+
+        cos_scores = HybridVectorizer.cosine_batch(query, payload)
+        scored = sorted(zip(ids, cos_scores), key=lambda x: x[1], reverse=True)
+        return [(did, cs) for did, cs in scored[:top_k] if cs > min_score]
 
     def sync_index(self, force: bool = False, fast_only: bool = True):
         """Sincronización incremental ultrarrápida; con fast_only=True evita recorrer 6k notas en OneDrive."""
@@ -561,6 +600,7 @@ class DevBrainIndex:
 
             conn.commit()
         self._cache.clear()
+        self._vec_cache.clear()
 
         if self.synapse_engine and force:
             try:
@@ -781,21 +821,19 @@ class DevBrainIndex:
                 except Exception:
                     pass
 
-            vrows = cur.execute(
-                """
-                SELECT k.id, k.path, k.title, k.content, k.category, v.vec
-                FROM knowledge k JOIN doc_vectors v ON v.doc_type = 'knowledge' AND v.doc_id = k.id
-                """
-            ).fetchall()
-            if vrows:
-                cos_scores = HybridVectorizer.cosine_batch(query, [r["vec"] for r in vrows])
-                scored_vecs = sorted(zip(cos_scores, vrows), key=lambda x: x[0], reverse=True)
-                for idx, (cs, r) in enumerate(scored_vecs[:limit * 3]):
-                    if cs > 0.14:
-                        kid = int(r["id"])
-                        vec_ranks[kid] = idx
-                        if kid not in rows_by_id:
-                            rows_by_id[kid] = r
+            vec_hits = self._top_vector_ids("knowledge", query, limit * 3, 0.14)
+            missing_ids = [kid for kid, _ in vec_hits if kid not in rows_by_id]
+            if missing_ids:
+                placeholders = ",".join("?" for _ in missing_ids)
+                fetched = cur.execute(
+                    f"SELECT id, path, title, content, category FROM knowledge WHERE id IN ({placeholders})",
+                    missing_ids,
+                ).fetchall()
+                for r in fetched:
+                    rows_by_id[int(r["id"])] = r
+            for idx, (kid, _) in enumerate(vec_hits):
+                if kid in rows_by_id:
+                    vec_ranks[kid] = idx
 
         results = []
         for kid, r in rows_by_id.items():
