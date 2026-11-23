@@ -547,8 +547,18 @@ class DevBrainIndex:
                             )
 
                             if doc_type == "memory":
-                                old_row = cur.execute("SELECT id FROM memories WHERE path = ?", (rel_path,)).fetchone()
+                                old_row = cur.execute(
+                                    "SELECT id, title, content, project, tags FROM memories WHERE path = ?",
+                                    (rel_path,),
+                                ).fetchone()
                                 if old_row:
+                                    try:
+                                        cur.execute(
+                                            "INSERT INTO memories_fts(memories_fts, rowid, title, content, project, tags) VALUES('delete', ?, ?, ?, ?, ?)",
+                                            (old_row["id"], old_row["title"], old_row["content"], old_row["project"], old_row["tags"]),
+                                        )
+                                    except Exception:
+                                        pass
                                     cur.execute("DELETE FROM doc_vectors WHERE doc_type = 'memory' AND doc_id = ?", (old_row["id"],))
                                     cur.execute("DELETE FROM memories WHERE id = ?", (old_row["id"],))
                                 cur.execute(
@@ -571,8 +581,18 @@ class DevBrainIndex:
                                 self._upsert_vector(cur, "memory", int(row_id), f"{title} {body}")
 
                             elif doc_type in ["knowledge", "projects"]:
-                                old_row = cur.execute("SELECT id FROM knowledge WHERE path = ?", (rel_path,)).fetchone()
+                                old_row = cur.execute(
+                                    "SELECT id, title, content, category FROM knowledge WHERE path = ?",
+                                    (rel_path,),
+                                ).fetchone()
                                 if old_row:
+                                    try:
+                                        cur.execute(
+                                            "INSERT INTO knowledge_fts(knowledge_fts, rowid, title, content, category) VALUES('delete', ?, ?, ?, ?)",
+                                            (old_row["id"], old_row["title"], old_row["content"], old_row["category"]),
+                                        )
+                                    except Exception:
+                                        pass
                                     cur.execute("DELETE FROM doc_vectors WHERE doc_type = 'knowledge' AND doc_id = ?", (old_row["id"],))
                                     cur.execute("DELETE FROM knowledge WHERE id = ?", (old_row["id"],))
                                 category = rel_path.split("/")[1] if "/" in rel_path else "general"
@@ -594,9 +614,35 @@ class DevBrainIndex:
                 if dt in track_deletions_for and path_str not in seen_by_type[dt]:
                     cur.execute("DELETE FROM files_meta WHERE path = ?", (path_str,))
                     if dt == "memory":
-                        cur.execute("DELETE FROM memories WHERE path = ?", (path_str,))
+                        old_m = cur.execute(
+                            "SELECT id, title, content, project, tags FROM memories WHERE path = ?",
+                            (path_str,),
+                        ).fetchone()
+                        if old_m:
+                            try:
+                                cur.execute(
+                                    "INSERT INTO memories_fts(memories_fts, rowid, title, content, project, tags) VALUES('delete', ?, ?, ?, ?, ?)",
+                                    (old_m["id"], old_m["title"], old_m["content"], old_m["project"], old_m["tags"]),
+                                )
+                            except Exception:
+                                pass
+                            cur.execute("DELETE FROM doc_vectors WHERE doc_type = 'memory' AND doc_id = ?", (old_m["id"],))
+                            cur.execute("DELETE FROM memories WHERE id = ?", (old_m["id"],))
                     else:
-                        cur.execute("DELETE FROM knowledge WHERE path = ?", (path_str,))
+                        old_k = cur.execute(
+                            "SELECT id, title, content, category FROM knowledge WHERE path = ?",
+                            (path_str,),
+                        ).fetchone()
+                        if old_k:
+                            try:
+                                cur.execute(
+                                    "INSERT INTO knowledge_fts(knowledge_fts, rowid, title, content, category) VALUES('delete', ?, ?, ?, ?)",
+                                    (old_k["id"], old_k["title"], old_k["content"], old_k["category"]),
+                                )
+                            except Exception:
+                                pass
+                            cur.execute("DELETE FROM doc_vectors WHERE doc_type = 'knowledge' AND doc_id = ?", (old_k["id"],))
+                            cur.execute("DELETE FROM knowledge WHERE id = ?", (old_k["id"],))
 
             conn.commit()
         self._cache.clear()
@@ -608,6 +654,41 @@ class DevBrainIndex:
                 self.synapse_engine.prune_synapses(min_weight=0.05)
             except Exception:
                 pass
+
+    def compact_fts(self, vacuum: bool = True) -> Dict[str, Any]:
+        """Reconstruye segmentos FTS5 y compacta la base SQLite eliminando páginas muertas."""
+        wal_path = Path(str(self.db_path) + "-wal")
+        size_before = (self.db_path.stat().st_size if self.db_path.exists() else 0) + (
+            wal_path.stat().st_size if wal_path.exists() else 0
+        )
+        with self._get_conn() as conn:
+            conn.execute("INSERT INTO memories_fts(memories_fts) VALUES('rebuild')")
+            conn.execute("INSERT INTO knowledge_fts(knowledge_fts) VALUES('rebuild')")
+            conn.commit()
+            try:
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            except Exception:
+                pass
+        vacuumed = False
+        if vacuum:
+            self.close()
+            try:
+                vcon = sqlite3.connect(str(self.db_path), timeout=15.0)
+                vcon.isolation_level = None
+                vcon.execute("VACUUM")
+                vcon.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                vcon.close()
+                vacuumed = True
+            except Exception:
+                vacuumed = False
+        size_after = self.db_path.stat().st_size if self.db_path.exists() else 0
+        self._cache.clear()
+        self._vec_cache.clear()
+        return {
+            "before_mb": round(size_before / (1024 * 1024), 2),
+            "after_mb": round(size_after / (1024 * 1024), 2),
+            "vacuumed": vacuumed,
+        }
 
     def supersede_memory(self, query_or_title: str, new_title: str) -> int:
         """Marca memorias previas coincidentes como reemplazadas bi-temporalmente."""

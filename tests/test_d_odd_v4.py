@@ -27,6 +27,11 @@ import devbrain_mcp  # noqa: E402
 import ontology_engine as ont  # noqa: E402
 from devbrain_index import DevBrainIndex  # noqa: E402
 
+if devbrain_mcp.VAULT_DIR in devbrain_mcp.DECISIONS_DIR.parents or devbrain_mcp.DECISIONS_DIR == devbrain_mcp.VAULT_DIR:
+    _TMP_DEC = Path(_TMP_D_ODD.name) / "vault_decisions"
+    _TMP_DEC.mkdir(parents=True, exist_ok=True)
+    devbrain_mcp.DECISIONS_DIR = _TMP_DEC
+
 
 YAML_TEST = """version: 1
 dimensions:
@@ -177,6 +182,52 @@ class TestDODDv4(unittest.TestCase):
                 self.assertNotIn("Polling HTTP Viejo", active)
             finally:
                 idx.close()
+
+    def test_04_fts5_clean_delete_compact_and_remember_seeds(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            vdir = root / "vault"
+            know = vdir / "03-CONOCIMIENTO" / "backend"
+            know.mkdir(parents=True, exist_ok=True)
+            note = know / "legacy-note.md"
+            note.write_text("# Token Ghost Alpha\nContenido fantasma inicial.", encoding="utf-8")
+
+            idx = DevBrainIndex(vdir, db_path=root / "fts_clean.db")
+            try:
+                idx.sync_index(force=True, fast_only=False)
+                self.assertIn("Token Ghost Alpha", idx.search_knowledge("fantasma", limit=3))
+
+                note.write_text("# Token Renovado Beta\nContenido nuevo actualizado.", encoding="utf-8")
+                idx.sync_index(force=True, fast_only=False)
+                res_old = idx.search_knowledge("fantasma", limit=3)
+                self.assertIn("No se encontraron", res_old)
+                self.assertIn("Token Renovado Beta", idx.search_knowledge("renovado", limit=3))
+
+                note.unlink()
+                idx.sync_index(force=True, fast_only=False)
+                self.assertIn("No se encontraron", idx.search_knowledge("renovado", limit=3))
+
+                comp = idx.compact_fts(vacuum=True)
+                self.assertTrue(comp["vacuumed"])
+                self.assertGreaterEqual(comp["before_mb"], comp["after_mb"])
+                with idx._get_conn() as con:
+                    con.execute("INSERT INTO knowledge_fts(knowledge_fts) VALUES('integrity-check')")
+                    con.execute("INSERT INTO memories_fts(memories_fts) VALUES('integrity-check')")
+            finally:
+                idx.close()
+
+        yp = Path(_TMP_D_ODD.name) / "ontologia_remember.yaml"
+        yp.write_text(YAML_TEST, encoding="utf-8")
+        ont.sync_ontology_yaml(yaml_path=yp, force=True)
+        out = devbrain_mcp.handle_brain_remember({
+            "title": "Validar RLS con WITH CHECK",
+            "details": "Toda politica multi-tenant requiere USING y WITH CHECK",
+            "project": "Chambita",
+            "tags": ["decision", "pinned"],
+        })
+        self.assertIn("Decisión guardada", out)
+        insts = ont.get_instincts("Chambita", min_confidence=0.35)
+        self.assertTrue(any("Validar RLS" in i["trigger"] for i in insts))
 
 
 if __name__ == "__main__":

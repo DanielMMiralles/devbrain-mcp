@@ -927,12 +927,33 @@ def handle_brain_remember(args: dict) -> str:
         except Exception:
             pass
 
+    raw_tags = args.get("tags") or ["decision", "engram-memory"]
     res_msg = handle_remember_decision({
         "title": title,
         "details": details,
         "project": proj,
-        "tags": args.get("tags") or ["decision", "engram-memory"],
+        "tags": raw_tags,
     })
+    if ONTOLOGY and title:
+        try:
+            ONTOLOGY.record_wake_trace(
+                project=proj,
+                category="decision",
+                signature=slugify(title)[:40] or "decision",
+                detail=(details or title)[:240],
+                evidence_passed=True,
+                supersedes_query=supersedes_q,
+            )
+            tag_set = {str(t).strip().lower() for t in raw_tags}
+            if tag_set & {"pinned", "rule", "regla", "invariante"}:
+                ONTOLOGY.record_instinct(
+                    scope_id=proj,
+                    trigger=title[:80],
+                    pattern=(details or title)[:240],
+                    scope_type="project",
+                )
+        except Exception:
+            pass
     if superseded_cnt:
         res_msg += f"\n(Bi-temporal: {superseded_cnt} memoria(s) previa(s) marcada(s) como reemplazada(s))"
     return res_msg
@@ -1656,6 +1677,14 @@ def handle_close_decision(args: dict) -> str:
     rep = calibrate()
     if ONTOLOGY:
         try:
+            sig = slugify(dec["objective"][:40]) or dec_id
+            ONTOLOGY.record_wake_trace(
+                project=dec.get("project") or "General",
+                category="d-odd-decision" if outcome == "success" else "d-odd-antipattern",
+                signature=sig,
+                detail=(notes or dec.get("synthesis") or dec["objective"])[:240],
+                evidence_passed=(outcome == "success"),
+            )
             if outcome == "success" and notes:
                 ONTOLOGY.record_instinct(
                     scope_id=dec.get("project") or "General",
@@ -1967,7 +1996,7 @@ def process_request(request):
                 "instructions": PROTOCOL_TEXT,
                 "serverInfo": {
                     "name": "devbrain-mcp",
-                    "version": "4.0.0",
+                    "version": "4.1.0",
                     "mode": "vault-connected" if HAS_VAULT else "autonomous-standalone"
                 }
             }
