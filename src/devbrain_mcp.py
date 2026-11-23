@@ -996,7 +996,7 @@ valid_from: {today}
         except Exception:
             pass
     _maybe_refresh_portada()
-    loc_str = str(fpath.relative_to(VAULT_DIR)) if HAS_VAULT else str(fpath)
+    loc_str = str(fpath.relative_to(VAULT_DIR)) if (HAS_VAULT and fpath.is_relative_to(VAULT_DIR)) else str(fpath)
     res_msg = f"Directriz guardada en la memoria persistente del agente en: {loc_str}"
     if GENTLE_PI_BRIDGE:
         try:

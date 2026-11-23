@@ -219,13 +219,18 @@ class TestDODDv4(unittest.TestCase):
         yp = Path(_TMP_D_ODD.name) / "ontologia_remember.yaml"
         yp.write_text(YAML_TEST, encoding="utf-8")
         ont.sync_ontology_yaml(yaml_path=yp, force=True)
-        out = devbrain_mcp.handle_brain_remember({
-            "title": "Validar RLS con WITH CHECK",
-            "details": "Toda politica multi-tenant requiere USING y WITH CHECK",
-            "project": "Chambita",
-            "tags": ["decision", "pinned"],
-        })
-        self.assertIn("Decisión guardada", out)
+        orig_bridge = devbrain_mcp.GENTLE_PI_BRIDGE
+        devbrain_mcp.GENTLE_PI_BRIDGE = None
+        try:
+            out = devbrain_mcp.handle_brain_remember({
+                "title": "Validar RLS con WITH CHECK",
+                "details": "Toda politica multi-tenant requiere USING y WITH CHECK",
+                "project": "Chambita",
+                "tags": ["decision", "pinned"],
+            })
+        finally:
+            devbrain_mcp.GENTLE_PI_BRIDGE = orig_bridge
+        self.assertIn("Directriz guardada", out)
         insts = ont.get_instincts("Chambita", min_confidence=0.35)
         self.assertTrue(any("Validar RLS" in i["trigger"] for i in insts))
 
